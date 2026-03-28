@@ -65,11 +65,11 @@ export async function createWebhookLog(data: {
   method: string;
   path: string;
   status_code: number;
-  error_code?: string;
-  error_message?: string;
-  duration_ms?: number;
-  ip?: string;
-  user_agent?: string;
+  error_code?: string | undefined;
+  error_message?: string | undefined;
+  duration_ms?: number | undefined;
+  ip?: string | undefined;
+  user_agent?: string | undefined;
 }): Promise<void> {
   const id = generateId();
   const now = new Date().toISOString();

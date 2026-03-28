@@ -100,8 +100,8 @@ export async function findByIdempotencyKey(
  */
 export async function createSendLog(data: {
   project_id: string;
-  idempotency_key?: string;
-  payload_hash?: string;
+  idempotency_key?: string | undefined;
+  payload_hash?: string | undefined;
   template_id: string;
   recipient_id: string;
   to_email: string;
