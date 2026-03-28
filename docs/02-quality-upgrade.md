@@ -88,7 +88,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 **Files**:
 - `worker/wrangler.toml` — Add `[env.test]` route for `dove-test.worker.hexly.ai`
 - `src/lib/db/schema.ts` — Add `_test_marker` CREATE TABLE to schema
-- `scripts/deploy-test-worker.sh` (NEW) — One-shot script: `wrangler deploy --env test` + seed `_test_marker`
+- `scripts/deploy-test-worker.ts` (NEW) — One-shot script: deploy test Worker + replay full schema + seed `_test_marker`
 - `scripts/verify-test-db.ts` (NEW) — Script to verify connected DB is the test instance
 - `scripts/run-e2e.ts` — Call verify-test-db before running tests
 
@@ -108,28 +108,21 @@ CREATE TABLE IF NOT EXISTS _test_marker (
 INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 ```
 
-**`scripts/deploy-test-worker.sh`**:
-```bash
-#!/bin/bash
-set -euo pipefail
-# 1. Deploy test Worker: wrangler deploy --env test (in worker/ dir)
-# 2. Set API_KEY secret: wrangler secret put API_KEY --env test
-# 3. Replay FULL schema through the test Worker /query endpoint
-#    (bypasses the app entirely — no auth gate to worry about)
-#
-# The script imports and splits SCHEMA_SQL + PARTIAL_INDEX_SQL from
-# src/lib/db/schema.ts (same logic as initializeSchema()), then sends
-# each statement as a POST /query to the test Worker. This includes:
-#   - 5 CREATE TABLE statements (projects, recipients, templates, send_logs, webhook_logs)
-#   - 10 CREATE INDEX statements (covering FK lookups, sort columns)
-#   - 1 CREATE UNIQUE INDEX ... WHERE (partial index for idempotency_key)
-#   - 1 CREATE TABLE _test_marker + INSERT seed
-#
-# Example for each statement:
-#   curl -sf -X POST https://dove-test.worker.hexly.ai/query \
-#     -H "X-API-Key: $API_KEY" \
-#     -H "Content-Type: application/json" \
-#     -d '{"sql": "<statement>"}'
+**`scripts/deploy-test-worker.ts`** (TypeScript — can directly import schema constants):
+```typescript
+// 1. cd worker/ && wrangler deploy --env test
+// 2. wrangler secret put API_KEY --env test (interactive, one-time)
+// 3. Import SCHEMA_SQL + PARTIAL_INDEX_SQL from src/lib/db/schema.ts
+//    Split into individual statements (same logic as initializeSchema())
+// 4. Append _test_marker CREATE TABLE + INSERT seed
+// 5. Send each statement as POST /query to https://dove-test.worker.hexly.ai
+//    using D1_WORKER_URL + D1_WORKER_API_KEY from .env.test
+//
+// This replays the FULL schema:
+//   - 5 CREATE TABLE statements (projects, recipients, templates, send_logs, webhook_logs)
+//   - 10 CREATE INDEX statements (covering FK lookups, sort columns)
+//   - 1 CREATE UNIQUE INDEX ... WHERE (partial index for idempotency_key)
+//   - 1 CREATE TABLE _test_marker + INSERT seed
 ```
 
 > **Why replay the full schema?** The test DB must be identical to production in structure — including all indexes and the partial unique index on `send_logs(project_id, idempotency_key)`. Seeding only tables would cause idempotency dedup to silently not work in tests, masking real bugs.
