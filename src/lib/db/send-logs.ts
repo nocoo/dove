@@ -29,7 +29,7 @@ export interface SendLog {
  */
 export async function listSendLogs(
   projectId: string,
-  options: { limit?: number; offset?: number; status?: string } = {},
+  options: { limit?: number | undefined; offset?: number | undefined; status?: string | undefined } = {},
 ): Promise<SendLog[]> {
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;
@@ -51,7 +51,7 @@ export async function listSendLogs(
  * List send logs across all projects, paginated.
  */
 export async function listAllSendLogs(
-  options: { limit?: number; offset?: number; status?: string } = {},
+  options: { limit?: number | undefined; offset?: number | undefined; status?: string | undefined } = {},
 ): Promise<SendLog[]> {
   const limit = options.limit ?? 50;
   const offset = options.offset ?? 0;
