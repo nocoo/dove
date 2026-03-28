@@ -12,7 +12,7 @@ export interface TemplateVariable {
   name: string;
   type: "string" | "number" | "boolean";
   required: boolean;
-  default?: string;
+  default?: string | undefined;
 }
 
 export interface Template {
@@ -92,7 +92,7 @@ export async function createTemplate(data: {
   slug: string;
   subject: string;
   body_markdown: string;
-  variables?: TemplateVariable[];
+  variables?: TemplateVariable[] | undefined;
 }): Promise<Template> {
   const id = generateId();
   const now = new Date().toISOString();
@@ -123,11 +123,11 @@ export async function createTemplate(data: {
 export async function updateTemplate(
   id: string,
   data: {
-    name?: string;
-    slug?: string;
-    subject?: string;
-    body_markdown?: string;
-    variables?: TemplateVariable[];
+    name?: string | undefined;
+    slug?: string | undefined;
+    subject?: string | undefined;
+    body_markdown?: string | undefined;
+    variables?: TemplateVariable[] | undefined;
   },
 ): Promise<Template | undefined> {
   const existing = await getTemplate(id);
