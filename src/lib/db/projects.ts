@@ -56,11 +56,11 @@ export async function getProjectByToken(
  */
 export async function createProject(data: {
   name: string;
-  description?: string;
+  description?: string | undefined;
   email_prefix: string;
   from_name: string;
-  quota_daily?: number;
-  quota_monthly?: number;
+  quota_daily?: number | undefined;
+  quota_monthly?: number | undefined;
 }): Promise<Project> {
   const id = generateId();
   const token = generateWebhookToken();
@@ -94,12 +94,12 @@ export async function createProject(data: {
 export async function updateProject(
   id: string,
   data: {
-    name?: string;
-    description?: string | null;
-    email_prefix?: string;
-    from_name?: string;
-    quota_daily?: number;
-    quota_monthly?: number;
+    name?: string | undefined;
+    description?: string | null | undefined;
+    email_prefix?: string | undefined;
+    from_name?: string | undefined;
+    quota_daily?: number | undefined;
+    quota_monthly?: number | undefined;
   },
 ): Promise<Project | undefined> {
   const existing = await getProject(id);
