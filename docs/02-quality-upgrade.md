@@ -159,7 +159,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 
 ---
 
-### Step 4: Rewrite L2 — True HTTP E2E against running server
+### Step 4: Rewrite L2 — True HTTP E2E against running server ✅
 
 **Files**:
 - `scripts/run-e2e.ts` — Rewrite to auto-start/stop dev server on port 17046
