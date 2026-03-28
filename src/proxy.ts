@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ALLOWED_HOSTS } from "@/lib/hosts";
 
-// Skip auth in E2E test environment
-const SKIP_AUTH = process.env.E2E_SKIP_AUTH === "true";
+// Skip auth in E2E test environment (never in production)
+const SKIP_AUTH =
+  process.env.E2E_SKIP_AUTH === "true" &&
+  process.env.NODE_ENV !== "production";
 
 // Build redirect URL respecting reverse proxy headers
 function buildRedirectUrl(req: NextRequest, pathname: string): URL {
