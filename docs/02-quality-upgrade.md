@@ -87,10 +87,21 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 **Files**:
 - `worker/wrangler.toml` — Add `[env.test]` route for `dove-test.worker.hexly.ai`
-- `src/lib/db/schema.ts` — Add `_test_marker` CREATE TABLE to schema
+- `src/lib/db/schema.ts` — Export `SCHEMA_SQL` and `PARTIAL_INDEX_SQL` (currently module-private `const`); add `_test_marker` CREATE TABLE to schema
 - `scripts/deploy-test-worker.ts` (NEW) — One-shot script: deploy test Worker + replay full schema + seed `_test_marker`
 - `scripts/verify-test-db.ts` (NEW) — Script to verify connected DB is the test instance
 - `scripts/run-e2e.ts` — Call verify-test-db before running tests
+
+**Schema export change** (`src/lib/db/schema.ts`):
+```diff
+- const SCHEMA_SQL = `
++ export const SCHEMA_SQL = `
+  ...
+- const PARTIAL_INDEX_SQL =
++ export const PARTIAL_INDEX_SQL =
+```
+
+This allows both `initializeSchema()` (unchanged, same file) and `deploy-test-worker.ts` to share the single source of truth for schema DDL.
 
 **Design**:
 
