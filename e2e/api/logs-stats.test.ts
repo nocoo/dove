@@ -103,7 +103,7 @@ describe("GET /api/stats", () => {
     expect(typeof body.total_sends_today).toBe("number");
     expect(typeof body.total_sends_month).toBe("number");
     expect(typeof body.total_failed_today).toBe("number");
-  });
+  }, 15_000);
 });
 
 // ---------------------------------------------------------------------------
@@ -122,5 +122,5 @@ describe("GET /api/stats/charts", () => {
     expect(first.date).toBeDefined();
     expect(typeof first.sent).toBe("number");
     expect(typeof first.failed).toBe("number");
-  });
+  }, 15_000);
 });

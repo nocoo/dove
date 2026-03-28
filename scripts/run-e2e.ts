@@ -167,13 +167,32 @@ async function waitForServer(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step 6b: Warm up D1 connection
+// ---------------------------------------------------------------------------
+
+async function warmupD1(): Promise<void> {
+  console.log("Step 6b: Warming up D1 connection...");
+  const start = Date.now();
+  try {
+    const res = await fetch(`http://localhost:${E2E_PORT}/api/projects`, {
+      signal: AbortSignal.timeout(15_000),
+    });
+    await res.text(); // drain body
+    console.log(`  D1 warm (${Date.now() - start}ms, status=${res.status})`);
+  } catch (err) {
+    console.log(`  WARN: D1 warmup call failed (${Date.now() - start}ms): ${err}`);
+    // Non-fatal — tests will retry on their own
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Step 7: Run tests
 // ---------------------------------------------------------------------------
 
 async function runTests(): Promise<number> {
   console.log("\nStep 7: Running E2E tests...\n");
 
-  const proc = Bun.spawn(["bun", "test", "e2e/api/"], {
+  const proc = Bun.spawn(["bun", "test", "--timeout", "15000", "e2e/api/"], {
     cwd: ROOT,
     stdout: "inherit",
     stderr: "inherit",
@@ -220,6 +239,9 @@ async function main(): Promise<void> {
   try {
     // Step 6: Wait for ready
     await waitForServer();
+
+    // Step 6b: Warm up D1 (avoid cold-start timeouts in tests)
+    await warmupD1();
 
     // Step 7: Run tests
     testExitCode = await runTests();
