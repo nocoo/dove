@@ -1,200 +1,66 @@
 /**
- * E2E API test helpers — build requests, parse responses, D1 mock wiring.
+ * E2E API test helpers — real HTTP client for L2 tests.
  *
- * Strategy: Mock only the D1 client and Resend API (external I/O boundaries).
- * All business logic (validation, rendering, quota checks) runs for real.
+ * All requests go through the running dev server on port 17046.
+ * No mocks, no in-process route imports.
  */
 
-import { NextRequest } from "next/server";
-
-const BASE = "http://localhost:17046";
-const NOW = "2026-03-28T12:00:00.000Z";
+const BASE = `http://localhost:${process.env.PORT ?? 17046}`;
 
 // ---------------------------------------------------------------------------
-// D1 query mock infrastructure
+// HTTP helpers
 // ---------------------------------------------------------------------------
 
-export type D1Handler = (sql: string, params: unknown[]) => unknown[];
+type RequestOptions = {
+  body?: unknown;
+  headers?: Record<string, string>;
+  searchParams?: Record<string, string>;
+};
 
-let d1Handler: D1Handler = () => [];
-
-export function setD1Handler(handler: D1Handler): void {
-  d1Handler = handler;
-}
-
-export function resetD1Handler(): void {
-  d1Handler = () => [];
-}
-
-/** Called by the mock.module("@/lib/db/d1-client") */
-export function getD1Handler(): D1Handler {
-  return (...args: Parameters<D1Handler>) => d1Handler(...args);
-}
-
-// ---------------------------------------------------------------------------
-// Fixture data
-// ---------------------------------------------------------------------------
-
-export function makeProject(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "proj_e2e_test123456ab",
-    name: "E2E Project",
-    description: null,
-    email_prefix: "noreply",
-    from_name: "E2E App",
-    webhook_token: "tok_e2e_0123456789abcdef0123456789abcdef012345678",
-    quota_daily: 100,
-    quota_monthly: 1000,
-    created_at: NOW,
-    updated_at: NOW,
-    ...overrides,
-  };
-}
-
-export function makeRecipient(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "rcpt_e2e_test1234ab",
-    project_id: "proj_e2e_test123456ab",
-    name: "E2E User",
-    email: "e2e@example.com",
-    created_at: NOW,
-    ...overrides,
-  };
-}
-
-export function makeTemplate(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "tmpl_e2e_test1234ab",
-    project_id: "proj_e2e_test123456ab",
-    slug: "welcome",
-    name: "Welcome Email",
-    subject: "Welcome to {{app_name}}",
-    body_markdown: "# Hello, {{name}}!\n\nWelcome aboard.",
-    variables: JSON.stringify([
-      { name: "app_name", type: "string", required: true },
-      { name: "name", type: "string", required: true },
-    ]),
-    created_at: NOW,
-    updated_at: NOW,
-    ...overrides,
-  };
-}
-
-export function makeSendLog(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "slog_e2e_test1234ab",
-    project_id: "proj_e2e_test123456ab",
-    idempotency_key: null,
-    payload_hash: null,
-    template_id: "tmpl_e2e_test1234ab",
-    recipient_id: "rcpt_e2e_test1234ab",
-    to_email: "e2e@example.com",
-    subject: "Test Subject",
-    status: "sent",
-    resend_id: "resend_e2e_123",
-    error_message: null,
-    created_at: NOW,
-    sent_at: NOW,
-    ...overrides,
-  };
-}
-
-export function makeWebhookLog(overrides: Record<string, unknown> = {}) {
-  return {
-    id: "wlog_e2e_test1234ab",
-    project_id: "proj_e2e_test123456ab",
-    method: "POST",
-    path: "/api/webhook/proj_e2e_test123456ab/send",
-    status_code: 200,
-    error_code: null,
-    error_message: null,
-    duration_ms: 150,
-    ip: "127.0.0.1",
-    user_agent: "test-agent/1.0",
-    created_at: NOW,
-    ...overrides,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Request builders
-// ---------------------------------------------------------------------------
-
-/** Build a NextRequest (needed for routes that use request.nextUrl.searchParams) */
-export function buildNextRequest(
+async function request(
+  method: string,
   path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-    headers?: Record<string, string>;
-    searchParams?: Record<string, string>;
-  } = {},
-): NextRequest {
-  const { method = "GET", body, headers = {}, searchParams } = options;
+  options: RequestOptions = {},
+): Promise<Response> {
   const url = new URL(path, BASE);
 
-  if (searchParams) {
-    for (const [key, value] of Object.entries(searchParams)) {
+  if (options.searchParams) {
+    for (const [key, value] of Object.entries(options.searchParams)) {
       url.searchParams.set(key, value);
     }
   }
 
-  const init: RequestInit = {
-    method,
-    headers: {
-      "content-type": "application/json",
-      ...headers,
-    },
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    ...options.headers,
   };
 
-  if (body !== undefined) {
-    init.body = JSON.stringify(body);
+  const init: RequestInit = { method, headers };
+  if (options.body !== undefined) {
+    init.body = JSON.stringify(options.body);
   }
 
-  return new NextRequest(url.toString(), init);
+  return fetch(url.toString(), init);
 }
 
-/** Build a plain Request (for routes that don't need NextRequest) */
-export function buildRequest(
-  path: string,
-  options: {
-    method?: string;
-    body?: unknown;
-    headers?: Record<string, string>;
-  } = {},
-): Request {
-  const { method = "GET", body, headers = {} } = options;
-  const url = new URL(path, BASE);
-
-  const init: RequestInit = {
-    method,
-    headers: {
-      "content-type": "application/json",
-      ...headers,
-    },
-  };
-
-  if (body !== undefined) {
-    init.body = JSON.stringify(body);
-  }
-
-  return new Request(url.toString(), init);
+export function get(path: string, options?: RequestOptions): Promise<Response> {
+  return request("GET", path, options);
 }
 
-export function buildWebhookRequest(
-  projectId: string,
-  endpoint: string,
-  token: string,
-  options: {
-    method?: string;
-    body?: unknown;
-  } = {},
-): Request {
-  return buildRequest(`/api/webhook/${projectId}${endpoint}`, {
-    method: options.method ?? "POST",
-    body: options.body,
-    headers: { authorization: `Bearer ${token}` },
-  });
+export function post(path: string, options?: RequestOptions): Promise<Response> {
+  return request("POST", path, options);
+}
+
+export function put(path: string, options?: RequestOptions): Promise<Response> {
+  return request("PUT", path, options);
+}
+
+export function del(path: string, options?: RequestOptions): Promise<Response> {
+  return request("DELETE", path, options);
+}
+
+export function head(path: string, options?: RequestOptions): Promise<Response> {
+  return request("HEAD", path, options);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,11 +72,89 @@ export async function parseJson<T = unknown>(response: Response): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Next.js 16 route params (Promise-based)
+// Webhook helpers
 // ---------------------------------------------------------------------------
 
-export function routeParams<T extends Record<string, string>>(
-  values: T,
-): { params: Promise<T> } {
-  return { params: Promise.resolve(values) };
+export function webhookHeaders(token: string): Record<string, string> {
+  return { authorization: `Bearer ${token}` };
+}
+
+// ---------------------------------------------------------------------------
+// Test data lifecycle
+// ---------------------------------------------------------------------------
+
+/** Create a test project via the API. Returns the full project (with webhook_token). */
+export async function setupTestProject(
+  overrides: Record<string, unknown> = {},
+): Promise<{
+  id: string;
+  name: string;
+  webhook_token: string;
+  [key: string]: unknown;
+}> {
+  const payload = {
+    name: `E2E Project ${Date.now()}`,
+    email_prefix: "e2e-test",
+    from_name: "E2E Test",
+    ...overrides,
+  };
+
+  const response = await post("/api/projects", { body: payload });
+  if (response.status !== 201) {
+    const text = await response.text();
+    throw new Error(`Failed to create test project (${response.status}): ${text}`);
+  }
+
+  return parseJson(response);
+}
+
+/** Create a test recipient via the API. */
+export async function setupTestRecipient(
+  projectId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; email: string; [key: string]: unknown }> {
+  const payload = {
+    project_id: projectId,
+    name: `E2E User ${Date.now()}`,
+    email: `e2e-${Date.now()}@example.com`,
+    ...overrides,
+  };
+
+  const response = await post("/api/recipients", { body: payload });
+  if (response.status !== 201) {
+    const text = await response.text();
+    throw new Error(`Failed to create test recipient (${response.status}): ${text}`);
+  }
+
+  return parseJson(response);
+}
+
+/** Create a test template via the API. */
+export async function setupTestTemplate(
+  projectId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; slug: string; [key: string]: unknown }> {
+  const slug = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const payload = {
+    project_id: projectId,
+    name: `E2E Template ${Date.now()}`,
+    slug,
+    subject: "Hello {{name}}",
+    body_markdown: "# Hi {{name}}\n\nWelcome!",
+    variables: [{ name: "name", type: "string", required: true }],
+    ...overrides,
+  };
+
+  const response = await post("/api/templates", { body: payload });
+  if (response.status !== 201) {
+    const text = await response.text();
+    throw new Error(`Failed to create test template (${response.status}): ${text}`);
+  }
+
+  return parseJson(response);
+}
+
+/** Delete a project (cascades to recipients, templates, logs). */
+export async function cleanupProject(projectId: string): Promise<void> {
+  await del(`/api/projects/${projectId}`);
 }
