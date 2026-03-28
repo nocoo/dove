@@ -61,7 +61,27 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ---
 
-### Step 2: Deploy separate test Worker + D1 test isolation
+### Step 2: Harden auth bypass — add NODE_ENV production guard
+
+**Files**: `src/proxy.ts`
+
+**Problem**: The current auth bypass at `src/proxy.ts:7` checks only `process.env.E2E_SKIP_AUTH === "true"`. If this env var is accidentally set in production (e.g., copied from a test config), all auth is bypassed. There is no `NODE_ENV` guard.
+
+**Change**:
+```diff
+- const SKIP_AUTH = process.env.E2E_SKIP_AUTH === "true";
++ const SKIP_AUTH =
++   process.env.E2E_SKIP_AUTH === "true" &&
++   process.env.NODE_ENV !== "production";
+```
+
+**Test**: Add a unit test in `src/__tests__/proxy.test.ts` verifying that `SKIP_AUTH` is false when `NODE_ENV=production` even if `E2E_SKIP_AUTH=true`.
+
+**Commit**: `fix: guard E2E auth bypass with NODE_ENV !== production`
+
+---
+
+### Step 3: Deploy separate test Worker + D1 test isolation
 
 **ADR Decision**: **Option A is mandatory** — deploy a separate test Worker instance (`wrangler deploy --env test`). The production Worker has no request-level env switch and we will NOT add one. The client (`src/lib/db/d1-client.ts`) simply reads `D1_WORKER_URL` + `D1_WORKER_API_KEY` from env; pointing those at the test Worker URL is sufficient.
 
@@ -116,7 +136,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 
 ---
 
-### Step 3: Rewrite L2 — True HTTP E2E against running server
+### Step 4: Rewrite L2 — True HTTP E2E against running server
 
 **Files**:
 - `scripts/run-e2e.ts` — Rewrite to auto-start/stop dev server on port 17046
@@ -153,16 +173,15 @@ PORT=17046
 > **Note**: `D1_WORKER_URL` points to the **test Worker** (`dove-test.worker.hexly.ai`), which is a completely separate Cloudflare Worker deployment bound to `dove-db-test`. No request-level env switching — isolation is at the deployment level.
 
 **`scripts/run-e2e.ts`** rewrite:
-1. Load `.env.test` into environment
-2. **Soft gate check**: if `.env.test` missing or `D1_WORKER_URL` not set → warn "L2 skipped: test Worker not configured" + exit 0 (allow push)
-3. **Inequality check**: assert `D1_WORKER_URL` from `.env.test` differs from `.env.local` (refuse if same — misconfiguration)
-4. **Verify test DB marker** (`scripts/verify-test-db.ts`) — hard fail if marker missing (production safety)
-5. **Clean `.next/dev/lock`** — Next.js prevents parallel dev server instances; stale lock from port 7046 blocks port 17046 startup (backy lesson)
-6. Spawn `next dev --port 17046` directly (NOT `bun run dev` which hardcodes port 7046)
-7. Wait for server ready (poll `http://localhost:17046/api/live`)
-8. Run `bun test e2e/api/`
-9. Kill server
-10. Exit with test exit code
+1. Load `.env.test` into environment — **hard fail** if file missing or `D1_WORKER_URL` not set (L2 is a required gate for Tier S; missing infrastructure must block push, same as G2)
+2. **Inequality check**: assert `D1_WORKER_URL` from `.env.test` differs from `.env.local` (refuse if same — misconfiguration)
+3. **Verify test DB marker** (`scripts/verify-test-db.ts`) — hard fail if marker missing (production safety)
+4. **Clean `.next/dev/lock`** — Next.js prevents parallel dev server instances; stale lock from port 7046 blocks port 17046 startup (backy lesson)
+5. Spawn `next dev --port 17046` directly (NOT `bun run dev` which hardcodes port 7046)
+6. Wait for server ready (poll `http://localhost:17046/api/live`)
+7. Run `bun test e2e/api/`
+8. Kill server
+9. Exit with test exit code
 
 **`e2e/api/helpers.ts`** rewrite:
 - Remove all `mock.module()`, `setD1Handler()`, `getD1Handler()` infrastructure
@@ -197,7 +216,7 @@ const response = await fetch(`${BASE}/api/projects`);
 
 ---
 
-### Step 4: Implement L3 — Playwright BDD E2E
+### Step 5: Implement L3 — Playwright BDD E2E
 
 **Files**:
 - `playwright.config.ts` (NEW) — Playwright configuration
@@ -205,7 +224,7 @@ const response = await fetch(`${BASE}/api/projects`);
 
 **Auth strategy — Bypassed app-flow coverage**:
 
-`src/proxy.ts` already implements `E2E_SKIP_AUTH` (line 7: `const SKIP_AUTH = process.env.E2E_SKIP_AUTH === "true"`). When enabled, all auth checks are skipped and every route is accessible without a session. **No new auth bypass code is needed.** This means:
+`src/proxy.ts` already implements `E2E_SKIP_AUTH` (hardened in Step 2 with `NODE_ENV !== 'production'` guard). When enabled in non-production, all auth checks are skipped and every route is accessible without a session. **No new auth bypass code is needed.** This means:
 
 - ✅ We test: navigation, page rendering, CRUD flows, data display, skeleton/loading states
 - ❌ We do NOT test: Google OAuth login flow (not a stable CI target — requires real Google credentials)
@@ -255,15 +274,22 @@ export default defineConfig({
 
 ---
 
-### Step 5: Wire L3 into CI / on-demand script
+### Step 6: Wire L3 into CI / on-demand script
 
 **Files**:
-- `package.json` — Verify `test:e2e:bdd` script works
-- `.husky/pre-push` — L3 remains on-demand (not in pre-push per spec)
+- `package.json` — Change `test:e2e:bdd` script from `bun run e2e/bdd/runner.ts` (nonexistent) to `npx playwright test`
 
-**No hook change**: L3 is manual/CI only per the quality system spec.
+**Script change**:
+```diff
+- "test:e2e:bdd": "bun run e2e/bdd/runner.ts",
++ "test:e2e:bdd": "npx playwright test",
+```
 
-**Commit**: `chore: verify L3 Playwright E2E on-demand wiring`
+**No hook change**: L3 is manual/CI only per the quality system spec. `.husky/pre-push` is not modified.
+
+**Verification**: Run `bun run test:e2e:bdd` — Playwright reads `playwright.config.ts`, starts webServer on 27046, runs all specs.
+
+**Commit**: `chore: wire test:e2e:bdd to Playwright CLI`
 
 ---
 
@@ -289,19 +315,20 @@ After all steps complete, verify the full matrix:
 | # | Commit | Dimension |
 |---|--------|-----------|
 | 1 | `fix(G2): fail hard when security tools are not installed` | G2 |
-| 2 | `feat(D1): deploy test Worker and add _test_marker verification` | D1 |
-| 3 | `feat(L2): add .env.test and E2E server lifecycle in run-e2e.ts` | L2 |
-| 4 | `refactor(L2): rewrite e2e/api/helpers.ts for real HTTP` | L2 |
-| 5 | `refactor(L2): rewrite e2e/api health + db-init tests` | L2 |
-| 6 | `refactor(L2): rewrite e2e/api projects + recipients tests` | L2 |
-| 7 | `refactor(L2): rewrite e2e/api templates + logs-stats tests` | L2 |
-| 8 | `refactor(L2): rewrite e2e/api webhook test` | L2 |
-| 9 | `feat(L3): add Playwright config` | L3 |
-| 10 | `feat(L3): add dashboard and navigation BDD specs` | L3 |
-| 11 | `feat(L3): add project CRUD BDD spec` | L3 |
-| 12 | `feat(L3): add template CRUD BDD spec` | L3 |
-| 13 | `feat(L3): add logs viewer BDD specs` | L3 |
-| 14 | `chore: verify L3 Playwright E2E on-demand wiring` | L3 |
+| 2 | `fix: guard E2E auth bypass with NODE_ENV !== production` | Security |
+| 3 | `feat(D1): deploy test Worker and add _test_marker verification` | D1 |
+| 4 | `feat(L2): add .env.test and E2E server lifecycle in run-e2e.ts` | L2 |
+| 5 | `refactor(L2): rewrite e2e/api/helpers.ts for real HTTP` | L2 |
+| 6 | `refactor(L2): rewrite e2e/api health + db-init tests` | L2 |
+| 7 | `refactor(L2): rewrite e2e/api projects + recipients tests` | L2 |
+| 8 | `refactor(L2): rewrite e2e/api templates + logs-stats tests` | L2 |
+| 9 | `refactor(L2): rewrite e2e/api webhook test` | L2 |
+| 10 | `feat(L3): add Playwright config` | L3 |
+| 11 | `feat(L3): add dashboard and navigation BDD specs` | L3 |
+| 12 | `feat(L3): add project CRUD BDD spec` | L3 |
+| 13 | `feat(L3): add template CRUD BDD spec` | L3 |
+| 14 | `feat(L3): add logs viewer BDD specs` | L3 |
+| 15 | `chore: wire test:e2e:bdd to Playwright CLI` | L3 |
 
 ---
 
@@ -311,20 +338,22 @@ After all steps complete, verify the full matrix:
 |------|--------|------------|
 | Test Worker deployment fails | L2 blocks | Run `scripts/deploy-test-worker.sh` locally first; verify via `verify-test-db.ts` |
 | Test Worker API key mismatch | L2 breaks | Separate `wrangler secret put API_KEY --env test`; `.env.test` uses matching key |
-| `E2E_SKIP_AUTH` leaking to production | Security | Already guarded: `src/proxy.ts` reads env at module init; Railway does not set this var |
+| `E2E_SKIP_AUTH` leaking to production | Security | **Step 2 adds `NODE_ENV !== 'production'` guard** in `src/proxy.ts`; even if env var is set, bypass is dead in production |
 | Playwright flaky on CI | L3 unreliable | Use `retries: 2` in playwright.config, keep tests deterministic |
 | E2E test data polluting test DB | D1 | Add cleanup in test afterAll hooks; `_test_marker` guarantees we're on test DB |
 | Port conflict (7046 vs 17046/27046) | E2E breaks | Scripts use `next dev --port N` directly, never `bun run dev` |
 | `.next/dev/lock` stale lock | E2E server won't start | `run-e2e.ts` cleans `.next/dev/lock` before spawn (backy lesson) |
 
-### Gate Level Differentiation (D1 Isolation Spec)
+### Gate Level Policy
+
+Both L2 and L3 are **hard gates** when test infrastructure is missing:
 
 | Gate | Missing test credentials | Missing `_test_marker` |
 |------|--------------------------|------------------------|
-| **L2** (pre-push, `run-e2e.ts`) | **Soft gate**: warn + skip L2 entirely (allow push) | **Hard fail**: refuse to run (production safety) |
-| **L3** (on-demand, Playwright) | **Hard gate**: `${VAR:?}` aborts shell (L3 requires real data) | **Hard fail**: refuse to run |
+| **L2** (pre-push, `run-e2e.ts`) | **Hard fail**: exit 1 (test Worker must be deployed) | **Hard fail**: refuse to run (production safety) |
+| **L3** (on-demand, Playwright) | **Hard fail**: `${VAR:?}` aborts shell | **Hard fail**: refuse to run |
 
-Rationale: L2 runs on every push — blocking push for missing test credentials would hurt DX when test Worker isn't deployed yet. L3 is on-demand and explicitly expects full infrastructure.
+Rationale: Tier S requires all 6 dimensions green. Allowing L2 to silently skip would reintroduce the same class of loophole being removed from G2 in Step 1. If test infrastructure is not deployed, `git push` should fail — this ensures the team deploys the test Worker before claiming L2 compliance.
 
 ---
 
