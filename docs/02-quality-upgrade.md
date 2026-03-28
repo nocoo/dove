@@ -40,7 +40,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ## Implementation Steps
 
-### Step 1: Harden G2 — Remove soft-skip loophole
+### Step 1: Harden G2 — Remove soft-skip loophole ✅
 
 **Files**: `scripts/gate-security.ts`
 
@@ -61,7 +61,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ---
 
-### Step 2: Harden auth bypass — add NODE_ENV production guard
+### Step 2: Harden auth bypass — add NODE_ENV production guard ✅
 
 **Files**: `src/proxy.ts`
 
@@ -81,7 +81,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ---
 
-### Step 3: Deploy separate test Worker + D1 test isolation
+### Step 3: Deploy separate test Worker + D1 test isolation ✅
 
 **ADR Decision**: **Option A is mandatory** — deploy a separate test Worker instance (`wrangler deploy --env test`). The production Worker has no request-level env switch and we will NOT add one. The client (`src/lib/db/d1-client.ts`) simply reads `D1_WORKER_URL` + `D1_WORKER_API_KEY` from env; pointing those at the test Worker URL is sufficient.
 

@@ -19,6 +19,10 @@ database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
 
 [env.test]
 
+[[env.test.routes]]
+pattern = "dove-test.worker.hexly.ai"
+custom_domain = true
+
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "dove-db-test"

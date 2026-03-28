@@ -9,7 +9,7 @@
 
 import { executeD1Query } from "./d1-client";
 
-const SCHEMA_SQL = `
+export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -98,7 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_webhook_logs_status_code ON webhook_logs(status_c
  * D1/SQLite supports partial indexes via CREATE UNIQUE INDEX ... WHERE.
  * This must be a separate statement because it uses WHERE clause.
  */
-const PARTIAL_INDEX_SQL =
+export const PARTIAL_INDEX_SQL =
   "CREATE UNIQUE INDEX IF NOT EXISTS idx_send_logs_idempotency ON send_logs(project_id, idempotency_key) WHERE idempotency_key IS NOT NULL";
 
 /**

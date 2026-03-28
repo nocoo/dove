@@ -2,13 +2,40 @@
  * L2: API E2E test runner.
  *
  * Runs API-level end-to-end tests against a running dev server.
- * Placeholder — E2E tests will be added as integration tests mature.
+ *
+ * Steps:
+ *   1. Verify test DB is the correct instance (scripts/verify-test-db.ts)
+ *   2. Run E2E test suite
+ *
+ * This runner will be fully rewritten in Step 4 to auto-start/stop
+ * a dev server on port 17046. For now it adds the verify-test-db gate.
  */
+
+import { resolve } from "node:path";
+
+async function verifyTestDb(): Promise<void> {
+  console.log("Verifying test database...\n");
+
+  const script = resolve(import.meta.dirname, "verify-test-db.ts");
+  const proc = Bun.spawn(["bun", "run", script], {
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    console.error("Test DB verification FAILED. Aborting E2E.\n");
+    process.exit(1);
+  }
+}
 
 async function main() {
   console.log("--- L2: API E2E Tests ---\n");
 
-  // Check if the E2E test directory exists
+  // Step 1: Verify test DB identity
+  await verifyTestDb();
+
+  // Step 2: Run E2E tests
   const e2eDir = "e2e/api";
   const exists = await Bun.file(`${e2eDir}/health.test.ts`).exists();
 
