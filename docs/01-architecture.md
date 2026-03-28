@@ -689,50 +689,50 @@ This is the **only** opportunity to copy the token. Subsequent `GET /api/project
 The project will be built in these commit phases:
 
 ### Phase 1 — Scaffold
-1. Initialize project (package.json, tsconfig, next.config, eslint, Dockerfile, railway.json)
-2. Cloudflare Worker setup (worker/, wrangler.toml, D1 binding, API key auth)
-3. D1 proxy client (`src/lib/db/d1-client.ts` — calls Worker instead of D1 REST)
-4. Copy and adapt ID generation, host validation from backy
-5. Set up NextAuth v5 (auth.ts, proxy.ts, login page)
-6. Set up Tailwind + shadcn/ui base components
-7. Create AppShell (sidebar, layout, theme toggle)
+1. ✅ Initialize project (package.json, tsconfig, next.config, eslint, Dockerfile, railway.json)
+2. ✅ Cloudflare Worker setup (worker/, wrangler.toml, D1 binding, API key auth)
+3. ✅ D1 proxy client (`src/lib/db/d1-client.ts` — calls Worker instead of D1 REST)
+4. ✅ Copy and adapt ID generation, host validation from backy
+5. ✅ Set up NextAuth v5 (auth.ts, proxy.ts, login page)
+6. ✅ Set up Tailwind + shadcn/ui base components
+7. ✅ Create AppShell (sidebar, layout, theme toggle)
 
 ### Phase 2 — Data Layer
-8. Database schema (CREATE TABLE, migrations)
-9. Projects CRUD (`src/lib/db/projects.ts`)
-10. Recipients CRUD (`src/lib/db/recipients.ts`)
-11. Templates CRUD (`src/lib/db/templates.ts`)
-12. Send logs queries (`src/lib/db/send-logs.ts`)
-13. Webhook logs queries (`src/lib/db/webhook-logs.ts`)
+8. ✅ Database schema (CREATE TABLE, migrations)
+9. ✅ Projects CRUD (`src/lib/db/projects.ts`)
+10. ✅ Recipients CRUD (`src/lib/db/recipients.ts`)
+11. ✅ Templates CRUD (`src/lib/db/templates.ts`)
+12. ✅ Send logs queries (`src/lib/db/send-logs.ts`)
+13. ✅ Webhook logs queries (`src/lib/db/webhook-logs.ts`)
 
 ### Phase 3 — Business Logic
-14. Template rendering engine (variable substitution + Markdown → HTML)
-15. Resend API client
-16. Quota checking
-17. Sanitization (strip webhook_token)
+14. ✅ Template rendering engine (variable substitution + Markdown → HTML)
+15. ✅ Resend API client
+16. ✅ Quota checking
+17. ✅ Sanitization (strip webhook_token)
 
 ### Phase 4 — API Routes
-18. Project API routes (CRUD + token regeneration)
-19. Recipient API routes (CRUD)
-20. Template API routes (CRUD + preview)
-21. Send log / webhook log API routes (list, paginated)
-22. Stats API routes (dashboard data + charts)
-23. Webhook routes (HEAD health check, POST send, GET templates)
-24. Health check (`/api/live`), DB init (`/api/db/init` — non-production only, session auth)
+18. ✅ Project API routes (CRUD + token regeneration)
+19. ✅ Recipient API routes (CRUD)
+20. ✅ Template API routes (CRUD + preview)
+21. ✅ Send log / webhook log API routes (list, paginated)
+22. ✅ Stats API routes (dashboard data + charts)
+23. ✅ Webhook routes (HEAD health check, POST send, GET templates)
+24. ✅ Health check (`/api/live`), DB init (`/api/db/init` — non-production only, session auth)
 
 ### Phase 5 — UI
-25. Dashboard page (stats cards, quota gauges, charts)
-26. Projects page (list + detail with settings)
-27. Template editor page (Markdown editor + live preview + variable schema)
-28. Send logs page (table + filters)
-29. Webhook logs page (table)
+25. ✅ Dashboard page (stats cards, quota gauges, charts)
+26. ✅ Projects page (list + detail with settings)
+27. ✅ Template editor page (Markdown editor + live preview + variable schema)
+28. ✅ Send logs page (table + filters)
+29. ✅ Webhook logs page (table)
 
 ### Phase 6 — Quality
-30. L1 unit tests (90%+ coverage)
-31. L2 API E2E tests
-32. G1 static analysis (tsc + eslint strict)
-33. G2 security (osv-scanner + gitleaks)
-34. Husky hooks (pre-commit: G1 + L1, pre-push: L2 + G2)
+30. ✅ L1 unit tests (90%+ coverage)
+31. ✅ L2 API E2E tests
+32. ✅ G1 static analysis (tsc + eslint strict)
+33. ✅ G2 security (osv-scanner + gitleaks)
+34. ✅ Husky hooks (pre-commit: G1 + L1, pre-push: L2 + G2)
 
 ## Testing Strategy
 
