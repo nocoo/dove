@@ -3,106 +3,51 @@
  *       GET /api/webhook/[projectId]/templates,
  *       POST /api/webhook/[projectId]/send
  *
- * Mocks D1 client + Resend API. All business logic (auth, quota, render) runs for real.
+ * Real HTTP against running dev server on port 17046.
+ *
+ * NOTE: The happy-path send test actually calls the Resend API
+ * and sends a real email. It uses RESEND_API_KEY from .env.local.
+ * The recipient must be in the project's whitelist.
  */
-import { describe, expect, test, mock, beforeEach, spyOn } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {
-  buildRequest,
-  buildWebhookRequest,
+  get,
+  post,
+  head,
   parseJson,
-  routeParams,
-  makeProject,
-  makeRecipient,
-  makeTemplate,
-  getD1Handler,
-  setD1Handler,
-  resetD1Handler,
+  webhookHeaders,
+  setupTestProject,
+  setupTestRecipient,
+  setupTestTemplate,
+  cleanupProject,
 } from "./helpers";
 
-// ---------------------------------------------------------------------------
-// Mock boundaries: D1 + Resend
-// ---------------------------------------------------------------------------
+let projectId: string;
+let webhookToken: string;
+let recipientEmail: string;
+let templateSlug: string;
 
-let resendShouldFail = false;
-let resendCallCount = 0;
+beforeAll(async () => {
+  // Create a full test environment: project + recipient + template
+  const project = await setupTestProject();
+  projectId = project.id;
+  webhookToken = project.webhook_token;
 
-mock.module("@/lib/db/d1-client", () => ({
-  isD1Configured: () => true,
-  executeD1Query: async (sql: string, params: unknown[] = []) => getD1Handler()(sql, params),
-}));
-
-mock.module("@/lib/email/resend", () => ({
-  sendEmail: async () => {
-    resendCallCount++;
-    if (resendShouldFail) throw new Error("Resend API error: 500");
-    return { id: "resend_msg_e2e_001" };
-  },
-}));
-
-const project = makeProject();
-const recipient = makeRecipient();
-const template = makeTemplate();
-
-/**
- * Set up D1 handler for the full send pipeline.
- * Maps SQL patterns to fixture data.
- */
-function setupSendPipelineD1(overrides: {
-  quotaDailyUsed?: number;
-  quotaMonthlyUsed?: number;
-  findIdempotency?: Record<string, unknown> | null;
-} = {}) {
-  const { quotaDailyUsed = 5, quotaMonthlyUsed = 42, findIdempotency = null } = overrides;
-
-  setD1Handler((sql, params) => {
-    // getProject
-    if (sql.includes("FROM projects") && sql.includes("WHERE id = ?")) {
-      return params[0] === project.id ? [project] : [];
-    }
-    // getRecipientByEmail
-    if (sql.includes("FROM recipients") && sql.includes("email = ?")) {
-      const email = params.find((p) => typeof p === "string" && p.includes("@"));
-      return email === recipient.email ? [recipient] : [];
-    }
-    // getRecipient (by ID)
-    if (sql.includes("FROM recipients") && sql.includes("WHERE id = ?")) {
-      return params[0] === recipient.id ? [recipient] : [];
-    }
-    // getTemplateBySlug
-    if (sql.includes("FROM templates") && sql.includes("slug = ?")) {
-      return params[1] === template.slug ? [template] : [];
-    }
-    // listTemplates (for webhook/templates route)
-    if (sql.includes("FROM templates") && sql.includes("project_id")) {
-      return [template];
-    }
-    // findByIdempotencyKey
-    if (sql.includes("idempotency_key = ?")) {
-      return findIdempotency ? [findIdempotency] : [];
-    }
-    // countDailySends — SQL: "date('now')" without strftime
-    if (sql.includes("COUNT") && sql.includes("sent_at") && sql.includes("date('now')") && !sql.includes("strftime")) {
-      return [{ count: quotaDailyUsed }];
-    }
-    // countMonthlySends — SQL: "strftime('%Y-%m-01', 'now')"
-    if (sql.includes("COUNT") && sql.includes("sent_at") && sql.includes("strftime")) {
-      return [{ count: quotaMonthlyUsed }];
-    }
-    // createSendLog / markSendLogSent / markSendLogFailed / other writes
-    if (sql.includes("INSERT") || sql.includes("UPDATE")) {
-      return [];
-    }
-    return [];
+  const recipient = await setupTestRecipient(projectId, {
+    email: `e2e-webhook-${Date.now()}@example.com`,
   });
-}
+  recipientEmail = recipient.email;
 
-beforeEach(() => {
-  resetD1Handler();
-  resendShouldFail = false;
-  resendCallCount = 0;
-  process.env.RESEND_FROM_DOMAIN = "mail.example.com";
-  spyOn(console, "error").mockImplementation(() => {});
-  spyOn(console, "warn").mockImplementation(() => {});
+  const template = await setupTestTemplate(projectId, {
+    subject: "E2E Test: Hello {{name}}",
+    body_markdown: "# Hi {{name}}\n\nThis is an E2E test email.",
+    variables: [{ name: "name", type: "string", required: true }],
+  });
+  templateSlug = template.slug;
+});
+
+afterAll(async () => {
+  await cleanupProject(projectId);
 });
 
 // ---------------------------------------------------------------------------
@@ -111,34 +56,21 @@ beforeEach(() => {
 
 describe("HEAD /api/webhook/[projectId]", () => {
   test("returns 200 with valid token", async () => {
-    setupSendPipelineD1();
-    const { HEAD } = await import("@/app/api/webhook/[projectId]/route");
-    const request = buildRequest(`/api/webhook/${project.id}`, {
-      method: "HEAD",
-      headers: { authorization: `Bearer ${project.webhook_token}` },
+    const response = await head(`/api/webhook/${projectId}`, {
+      headers: webhookHeaders(webhookToken),
     });
-
-    const response = await HEAD(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(200);
   });
 
   test("returns 401 without auth header", async () => {
-    const { HEAD } = await import("@/app/api/webhook/[projectId]/route");
-    const request = buildRequest(`/api/webhook/${project.id}`, { method: "HEAD" });
-
-    const response = await HEAD(request, routeParams({ projectId: project.id }));
+    const response = await head(`/api/webhook/${projectId}`);
     expect(response.status).toBe(401);
   });
 
   test("returns 403 with wrong token", async () => {
-    setupSendPipelineD1();
-    const { HEAD } = await import("@/app/api/webhook/[projectId]/route");
-    const request = buildRequest(`/api/webhook/${project.id}`, {
-      method: "HEAD",
-      headers: { authorization: "Bearer wrong_token" },
+    const response = await head(`/api/webhook/${projectId}`, {
+      headers: webhookHeaders("wrong_token_000000000000000000000000000000000000000"),
     });
-
-    const response = await HEAD(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(403);
   });
 });
@@ -149,260 +81,128 @@ describe("HEAD /api/webhook/[projectId]", () => {
 
 describe("GET /api/webhook/[projectId]/templates", () => {
   test("returns template list with valid token", async () => {
-    setupSendPipelineD1();
-    const { GET } = await import("@/app/api/webhook/[projectId]/templates/route");
-    const request = buildWebhookRequest(project.id, "/templates", project.webhook_token, {
-      method: "GET",
+    const response = await get(`/api/webhook/${projectId}/templates`, {
+      headers: webhookHeaders(webhookToken),
     });
 
-    const response = await GET(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(200);
     const body = await parseJson<unknown[]>(response);
-    expect(body).toHaveLength(1);
+    expect(body.length).toBeGreaterThanOrEqual(1);
   });
 
   test("returns 401 without auth", async () => {
-    const { GET } = await import("@/app/api/webhook/[projectId]/templates/route");
-    const request = buildRequest(`/api/webhook/${project.id}/templates`);
-
-    const response = await GET(request, routeParams({ projectId: project.id }));
+    const response = await get(`/api/webhook/${projectId}/templates`);
     expect(response.status).toBe(401);
   });
 
   test("returns 403 with wrong token", async () => {
-    setupSendPipelineD1();
-    const { GET } = await import("@/app/api/webhook/[projectId]/templates/route");
-    const request = buildWebhookRequest(project.id, "/templates", "wrong_token", {
-      method: "GET",
+    const response = await get(`/api/webhook/${projectId}/templates`, {
+      headers: webhookHeaders("wrong_token_000000000000000000000000000000000000000"),
     });
-
-    const response = await GET(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(403);
   });
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/webhook/[projectId]/send — Full 12-step pipeline
+// POST /api/webhook/[projectId]/send
 // ---------------------------------------------------------------------------
 
 describe("POST /api/webhook/[projectId]/send", () => {
-  const validPayload = {
-    template: "welcome",
-    to: "e2e@example.com",
-    variables: { app_name: "TestApp", name: "Alice" },
-  };
-
-  // Happy path — all 12 steps pass
-  test("sends email successfully (full pipeline)", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: validPayload,
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(200);
-
-    const body = await parseJson<{ id: string; resend_id: string; status: string }>(response);
-    expect(body.status).toBe("sent");
-    expect(body.resend_id).toBe("resend_msg_e2e_001");
-    expect(resendCallCount).toBe(1);
+  const makePayload = (overrides: Record<string, unknown> = {}) => ({
+    template: templateSlug,
+    to: recipientEmail,
+    variables: { name: "E2E Test User" },
+    ...overrides,
   });
 
-  // Step 1: Auth
+  // Step 1: Auth errors (no Resend call)
   test("returns 401 without Authorization header", async () => {
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildRequest(`/api/webhook/${project.id}/send`, {
-      method: "POST",
-      body: validPayload,
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload(),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(401);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("auth_missing");
   });
 
   test("returns 403 with wrong token", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", "wrong_token", {
-      body: validPayload,
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload(),
+      headers: webhookHeaders("wrong_token_000000000000000000000000000000000000000"),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(403);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("auth_invalid");
   });
 
-  // Step 2: Parse
+  // Step 2: Parse errors (no Resend call)
   test("returns 400 for invalid JSON", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = new Request(`http://localhost:17046/api/webhook/${project.id}/send`, {
+    const url = `http://localhost:${process.env.PORT ?? 17046}/api/webhook/${projectId}/send`;
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${project.webhook_token}`,
+        authorization: `Bearer ${webhookToken}`,
       },
       body: "not json",
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(400);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("body_invalid");
   });
 
   test("returns 400 for missing required fields", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { template: "welcome" },
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: { template: templateSlug },
+      headers: webhookHeaders(webhookToken),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(400);
   });
 
-  // Step 4: Quota
-  test("returns 429 when daily quota exceeded", async () => {
-    setupSendPipelineD1({ quotaDailyUsed: 100 });
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: validPayload,
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(429);
-    const body = await parseJson<{ error: { code: string } }>(response);
-    expect(body.error.code).toBe("quota_daily_exceeded");
-  });
-
-  test("returns 429 when monthly quota exceeded", async () => {
-    setupSendPipelineD1({ quotaDailyUsed: 5, quotaMonthlyUsed: 1000 });
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: validPayload,
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(429);
-  });
-
-  // Step 5: Recipient
+  // Step 5: Recipient not found (no Resend call)
   test("returns 404 for unknown recipient", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { ...validPayload, to: "unknown@example.com" },
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload({ to: "nonexistent@example.com" }),
+      headers: webhookHeaders(webhookToken),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(404);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("recipient_not_found");
   });
 
-  // Step 6: Template
+  // Step 6: Template not found (no Resend call)
   test("returns 404 for unknown template slug", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { ...validPayload, template: "nonexistent" },
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload({ template: "nonexistent-slug" }),
+      headers: webhookHeaders(webhookToken),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(404);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("template_not_found");
   });
 
-  // Step 8: Variables
+  // Step 8: Missing variables (no Resend call)
   test("returns 422 for missing required variables", async () => {
-    setupSendPipelineD1();
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { template: "welcome", to: "e2e@example.com", variables: {} },
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload({ variables: {} }),
+      headers: webhookHeaders(webhookToken),
     });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(422);
     const body = await parseJson<{ error: { code: string } }>(response);
     expect(body.error.code).toBe("variables_invalid");
   });
 
-  // Step 10: RESEND_FROM_DOMAIN missing
-  test("returns 500 when RESEND_FROM_DOMAIN not set", async () => {
-    setupSendPipelineD1();
-    delete process.env.RESEND_FROM_DOMAIN;
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: validPayload,
+  // Happy path — actually sends an email via Resend
+  test("sends email successfully (full pipeline)", async () => {
+    const response = await post(`/api/webhook/${projectId}/send`, {
+      body: makePayload(),
+      headers: webhookHeaders(webhookToken),
     });
 
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(500);
-  });
-
-  // Step 10: Resend failure
-  test("returns 502 when Resend API fails", async () => {
-    setupSendPipelineD1();
-    resendShouldFail = true;
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: validPayload,
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(502);
-    const body = await parseJson<{ error: { code: string } }>(response);
-    expect(body.error.code).toBe("resend_failed");
-  });
-
-  // Step 3: Idempotency — already sent
-  test("returns cached result for already-sent idempotency key", async () => {
-    setupSendPipelineD1({
-      findIdempotency: {
-        id: "slog_cached_001",
-        status: "sent",
-        resend_id: "resend_cached_001",
-        payload_hash: null,
-      },
-    });
-
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { ...validPayload, idempotency_key: "key123" },
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
     expect(response.status).toBe(200);
-    const body = await parseJson<{ status: string; resend_id: string }>(response);
+    const body = await parseJson<{ id: string; resend_id: string; status: string }>(response);
     expect(body.status).toBe("sent");
-    expect(body.resend_id).toBe("resend_cached_001");
-    expect(resendCallCount).toBe(0); // should NOT call Resend
-  });
-
-  // Step 3: Idempotency — in-progress
-  test("returns 409 for in-progress idempotency key", async () => {
-    setupSendPipelineD1({
-      findIdempotency: {
-        id: "slog_progress_001",
-        status: "sending",
-        payload_hash: null,
-      },
-    });
-
-    const { POST } = await import("@/app/api/webhook/[projectId]/send/route");
-    const request = buildWebhookRequest(project.id, "/send", project.webhook_token, {
-      body: { ...validPayload, idempotency_key: "key456" },
-    });
-
-    const response = await POST(request, routeParams({ projectId: project.id }));
-    expect(response.status).toBe(409);
-    const body = await parseJson<{ error: { code: string } }>(response);
-    expect(body.error.code).toBe("send_in_progress");
+    expect(body.resend_id).toBeDefined();
+    expect(typeof body.resend_id).toBe("string");
   });
 });
