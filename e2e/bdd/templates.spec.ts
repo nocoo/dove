@@ -51,6 +51,71 @@ test.describe("Template CRUD", () => {
     await page.request.delete(`/api/projects/${project.id}`);
   });
 
+  test("edit and preview a template", async ({ page }) => {
+    // Setup: create project + template via API
+    const projectRes = await page.request.post("/api/projects", {
+      data: {
+        name: `E2E Edit Project ${Date.now()}`,
+        email_prefix: "e2e-edit",
+        from_name: "E2E Edit App",
+      },
+    });
+    expect(projectRes.ok()).toBeTruthy();
+    const project = (await projectRes.json()) as { id: string };
+
+    const tmplRes = await page.request.post("/api/templates", {
+      data: {
+        project_id: project.id,
+        name: `E2E Edit Template ${Date.now()}`,
+        slug: `e2e-edit-${Date.now()}`,
+        subject: "Original Subject {{name}}",
+        body_markdown: "# Hello {{name}}\n\nOriginal body.",
+        variables: [{ name: "name", type: "string", required: true }],
+      },
+    });
+    expect(tmplRes.ok()).toBeTruthy();
+    const tmpl = (await tmplRes.json()) as { id: string };
+
+    // Navigate to template detail
+    await page.goto(`/templates/${tmpl.id}`);
+
+    // Wait for form to load (Subject input should contain original value)
+    const subjectInput = page.getByLabel("Subject");
+    await expect(subjectInput).toBeVisible({ timeout: 20_000 });
+    await expect(subjectInput).toHaveValue("Original Subject {{name}}");
+
+    // No dirty bar initially
+    await expect(page.getByText("You have unsaved changes.")).not.toBeVisible();
+
+    // Edit the subject field
+    await subjectInput.fill("Updated Subject {{name}}");
+
+    // Dirty bar should appear
+    await expect(page.getByText("You have unsaved changes.")).toBeVisible();
+
+    // Save changes
+    await page.getByRole("button", { name: "Save Changes" }).click();
+
+    // Dirty bar should disappear after save
+    await expect(page.getByText("You have unsaved changes.")).not.toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Fill sample variable for preview (template has required "name" variable)
+    await page.getByPlaceholder("required").fill("World");
+
+    // Click Render to preview
+    await page.getByRole("button", { name: "Render" }).click();
+
+    // Preview should show rendered HTML in .prose container
+    const prose = page.locator(".prose");
+    await expect(prose).toBeVisible({ timeout: 15_000 });
+    await expect(prose).toContainText("Hello World");
+
+    // Cleanup
+    await page.request.delete(`/api/projects/${project.id}`);
+  });
+
   test("templates list page renders", async ({ page }) => {
     await page.goto("/templates");
 
