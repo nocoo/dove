@@ -7,6 +7,7 @@ import { Loader2, Plus, FolderKanban, Mail, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { ProjectsListSkeleton } from "@/components/skeletons";
 
 interface ProjectSummary {
   id: string;
@@ -64,9 +65,7 @@ export default function ProjectsPage() {
 
         {/* Content */}
         {loading && !projects ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <ProjectsListSkeleton />
         ) : error && !projects ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
             <p className="text-sm text-destructive">{error}</p>

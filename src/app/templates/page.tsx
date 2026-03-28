@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, FileText } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { TemplatesListSkeleton } from "@/components/skeletons";
 
 interface Template {
   id: string;
@@ -85,9 +86,7 @@ export default function TemplatesPage() {
 
         {/* Content */}
         {loading && !templates ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <TemplatesListSkeleton />
         ) : error && !templates ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
             <p className="text-sm text-destructive">{error}</p>

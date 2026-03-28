@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { generatePageNumbers } from "@/lib/pagination";
+import { LogTableSkeleton } from "@/components/skeletons";
 
 interface SendLog {
   id: string;
@@ -170,9 +171,7 @@ export default function SendLogsPage() {
 
         {/* Content */}
         {loading && !logs ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <LogTableSkeleton columns={5} />
         ) : error && !logs ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
             <p className="text-sm text-destructive">{error}</p>

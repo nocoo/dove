@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, FolderKanban, Mail, CalendarDays, AlertTriangle } from "lucide-react";
+import { FolderKanban, Mail, CalendarDays, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { SendsChart } from "@/components/charts/sends-chart";
+import { DashboardSkeleton } from "@/components/skeletons";
 
 interface DashboardStats {
   total_projects: number;
@@ -86,9 +87,7 @@ export default function DashboardPage() {
         </div>
 
         {loading && !stats ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
+          <DashboardSkeleton />
         ) : (
           <>
             {/* Stats cards */}
