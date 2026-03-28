@@ -127,8 +127,8 @@ function spawnDevServer(envVars: Map<string, string>): Subprocess {
     {
       cwd: ROOT,
       env,
-      stdout: "pipe",
-      stderr: "pipe",
+      stdout: "inherit",
+      stderr: "inherit",
     },
   );
 
