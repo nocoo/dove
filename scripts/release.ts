@@ -510,6 +510,7 @@ async function main(): Promise<void> {
   console.log("🔍 Phase 3: Checking for stale version strings...\n");
 
   const rgResult = await run("rg", [
+    "-w",
     currentVersion,
     "--glob",
     "*.ts",
@@ -521,6 +522,10 @@ async function main(): Promise<void> {
     "!scripts/release.ts",
     "--glob",
     "!CHANGELOG.md",
+    "--glob",
+    "!src/__tests__/**",
+    "--glob",
+    "!e2e/**",
   ]);
 
   if (rgResult.code === 0 && rgResult.stdout.trim()) {
