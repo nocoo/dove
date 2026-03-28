@@ -239,7 +239,7 @@ const response = await fetch(`${BASE}/api/projects`);
 
 ---
 
-### Step 5: Implement L3 — Playwright BDD E2E
+### Step 5: Implement L3 — Playwright BDD E2E ✅
 
 **Files**:
 - `playwright.config.ts` (NEW) — Playwright configuration
@@ -297,7 +297,7 @@ export default defineConfig({
 
 ---
 
-### Step 6: Wire L3 into CI / on-demand script
+### Step 6: Wire L3 into CI / on-demand script ✅
 
 **Files**:
 - `package.json` — Change `test:e2e:bdd` script from `bun run e2e/bdd/runner.ts` (nonexistent) to `npx playwright test`

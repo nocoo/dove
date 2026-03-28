@@ -11,7 +11,7 @@
     "test:coverage": "bun run scripts/check-coverage.ts",
     "test:e2e": "bun run scripts/run-e2e.ts",
     "test:e2e:api": "bun run scripts/run-e2e.ts",
-    "test:e2e:bdd": "bun run e2e/bdd/runner.ts",
+    "test:e2e:bdd": "npx playwright test",
     "typecheck": "tsc --noEmit",
     "lint:staged": "lint-staged",
     "gate:security": "bun run scripts/gate-security.ts",
