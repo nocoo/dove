@@ -16,7 +16,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 4,
+  workers: process.env.CI ? 1 : 2,
   reporter: "html",
   use: {
     baseURL: "http://localhost:27046",
@@ -28,6 +28,9 @@ export default defineConfig({
       "D1_WORKER_URL=${D1_WORKER_URL_TEST:?not set}",
       "D1_WORKER_API_KEY=${D1_WORKER_API_KEY_TEST:?not set}",
       "E2E_SKIP_AUTH=true",
+      "RESEND_DRY_RUN=true",
+      "RESEND_API_KEY=re_test_placeholder_not_used",
+      "RESEND_FROM_DOMAIN=test.example.com",
       "npx next dev --port 27046",
     ].join(" "),
     port: 27046,
