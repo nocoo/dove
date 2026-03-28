@@ -1,0 +1,7 @@
+# Gitleaks configuration — allow test fixture tokens
+
+[allowlist]
+  description = "Test fixture tokens (not real secrets)"
+  paths = [
+    '''(src/__tests__|e2e/)/.*\.ts$''',
+  ]
