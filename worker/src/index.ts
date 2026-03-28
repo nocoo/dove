@@ -78,9 +78,13 @@ export default {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Unknown D1 error";
+
+      // UNIQUE constraint violations are deterministic client errors (not transient)
+      const status = /unique/i.test(message) ? 400 : 500;
+
       return Response.json(
         { success: false, error: `D1_ERROR: ${message}` },
-        { status: 500 },
+        { status },
       );
     }
   },

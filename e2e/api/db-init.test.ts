@@ -15,5 +15,5 @@ describe("POST /api/db/init", () => {
     expect(response.status).toBe(200);
     const body = await parseJson<{ success: boolean }>(response);
     expect(body.success).toBe(true);
-  });
+  }, 30_000); // Schema init touches D1 with 17+ statements — allow extra time
 });

@@ -76,6 +76,11 @@ export async function executeD1Query<T>(
     if (!response.ok) {
       const errorText = await response.text();
 
+      // UNIQUE constraint violations are deterministic — never retry
+      if (/unique/i.test(errorText)) {
+        throw new Error("UNIQUE constraint failed");
+      }
+
       if (attempt < D1_MAX_RETRIES && response.status >= 500) {
         console.warn("D1 transient error:", errorText);
         lastError = new Error("D1 query failed");

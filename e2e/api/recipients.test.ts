@@ -97,7 +97,7 @@ describe("POST /api/recipients", () => {
       body: { project_id: projectId, name: "Dup", email },
     });
     expect(response.status).toBe(409);
-  });
+  }, 15_000);
 });
 
 // ---------------------------------------------------------------------------
