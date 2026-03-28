@@ -89,8 +89,8 @@ export async function createRecipient(data: {
 export async function updateRecipient(
   id: string,
   data: {
-    name?: string;
-    email?: string;
+    name?: string | undefined;
+    email?: string | undefined;
   },
 ): Promise<Recipient | undefined> {
   const existing = await getRecipient(id);
