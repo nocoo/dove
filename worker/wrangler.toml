@@ -1,12 +1,25 @@
-name = "dove-worker"
+name = "dove"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
+workers_dev = true
+
+# Custom domain (requires hexly.ai zone on Cloudflare)
+[[routes]]
+pattern = "dove.worker.hexly.ai"
+custom_domain = true
 
 [[d1_databases]]
 binding = "DB"
-database_name = "dove"
-database_id = "<from cloudflare dashboard>"
+database_name = "dove-db"
+database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
 
 # API_KEY must be set via wrangler secret:
 # wrangler secret put API_KEY
 # This shared secret must match D1_WORKER_API_KEY on the Railway side.
+
+[env.test]
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "dove-db-test"
+database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"

@@ -23,6 +23,11 @@ worker/node_modules
 .DS_Store
 *.pem
 
+# wrangler
+.wrangler/
+worker/.wrangler/
+worker/bun.lock
+
 # debug
 npm-debug.log*
 yarn-debug.log*
