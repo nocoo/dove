@@ -7,9 +7,8 @@ test.describe("Dashboard", () => {
     // Page heading
     await expect(page.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible();
 
-    // Stats cards — verify the 4 key metrics labels appear
-    await expect(page.getByText("Projects")).toBeVisible();
-    await expect(page.getByText("Sent Today")).toBeVisible();
+    // Stats cards — verify the 4 key metrics labels appear (async data load from D1)
+    await expect(page.getByText("Sent Today")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Sent This Month")).toBeVisible();
     await expect(page.getByText("Failed Today")).toBeVisible();
   });

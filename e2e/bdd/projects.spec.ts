@@ -35,9 +35,9 @@ test.describe("Project CRUD", () => {
     await page.getByText(projectName).click();
     await expect(page).toHaveURL(/\/projects\/[a-zA-Z0-9_-]+$/, { timeout: 10_000 });
 
-    // Delete the project — scroll to and click "Delete Project" trigger button
+    // Delete the project — wait for detail page to fully load, then click delete
     const deleteBtn = page.getByRole("button", { name: "Delete Project" });
-    await deleteBtn.scrollIntoViewIfNeeded();
+    await expect(deleteBtn).toBeVisible({ timeout: 15_000 });
     await deleteBtn.click();
 
     // Confirm deletion in the dialog — the confirm button says "Delete"
