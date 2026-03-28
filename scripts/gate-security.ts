@@ -4,7 +4,7 @@
  * Checks for known vulnerabilities in dependencies (osv-scanner)
  * and leaked secrets in the codebase (gitleaks).
  *
- * Both tools are optional — if not installed, warns and skips.
+ * Hard fail if tools are not installed — no soft-skip.
  */
 
 async function runCommand(cmd: string[], label: string): Promise<boolean> {
@@ -24,8 +24,10 @@ async function runCommand(cmd: string[], label: string): Promise<boolean> {
     console.log(`${label}: passed`);
     return true;
   } catch {
-    console.warn(`${label}: tool not found — skipping (install for full security checks)`);
-    return true; // Don't fail if tool not installed
+    console.error(`${label}: tool not installed. Install it to pass the security gate.`);
+    console.error(`  osv-scanner: https://github.com/google/osv-scanner`);
+    console.error(`  gitleaks: https://github.com/gitleaks/gitleaks`);
+    return false;
   }
 }
 
