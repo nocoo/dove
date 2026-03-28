@@ -1,68 +1,243 @@
 /**
- * L2: API E2E test runner.
- *
- * Runs API-level end-to-end tests against a running dev server.
+ * L2: API E2E test runner with full server lifecycle.
  *
  * Steps:
- *   1. Verify test DB is the correct instance (scripts/verify-test-db.ts)
- *   2. Run E2E test suite
+ *   1. Load .env.test — hard fail if missing
+ *   2. Inequality check — test URL !== production URL
+ *   3. Verify test DB marker (_test_marker)
+ *   4. Clean .next/dev/lock (stale lock prevents parallel dev servers)
+ *   5. Spawn `next dev --port 17046` with E2E env
+ *   6. Wait for server ready (poll /api/live)
+ *   7. Run `bun test e2e/api/`
+ *   8. Kill server
+ *   9. Exit with test exit code
  *
- * This runner will be fully rewritten in Step 4 to auto-start/stop
- * a dev server on port 17046. For now it adds the verify-test-db gate.
+ * Usage:
+ *   bun run scripts/run-e2e.ts
  */
 
+import { readFileSync, existsSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
+import type { Subprocess } from "bun";
+
+const ROOT = resolve(import.meta.dirname, "..");
+const E2E_PORT = 17046;
+const POLL_INTERVAL_MS = 500;
+const MAX_WAIT_MS = 60_000;
+
+// ---------------------------------------------------------------------------
+// Step 1: Load .env.test
+// ---------------------------------------------------------------------------
+
+function loadEnvFile(path: string): Map<string, string> {
+  const content = readFileSync(path, "utf-8");
+  const vars = new Map<string, string>();
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    vars.set(key, value);
+  }
+  return vars;
+}
+
+function loadTestEnv(): Map<string, string> {
+  const envPath = resolve(ROOT, ".env.test");
+  try {
+    return loadEnvFile(envPath);
+  } catch {
+    console.error("FATAL: .env.test not found.");
+    console.error("  L2 E2E requires a test Worker. See docs/02-quality-upgrade.md Step 3.");
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 2: Inequality check
+// ---------------------------------------------------------------------------
+
+function checkInequality(testUrl: string): void {
+  try {
+    const prodVars = loadEnvFile(resolve(ROOT, ".env.local"));
+    const prodUrl = prodVars.get("D1_WORKER_URL");
+    if (prodUrl && testUrl === prodUrl) {
+      console.error("FATAL: D1_WORKER_URL in .env.test matches .env.local!");
+      console.error(`  Both point to: ${testUrl}`);
+      process.exit(1);
+    }
+    if (prodUrl) {
+      console.log(`  Inequality check: ${testUrl} !== ${prodUrl}`);
+    }
+  } catch {
+    console.log("  WARN: .env.local not found, skipping inequality check (OK in CI).");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 3: Verify test DB marker
+// ---------------------------------------------------------------------------
 
 async function verifyTestDb(): Promise<void> {
-  console.log("Verifying test database...\n");
-
+  console.log("\nStep 3: Verifying test DB...");
   const script = resolve(import.meta.dirname, "verify-test-db.ts");
   const proc = Bun.spawn(["bun", "run", script], {
     stdout: "inherit",
     stderr: "inherit",
   });
-
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
-    console.error("Test DB verification FAILED. Aborting E2E.\n");
+    console.error("FATAL: Test DB verification failed. Aborting E2E.\n");
     process.exit(1);
   }
 }
 
-async function main() {
-  console.log("--- L2: API E2E Tests ---\n");
+// ---------------------------------------------------------------------------
+// Step 4: Clean .next/dev/lock
+// ---------------------------------------------------------------------------
 
-  // Step 1: Verify test DB identity
-  await verifyTestDb();
+function cleanDevLock(): void {
+  const lockPath = resolve(ROOT, ".next/dev/lock");
+  if (existsSync(lockPath)) {
+    console.log("  Removing stale .next/dev/lock...");
+    unlinkSync(lockPath);
+  }
+}
 
-  // Step 2: Run E2E tests
-  const e2eDir = "e2e/api";
-  const exists = await Bun.file(`${e2eDir}/health.test.ts`).exists();
+// ---------------------------------------------------------------------------
+// Step 5: Spawn dev server
+// ---------------------------------------------------------------------------
 
-  if (!exists) {
-    console.log("No E2E tests found yet. Skipping.\n");
-    console.log("To add E2E tests, create files in e2e/api/\n");
-    return;
+function spawnDevServer(envVars: Map<string, string>): Subprocess {
+  const env: Record<string, string> = { ...process.env } as Record<string, string>;
+
+  // Inject test environment variables
+  for (const [key, value] of envVars) {
+    env[key] = value;
+  }
+  env.NODE_ENV = "development";
+  env.PORT = String(E2E_PORT);
+
+  console.log(`\nStep 5: Starting dev server on port ${E2E_PORT}...`);
+
+  const proc = Bun.spawn(
+    ["npx", "next", "dev", "--port", String(E2E_PORT)],
+    {
+      cwd: ROOT,
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
+
+  return proc;
+}
+
+// ---------------------------------------------------------------------------
+// Step 6: Wait for server ready
+// ---------------------------------------------------------------------------
+
+async function waitForServer(): Promise<void> {
+  const url = `http://localhost:${E2E_PORT}/api/live`;
+  const start = Date.now();
+
+  console.log(`Step 6: Waiting for server at ${url}...`);
+
+  while (Date.now() - start < MAX_WAIT_MS) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      if (response.ok) {
+        const body = await response.json() as { status: string; d1: boolean };
+        if (body.status === "ok" && body.d1) {
+          console.log(`  Server ready (${Date.now() - start}ms)`);
+          return;
+        }
+        console.log(`  Server responded but not ready: ${JSON.stringify(body)}`);
+      }
+    } catch {
+      // Server not up yet — expected during startup
+    }
+    await Bun.sleep(POLL_INTERVAL_MS);
   }
 
-  const proc = Bun.spawn(["bun", "test", e2eDir], {
-    stdout: "pipe",
-    stderr: "pipe",
+  console.error(`FATAL: Server did not start within ${MAX_WAIT_MS}ms`);
+  process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// Step 7: Run tests
+// ---------------------------------------------------------------------------
+
+async function runTests(): Promise<number> {
+  console.log("\nStep 7: Running E2E tests...\n");
+
+  const proc = Bun.spawn(["bun", "test", "e2e/api/"], {
+    cwd: ROOT,
+    stdout: "inherit",
+    stderr: "inherit",
   });
 
-  const stdout = await new Response(proc.stdout).text();
-  const stderr = await new Response(proc.stderr).text();
-  const exitCode = await proc.exited;
+  return proc.exited;
+}
 
-  process.stdout.write(stdout);
-  process.stderr.write(stderr);
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
-  if (exitCode !== 0) {
-    console.error("\nE2E tests FAILED.\n");
+async function main(): Promise<void> {
+  console.log("=== L2: API E2E Test Runner ===\n");
+
+  // Step 1: Load .env.test
+  console.log("Step 1: Loading .env.test...");
+  const envVars = loadTestEnv();
+  const testUrl = envVars.get("D1_WORKER_URL");
+  const testApiKey = envVars.get("D1_WORKER_API_KEY");
+
+  if (!testUrl || !testApiKey) {
+    console.error("FATAL: .env.test must define D1_WORKER_URL and D1_WORKER_API_KEY");
+    process.exit(1);
+  }
+  console.log(`  D1_WORKER_URL = ${testUrl}`);
+
+  // Step 2: Inequality check
+  console.log("\nStep 2: Checking URL inequality...");
+  checkInequality(testUrl);
+
+  // Step 3: Verify test DB
+  await verifyTestDb();
+
+  // Step 4: Clean stale lock
+  console.log("\nStep 4: Cleaning .next/dev/lock...");
+  cleanDevLock();
+
+  // Step 5: Spawn dev server
+  const server = spawnDevServer(envVars);
+
+  let testExitCode = 1;
+
+  try {
+    // Step 6: Wait for ready
+    await waitForServer();
+
+    // Step 7: Run tests
+    testExitCode = await runTests();
+  } finally {
+    // Step 8: Kill server
+    console.log("\nStep 8: Stopping dev server...");
+    server.kill();
+    await server.exited;
+    console.log("  Server stopped.");
+  }
+
+  // Step 9: Exit
+  if (testExitCode !== 0) {
+    console.error("\n=== E2E tests FAILED ===\n");
     process.exit(1);
   }
 
-  console.log("\nE2E tests passed.\n");
+  console.log("\n=== E2E tests PASSED ===\n");
 }
 
 void main();
