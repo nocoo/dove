@@ -2,32 +2,29 @@
  * E2E: Templates API — GET/POST /api/templates, GET/PUT/DELETE /api/templates/[id],
  *       POST /api/templates/[id]/preview
  *
- * Mocks only D1 client; template logic + rendering runs for real.
+ * Real HTTP against running dev server on port 17046.
  */
-import { describe, expect, test, mock, beforeEach, spyOn } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {
-  buildNextRequest,
-  buildRequest,
+  get,
+  post,
+  put,
+  del,
   parseJson,
-  routeParams,
-  makeTemplate,
-  getD1Handler,
-  setD1Handler,
-  resetD1Handler,
+  setupTestProject,
+  setupTestTemplate,
+  cleanupProject,
 } from "./helpers";
 
-// Mock D1 at the boundary
-mock.module("@/lib/db/d1-client", () => ({
-  isD1Configured: () => true,
-  executeD1Query: async (sql: string, params: unknown[] = []) => getD1Handler()(sql, params),
-}));
+let projectId: string;
 
-const template = makeTemplate();
+beforeAll(async () => {
+  const project = await setupTestProject();
+  projectId = project.id;
+});
 
-beforeEach(() => {
-  resetD1Handler();
-  spyOn(console, "error").mockImplementation(() => {});
-  spyOn(console, "warn").mockImplementation(() => {});
+afterAll(async () => {
+  await cleanupProject(projectId);
 });
 
 // ---------------------------------------------------------------------------
@@ -35,36 +32,19 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("GET /api/templates", () => {
-  test("returns all templates when no projectId", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("FROM templates")) return [template];
-      return [];
-    });
+  test("returns templates (optionally filtered by projectId)", async () => {
+    const template = await setupTestTemplate(projectId);
 
-    const { GET } = await import("@/app/api/templates/route");
-    const request = buildNextRequest("/api/templates");
-    const response = await GET(request);
+    const response = await get("/api/templates", {
+      searchParams: { projectId },
+    });
 
     expect(response.status).toBe(200);
-    const body = await parseJson<unknown[]>(response);
-    expect(body).toHaveLength(1);
-  });
+    const body = await parseJson<Record<string, unknown>[]>(response);
+    expect(body.length).toBeGreaterThanOrEqual(1);
 
-  test("filters by projectId", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("project_id")) return [template];
-      return [];
-    });
-
-    const { GET } = await import("@/app/api/templates/route");
-    const request = buildNextRequest("/api/templates", {
-      searchParams: { projectId: template.project_id },
-    });
-    const response = await GET(request);
-
-    expect(response.status).toBe(200);
-    const body = await parseJson<unknown[]>(response);
-    expect(body).toHaveLength(1);
+    const found = body.find((t) => t.id === template.id);
+    expect(found).toBeDefined();
   });
 });
 
@@ -74,60 +54,60 @@ describe("GET /api/templates", () => {
 
 describe("POST /api/templates", () => {
   test("creates template with valid input", async () => {
-    setD1Handler(() => []);
-
-    const { POST } = await import("@/app/api/templates/route");
-    const request = buildRequest("/api/templates", {
-      method: "POST",
+    const slug = `e2e-create-${Date.now()}`;
+    const response = await post("/api/templates", {
       body: {
-        project_id: "proj_e2e_test123456ab",
+        project_id: projectId,
         name: "New Template",
-        slug: "new-template",
+        slug,
         subject: "Hello {{name}}",
         body_markdown: "# Hi\n\nWelcome.",
         variables: [{ name: "name", type: "string", required: true }],
       },
     });
 
-    const response = await POST(request);
     expect(response.status).toBe(201);
     const body = await parseJson<Record<string, unknown>>(response);
-    expect(body.slug).toBe("new-template");
+    expect(body.slug).toBe(slug);
   });
 
   test("rejects invalid slug (uppercase, spaces)", async () => {
-    const { POST } = await import("@/app/api/templates/route");
-    const request = buildRequest("/api/templates", {
-      method: "POST",
+    const response = await post("/api/templates", {
       body: {
-        project_id: "proj_123",
+        project_id: projectId,
         name: "Bad Slug",
         slug: "Has Spaces!",
         subject: "Sub",
         body_markdown: "Body",
       },
     });
-
-    const response = await POST(request);
     expect(response.status).toBe(400);
   });
 
   test("returns 409 on duplicate slug", async () => {
-    setD1Handler(() => { throw new Error("UNIQUE constraint failed"); });
+    const slug = `e2e-dup-${Date.now()}`;
 
-    const { POST } = await import("@/app/api/templates/route");
-    const request = buildRequest("/api/templates", {
-      method: "POST",
+    // Create first
+    await post("/api/templates", {
       body: {
-        project_id: "proj_e2e_test123456ab",
-        name: "Dup",
-        slug: "welcome",
+        project_id: projectId,
+        name: "First",
+        slug,
         subject: "Sub",
         body_markdown: "Body",
       },
     });
 
-    const response = await POST(request);
+    // Try duplicate
+    const response = await post("/api/templates", {
+      body: {
+        project_id: projectId,
+        name: "Dup",
+        slug,
+        subject: "Sub",
+        body_markdown: "Body",
+      },
+    });
     expect(response.status).toBe(409);
   });
 });
@@ -138,29 +118,18 @@ describe("POST /api/templates", () => {
 
 describe("GET /api/templates/[id]", () => {
   test("returns template when found", async () => {
-    setD1Handler(() => [template]);
+    const template = await setupTestTemplate(projectId);
 
-    const { GET } = await import("@/app/api/templates/[id]/route");
-    const response = await GET(
-      buildRequest(`/api/templates/${template.id}`),
-      routeParams({ id: template.id }),
-    );
-
+    const response = await get(`/api/templates/${template.id}`);
     expect(response.status).toBe(200);
+
     const body = await parseJson<Record<string, unknown>>(response);
     expect(body.id).toBe(template.id);
-    expect(body.slug).toBe("welcome");
+    expect(body.slug).toBe(template.slug);
   });
 
   test("returns 404 when not found", async () => {
-    setD1Handler(() => []);
-
-    const { GET } = await import("@/app/api/templates/[id]/route");
-    const response = await GET(
-      buildRequest("/api/templates/nonexistent"),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await get("/api/templates/nonexistent_id_12345");
     expect(response.status).toBe(404);
   });
 });
@@ -171,37 +140,21 @@ describe("GET /api/templates/[id]", () => {
 
 describe("PUT /api/templates/[id]", () => {
   test("updates template", async () => {
-    let callCount = 0;
-    setD1Handler((sql) => {
-      callCount++;
-      if (sql.includes("WHERE id = ?")) return [{ ...template, name: callCount > 1 ? "Updated" : template.name }];
-      return [];
+    const template = await setupTestTemplate(projectId);
+
+    const response = await put(`/api/templates/${template.id}`, {
+      body: { name: "Updated Template" },
     });
 
-    const { PUT } = await import("@/app/api/templates/[id]/route");
-    const response = await PUT(
-      buildRequest(`/api/templates/${template.id}`, {
-        method: "PUT",
-        body: { name: "Updated" },
-      }),
-      routeParams({ id: template.id }),
-    );
-
     expect(response.status).toBe(200);
+    const body = await parseJson<Record<string, unknown>>(response);
+    expect(body.name).toBe("Updated Template");
   });
 
   test("returns 404 for nonexistent template", async () => {
-    setD1Handler(() => []);
-
-    const { PUT } = await import("@/app/api/templates/[id]/route");
-    const response = await PUT(
-      buildRequest("/api/templates/nonexistent", {
-        method: "PUT",
-        body: { name: "X" },
-      }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await put("/api/templates/nonexistent_id_12345", {
+      body: { name: "X" },
+    });
     expect(response.status).toBe(404);
   });
 });
@@ -212,26 +165,14 @@ describe("PUT /api/templates/[id]", () => {
 
 describe("DELETE /api/templates/[id]", () => {
   test("deletes template and returns 204", async () => {
-    setD1Handler(() => [template]);
+    const template = await setupTestTemplate(projectId);
 
-    const { DELETE } = await import("@/app/api/templates/[id]/route");
-    const response = await DELETE(
-      buildRequest(`/api/templates/${template.id}`, { method: "DELETE" }),
-      routeParams({ id: template.id }),
-    );
-
+    const response = await del(`/api/templates/${template.id}`);
     expect(response.status).toBe(204);
   });
 
   test("returns 404 for nonexistent template", async () => {
-    setD1Handler(() => []);
-
-    const { DELETE } = await import("@/app/api/templates/[id]/route");
-    const response = await DELETE(
-      buildRequest("/api/templates/nonexistent", { method: "DELETE" }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await del("/api/templates/nonexistent_id_12345");
     expect(response.status).toBe(404);
   });
 });
@@ -242,18 +183,18 @@ describe("DELETE /api/templates/[id]", () => {
 
 describe("POST /api/templates/[id]/preview", () => {
   test("renders preview with variables", async () => {
-    setD1Handler(() => [template]);
+    const template = await setupTestTemplate(projectId, {
+      subject: "Welcome to {{app_name}}",
+      body_markdown: "# Hello, {{name}}!\n\nWelcome aboard.",
+      variables: [
+        { name: "app_name", type: "string", required: true },
+        { name: "name", type: "string", required: true },
+      ],
+    });
 
-    const { POST } = await import("@/app/api/templates/[id]/preview/route");
-    const response = await POST(
-      buildRequest(`/api/templates/${template.id}/preview`, {
-        method: "POST",
-        body: {
-          variables: { app_name: "MyApp", name: "Alice" },
-        },
-      }),
-      routeParams({ id: template.id }),
-    );
+    const response = await post(`/api/templates/${template.id}/preview`, {
+      body: { variables: { app_name: "MyApp", name: "Alice" } },
+    });
 
     expect(response.status).toBe(200);
     const body = await parseJson<{ subject: string; html: string }>(response);
@@ -262,34 +203,23 @@ describe("POST /api/templates/[id]/preview", () => {
   });
 
   test("returns 404 for nonexistent template", async () => {
-    setD1Handler(() => []);
-
-    const { POST } = await import("@/app/api/templates/[id]/preview/route");
-    const response = await POST(
-      buildRequest("/api/templates/nonexistent/preview", {
-        method: "POST",
-        body: { variables: {} },
-      }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await post("/api/templates/nonexistent_id_12345/preview", {
+      body: { variables: {} },
+    });
     expect(response.status).toBe(404);
   });
 
   test("returns 422 for missing required variables", async () => {
-    setD1Handler(() => [template]);
+    const template = await setupTestTemplate(projectId, {
+      variables: [
+        { name: "app_name", type: "string", required: true },
+        { name: "name", type: "string", required: true },
+      ],
+    });
 
-    const { POST } = await import("@/app/api/templates/[id]/preview/route");
-    const response = await POST(
-      buildRequest(`/api/templates/${template.id}/preview`, {
-        method: "POST",
-        body: {
-          variables: {}, // missing required app_name and name
-        },
-      }),
-      routeParams({ id: template.id }),
-    );
-
+    const response = await post(`/api/templates/${template.id}/preview`, {
+      body: { variables: {} },
+    });
     expect(response.status).toBe(422);
   });
 });
