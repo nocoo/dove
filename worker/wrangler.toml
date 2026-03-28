@@ -1,0 +1,12 @@
+name = "dove-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dove"
+database_id = "<from cloudflare dashboard>"
+
+# API_KEY must be set via wrangler secret:
+# wrangler secret put API_KEY
+# This shared secret must match D1_WORKER_API_KEY on the Railway side.
