@@ -320,16 +320,16 @@ export default defineConfig({
 
 After all steps complete, verify the full matrix:
 
-| Check | Command | Expected |
-|-------|---------|----------|
-| L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage |
-| G1 | `bun run typecheck && bun run lint` | 0 errors, 0 warnings |
-| L2 | `bun run test:e2e:api` | Server starts on 17046, all tests pass via real HTTP against dove-db-test |
-| G2 | `bun run gate:security` | osv-scanner + gitleaks both run and pass (hard fail if missing) |
-| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27046 |
-| D1 | Verified by L2 | `_test_marker` check passes before tests, all queries hit dove-db-test |
-| pre-commit | `git commit` | G1 + L1 sequential (<30s) |
-| pre-push | `git push` | L2 ‖ G2 parallel (<3min) |
+| Check | Command | Expected | Result |
+|-------|---------|----------|--------|
+| L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage | ✅ 129 tests, 92.96% funcs / 96.80% lines |
+| G1 | `bun run typecheck && bun run lint` | 0 errors, 0 warnings | ✅ Pass |
+| L2 | `bun run test:e2e:api` | Server starts on 17046, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass |
+| G2 | `bun run gate:security` | osv-scanner + gitleaks both run and pass (hard fail if missing) | ✅ Pass |
+| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27046 | ✅ 10 tests pass |
+| D1 | Verified by L2 | `_test_marker` check passes before tests, all queries hit dove-db-test | ✅ Verified |
+| pre-commit | `git commit` | G1 + L1 sequential (<30s) | ✅ Pass |
+| pre-push | `git push` | L2 ‖ G2 parallel (<3min) | Pending push |
 
 ---
 
