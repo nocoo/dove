@@ -83,28 +83,34 @@ test.describe("Send Logs", () => {
   });
 
   test("filters send logs by project", async ({ page }) => {
-    // Create log data via API
-    const { project, recipient } = await createLogData(page.request);
+    // Create TWO projects with log data — proves filter excludes non-matching rows
+    const dataA = await createLogData(page.request);
+    const dataB = await createLogData(page.request);
 
     await page.goto("/send-logs");
     await expect(page.getByText("All Projects")).toBeVisible({ timeout: 15_000 });
 
-    // Verify our log row is visible (recipient email in table)
-    await expect(page.getByText(recipient.email)).toBeVisible({ timeout: 10_000 });
+    // Both recipients should be visible before filtering
+    await expect(page.getByText(dataA.recipient.email)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(dataB.recipient.email)).toBeVisible({ timeout: 10_000 });
 
-    // Open the project filter and select our project
+    // Filter to project A
     const projectFilter = page.locator("button").filter({ hasText: "All Projects" });
     await projectFilter.click();
-    await page.getByRole("option", { name: project.name }).click();
+    await page.getByRole("option", { name: dataA.project.name }).click();
 
-    // Row should still be visible after filtering
-    await expect(page.getByText(recipient.email)).toBeVisible({ timeout: 10_000 });
+    // Project A's row must remain visible
+    await expect(page.getByText(dataA.recipient.email)).toBeVisible({ timeout: 10_000 });
+
+    // Project B's row must be GONE — proves the filter actually excludes rows
+    await expect(page.getByText(dataB.recipient.email)).not.toBeVisible({ timeout: 5_000 });
 
     // "Clear filters" button should appear
     await expect(page.getByRole("button", { name: /clear filters/i })).toBeVisible();
 
     // Cleanup
-    await page.request.delete(`/api/projects/${project.id}`);
+    await page.request.delete(`/api/projects/${dataA.project.id}`);
+    await page.request.delete(`/api/projects/${dataB.project.id}`);
   });
 });
 
@@ -140,10 +146,19 @@ test.describe("Webhook Logs", () => {
     await page.goto("/webhook-logs");
     await expect(page.getByText("All Projects")).toBeVisible({ timeout: 15_000 });
 
-    // Find a POST row and click to expand
-    const postRow = page.locator("button").filter({ hasText: "POST" }).first();
-    await expect(postRow).toBeVisible({ timeout: 10_000 });
-    await postRow.click();
+    // Filter to the test project so we only see OUR webhook logs
+    const projectFilter = page.locator("button").filter({ hasText: "All Projects" });
+    await projectFilter.click();
+    await page.getByRole("option", { name: project.name }).click();
+
+    // Wait for filtered results — find a row containing the test project's webhook path
+    const expectedPath = `/api/webhook/${project.id}/send`;
+    const pathCell = page.locator(".font-mono").filter({ hasText: expectedPath }).first();
+    await expect(pathCell).toBeVisible({ timeout: 10_000 });
+
+    // Click the row containing our path to expand it
+    const row = pathCell.locator("xpath=ancestor::button");
+    await row.click();
 
     // Expanded detail should show "ID" and "Created" labels
     await expect(page.getByText("ID", { exact: true })).toBeVisible({ timeout: 5_000 });

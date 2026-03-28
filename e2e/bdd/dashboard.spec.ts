@@ -7,10 +7,25 @@ test.describe("Dashboard", () => {
     // Page heading
     await expect(page.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible();
 
-    // Stats cards — verify the 4 key metrics labels appear (async data load from D1)
+    // Skeleton should appear on initial load (before D1 response).
+    // Race: if D1 is fast the skeleton may vanish before we check,
+    // so we look for EITHER the skeleton OR the loaded chart title.
+    const skeleton = page.locator("[data-slot='skeleton']").first();
+    const chartTitle = page.getByText("Sends Over Time");
+    await expect(skeleton.or(chartTitle)).toBeVisible({ timeout: 15_000 });
+
+    // Wait for real content to replace skeleton — stats cards must appear
     await expect(page.getByText("Sent Today")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Sent This Month")).toBeVisible();
     await expect(page.getByText("Failed Today")).toBeVisible();
+
+    // Chart must render — verify Recharts container is in the DOM
+    await expect(chartTitle).toBeVisible({ timeout: 15_000 });
+    const chartContainer = page.locator(".recharts-responsive-container");
+    await expect(chartContainer).toBeVisible({ timeout: 10_000 });
+
+    // Skeleton must be gone once chart is visible
+    await expect(skeleton).not.toBeVisible();
   });
 
   test("sidebar navigation works", async ({ page }) => {
