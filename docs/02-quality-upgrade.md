@@ -256,9 +256,9 @@ const response = await fetch(`${BASE}/api/projects`);
 **Core flows to test** (all with auth bypassed):
 1. **Dashboard**: Visit `/` → verify stats cards render, chart loads, skeleton appears first
 2. **Project CRUD**: Navigate to `/projects` → create project → verify listed → view detail → delete
-3. **Template CRUD**: Navigate to `/templates` → create template → verify listed → edit → preview
-4. **Send logs**: Navigate to `/send-logs` → verify table renders → filter by project
-5. **Webhook logs**: Navigate to `/webhook-logs` → verify table renders → expand row
+3. **Template CRUD**: Navigate to `/templates` → create template → verify listed → edit subject → save → fill variables → render preview
+4. **Send logs**: Navigate to `/send-logs` → verify table renders → filter by project → verify filtered rows
+5. **Webhook logs**: Navigate to `/webhook-logs` → verify table renders → expand row → verify detail panel
 6. **Login page** (static): Visit `/login` → verify page loads, Google sign-in button visible
 
 **`playwright.config.ts`**:
@@ -322,11 +322,11 @@ After all steps complete, verify the full matrix:
 
 | Check | Command | Expected | Result |
 |-------|---------|----------|--------|
-| L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage | ✅ 129 tests, 92.96% funcs / 96.80% lines |
+| L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage | ✅ 130 tests, 92.96% funcs / 96.83% lines |
 | G1 | `bun run typecheck && bun run lint` | 0 errors, 0 warnings | ✅ Pass |
 | L2 | `bun run test:e2e:api` | Server starts on 17046, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass |
 | G2 | `bun run gate:security` | osv-scanner + gitleaks both run and pass (hard fail if missing) | ✅ Pass |
-| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27046 | ✅ 10 tests pass |
+| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27046 | ✅ 13 tests pass |
 | D1 | Verified by L2 | `_test_marker` check passes before tests, all queries hit dove-db-test | ✅ Verified |
 | pre-commit | `git commit` | G1 + L1 sequential (<30s) | ✅ Pass |
 | pre-push | `git push` | L2 ‖ G2 parallel (<3min) | Pending push |
