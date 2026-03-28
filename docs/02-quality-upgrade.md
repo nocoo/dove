@@ -96,26 +96,38 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 The `_test_marker` table contains a single row `(key='env', value='test')`. Before any E2E test run, the runner verifies this marker exists. If it doesn't, the test suite refuses to run — protecting production data.
 
-The marker is seeded via the **app's existing schema init path** (`POST /api/db/init` → `src/lib/db/schema.ts:initializeSchema()`), NOT the Worker. The Worker is a thin SQL proxy that never manages schema.
+The marker is seeded via **direct SQL through the test Worker's `/query` endpoint** — the same thin SQL proxy used at runtime. This avoids depending on the app's `POST /api/db/init` route (which is behind the auth gate). The schema DDL statements are extracted from `src/lib/db/schema.ts` and sent as individual requests.
 
 ```sql
--- Added to src/lib/db/schema.ts initializeSchema()
+-- Sent directly to test Worker POST /query (same DDL as src/lib/db/schema.ts)
 CREATE TABLE IF NOT EXISTS _test_marker (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
--- Seeded by deploy-test-worker.sh after schema init:
+-- After all schema tables are created:
 INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 ```
 
 **`scripts/deploy-test-worker.sh`**:
 ```bash
 #!/bin/bash
-# 1. Deploy test Worker: wrangler deploy --env test
+set -euo pipefail
+# 1. Deploy test Worker: wrangler deploy --env test (in worker/ dir)
 # 2. Set API_KEY secret: wrangler secret put API_KEY --env test
-# 3. Start temp dev server with test Worker URL → POST /api/db/init
-# 4. Seed _test_marker via test Worker /query endpoint
+# 3. Seed schema + _test_marker directly through the test Worker /query endpoint
+#    (bypasses the app entirely — no auth gate to worry about)
+#
+# Schema seeding sends each CREATE TABLE statement from src/lib/db/schema.ts
+# as individual POST /query requests to the test Worker:
+#   curl -X POST https://dove-test.worker.hexly.ai/query \
+#     -H "X-API-Key: $API_KEY" \
+#     -H "Content-Type: application/json" \
+#     -d '{"sql": "CREATE TABLE IF NOT EXISTS ..."}'
+#
+# Final seed: INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test')
 ```
+
+> **Why not use `POST /api/db/init`?** That route is behind the auth gate (`src/proxy.ts`). Starting a temp dev server with `E2E_SKIP_AUTH=true` just for bootstrap adds unnecessary complexity. Since the test Worker is a SQL proxy that accepts arbitrary `{ sql, params }`, we send CREATE TABLE statements directly — simpler, no auth dependency, idempotent.
 
 **`scripts/verify-test-db.ts`**:
 ```typescript
