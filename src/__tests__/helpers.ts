@@ -181,7 +181,8 @@ export const WEBHOOK_LOG_STUBS = {
 
 export const SANITIZE_STUBS = {
   sanitizeProject: (p: Project) => {
-    const { webhook_token: _, ...rest } = p;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { webhook_token: _token, ...rest } = p;
     return rest;
   },
 };

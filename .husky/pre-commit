@@ -1,0 +1,5 @@
+# G1: Static analysis (typecheck + lint on staged files)
+# L1: Unit tests + coverage gate
+# Sequential: G1 first to catch static issues before running tests
+
+bun run typecheck && bun run lint:staged && bun run test:coverage

@@ -35,8 +35,8 @@ async function main() {
     process.exit(0);
   }
 
-  const functionCov = parseFloat(match[1]!);
-  const lineCov = parseFloat(match[2]!);
+  const functionCov = parseFloat(match[1] ?? "0");
+  const lineCov = parseFloat(match[2] ?? "0");
 
   console.log(`\n--- Coverage Check ---`);
   console.log(`Function coverage: ${functionCov}%`);

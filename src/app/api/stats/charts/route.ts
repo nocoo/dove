@@ -40,7 +40,7 @@ export async function GET() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setUTCDate(d.getUTCDate() - i);
-      const dateStr = d.toISOString().split("T")[0]!;
+      const dateStr = d.toISOString().split("T")[0] ?? "";
 
       chartData.push({
         date: dateStr,

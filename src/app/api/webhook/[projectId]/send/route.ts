@@ -193,7 +193,7 @@ export async function POST(
     if (!quotaResult.allowed) {
       return respond(
         errorResponse(
-          quotaResult.error_code!,
+          quotaResult.error_code ?? "quota_daily_exceeded",
           quotaResult.error_code === "quota_daily_exceeded"
             ? `Daily send limit (${project.quota_daily}) exceeded`
             : `Monthly send limit (${project.quota_monthly}) exceeded`,
