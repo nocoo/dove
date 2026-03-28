@@ -45,6 +45,13 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     throw new Error("RESEND_API_KEY not configured");
   }
 
+  // Dry-run mode: validate params but skip Resend API call.
+  // Used by L2/L3 E2E tests to exercise the full send pipeline
+  // (auth → dedup → quota → render → log) without hitting the real API.
+  if (process.env.RESEND_DRY_RUN === "true") {
+    return { id: `dry_run_${crypto.randomUUID()}` };
+  }
+
   const body = JSON.stringify({
     from: params.from,
     to: [params.to],

@@ -5,9 +5,9 @@
  *
  * Real HTTP against running dev server on port 17046.
  *
- * NOTE: The happy-path send test actually calls the Resend API
- * and sends a real email. It uses RESEND_API_KEY from .env.local.
- * The recipient must be in the project's whitelist.
+ * The happy-path send test exercises the full pipeline (auth → dedup →
+ * quota → template → render → log) but uses RESEND_DRY_RUN=true from
+ * .env.test so no real email is sent via the Resend API.
  */
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {
@@ -192,7 +192,7 @@ describe("POST /api/webhook/[projectId]/send", () => {
     expect(body.error.code).toBe("variables_invalid");
   });
 
-  // Happy path — actually sends an email via Resend
+  // Happy path — exercises full pipeline in RESEND_DRY_RUN mode (no real email)
   test("sends email successfully (full pipeline)", async () => {
     const response = await post(`/api/webhook/${projectId}/send`, {
       body: makePayload(),
@@ -202,7 +202,6 @@ describe("POST /api/webhook/[projectId]/send", () => {
     expect(response.status).toBe(200);
     const body = await parseJson<{ id: string; resend_id: string; status: string }>(response);
     expect(body.status).toBe("sent");
-    expect(body.resend_id).toBeDefined();
-    expect(typeof body.resend_id).toBe("string");
+    expect(body.resend_id).toMatch(/^dry_run_/);
   });
 });

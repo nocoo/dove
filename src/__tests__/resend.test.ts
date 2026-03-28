@@ -6,12 +6,14 @@ let originalFetch: typeof globalThis.fetch;
 beforeEach(() => {
   originalFetch = globalThis.fetch;
   process.env.RESEND_API_KEY = "re_test_api_key";
+  delete process.env.RESEND_DRY_RUN;
   spyOn(console, "warn").mockImplementation(() => {});
   spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  delete process.env.RESEND_DRY_RUN;
 });
 
 describe("sendEmail", () => {
@@ -133,4 +135,19 @@ describe("sendEmail", () => {
     expect(result.id).toBe("resend_after_409");
     expect(fetchCount).toBe(2);
   }, 10000);
+
+  test("dry-run mode returns fake ID without calling fetch", async () => {
+    process.env.RESEND_DRY_RUN = "true";
+    let fetchCalled = false;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCalled = true;
+      return new Response(JSON.stringify({ id: "should_not_reach" }), { status: 200 });
+    });
+
+    const { sendEmail } = await import("@/lib/email/resend");
+    const result = await sendEmail(params);
+
+    expect(result.id).toMatch(/^dry_run_/);
+    expect(fetchCalled).toBe(false);
+  });
 });
