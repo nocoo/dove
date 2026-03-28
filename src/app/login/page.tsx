@@ -140,7 +140,7 @@ function LoginContent() {
             <div className="flex flex-1 flex-col items-center px-6 pt-6 pb-5">
               {/* Logo */}
               <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-[#171717] ring-1 ring-border flex items-center justify-center">
-                <Image src="/logo-80.png" alt="dove" width={80} height={80} className="h-full w-full object-cover" />
+                <Image src="/logo-288.png" alt="dove" width={288} height={288} className="h-full w-full object-cover" />
               </div>
 
               <p className="mt-5 text-lg font-semibold text-foreground">Welcome back</p>
