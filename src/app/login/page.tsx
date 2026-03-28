@@ -2,6 +2,7 @@
 
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { Suspense } from "react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -117,7 +118,7 @@ function LoginContent() {
                   }}
                 />
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-primary-foreground">D</span>
+                  <Image src="/logo-24.png" alt="dove" width={16} height={16} className="brightness-0 invert" />
                   <span className="text-sm font-semibold text-primary-foreground">dove</span>
                 </div>
                 <span className="text-[10px] font-medium uppercase tracking-widest text-primary-foreground/60">
@@ -137,9 +138,9 @@ function LoginContent() {
 
             {/* Badge content */}
             <div className="flex flex-1 flex-col items-center px-6 pt-6 pb-5">
-              {/* Avatar placeholder */}
+              {/* Logo */}
               <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-[#171717] ring-1 ring-border flex items-center justify-center">
-                <span className="text-3xl font-bold text-primary">D</span>
+                <Image src="/logo-80.png" alt="dove" width={80} height={80} className="h-full w-full object-cover" />
               </div>
 
               <p className="mt-5 text-lg font-semibold text-foreground">Welcome back</p>

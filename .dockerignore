@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.husky
+.claude
+.superset
+.gitleaks.toml
+logo.png
+docs
+e2e
+scripts
+worker
+*.md
+!README.md
