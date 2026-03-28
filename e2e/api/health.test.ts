@@ -10,9 +10,13 @@ mock.module("@/lib/db/d1-client", () => ({
   executeD1Query: async (sql: string, params: unknown[] = []) => getD1Handler()(sql, params),
 }));
 
+// Mock version constant (module-level const, not dynamic env read)
+mock.module("@/lib/version", () => ({
+  APP_VERSION: "1.0.0-e2e",
+}));
+
 beforeEach(() => {
   resetD1Handler();
-  process.env.NEXT_PUBLIC_APP_VERSION = "1.0.0-e2e";
   spyOn(console, "error").mockImplementation(() => {});
 });
 
