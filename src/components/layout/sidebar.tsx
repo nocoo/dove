@@ -16,6 +16,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_VERSION } from "@/lib/version";
 import { useSidebar } from "./sidebar-context";
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -214,7 +215,7 @@ export function Sidebar() {
                 <span className="text-lg font-bold text-primary">D</span>
                 <span className="text-lg font-bold tracking-tighter">dove</span>
                 <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                  v{process.env.NEXT_PUBLIC_APP_VERSION}
+                  v{APP_VERSION}
                 </span>
               </div>
               <button
