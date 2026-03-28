@@ -31,14 +31,16 @@ function StatsCard({
   accent?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background/50 p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${accent ?? "bg-primary/10"}`}>
-          <Icon className={`h-4 w-4 ${accent ? "text-current" : "text-primary"}`} />
+    <div className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-xs md:text-sm text-muted-foreground">{label}</p>
+          <p className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">{value}</p>
+        </div>
+        <div className={`rounded-md ${accent ?? "bg-card"} p-2`}>
+          <Icon className={`h-5 w-5 ${accent ? "text-current" : "text-muted-foreground"}`} />
         </div>
       </div>
-      <p className="text-2xl font-semibold text-foreground mt-1">{value}</p>
     </div>
   );
 }
@@ -75,7 +77,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
           <h1 className="text-xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -90,7 +92,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* Stats cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <StatsCard
                 label="Projects"
                 value={String(stats?.total_projects ?? 0)}

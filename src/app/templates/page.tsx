@@ -96,7 +96,7 @@ export default function TemplatesPage() {
             </Button>
           </div>
         ) : templates && templates.length === 0 ? (
-          <div className="rounded-lg border border-border bg-background/50 p-12 text-center">
+          <div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
             <p className="text-sm font-medium text-foreground">No templates yet</p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -114,7 +114,7 @@ export default function TemplatesPage() {
                 <h2 className="text-sm font-medium text-muted-foreground mb-3">
                   {projectMap.get(projectId) ?? "Unknown Project"}
                 </h2>
-                <div className="divide-y divide-border rounded-lg border border-border">
+                <div className="divide-y divide-border/50 rounded-xl bg-secondary overflow-hidden">
                   {tmps.map((t) => (
                     <Link
                       key={t.id}

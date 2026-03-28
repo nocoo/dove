@@ -75,7 +75,7 @@ export default function ProjectsPage() {
             </Button>
           </div>
         ) : projects && projects.length === 0 ? (
-          <div className="rounded-lg border border-border bg-background/50 p-12 text-center">
+          <div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
             <FolderKanban className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
             <p className="text-sm font-medium text-foreground">No projects yet</p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -95,17 +95,17 @@ export default function ProjectsPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {projects?.map((project) => (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="group rounded-lg border border-border bg-background/50 p-4 transition-colors hover:border-primary/30 hover:bg-background/80"
+                  className="group rounded-[var(--radius-card)] bg-secondary p-4 transition-colors hover:bg-accent/60"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                        <Mail className="h-4 w-4 text-primary" strokeWidth={1.5} />
+                      <div className="rounded-md bg-card p-2">
+                        <Mail className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">{project.name}</p>
@@ -123,7 +123,7 @@ export default function ProjectsPage() {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Daily Quota</p>
                       <p className="text-xs font-medium text-foreground">{project.quota_daily}/day</p>

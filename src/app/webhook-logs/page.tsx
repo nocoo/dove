@@ -158,7 +158,7 @@ export default function WebhookLogsPage() {
             </Button>
           </div>
         ) : logs && logs.length === 0 ? (
-          <div className="rounded-lg border border-border bg-background/50 p-12 text-center">
+          <div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
             <ScrollText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
             <p className="text-sm font-medium text-foreground">
               {hasFilters ? "No logs match your filters" : "No webhook logs yet"}
