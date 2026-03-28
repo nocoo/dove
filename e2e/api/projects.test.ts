@@ -1,32 +1,26 @@
 /**
  * E2E: Projects API — full CRUD + token regeneration.
  *
- * Mocks only D1 client; all project business logic runs for real.
+ * Real HTTP against running dev server on port 17046.
  */
-import { describe, expect, test, mock, beforeEach, spyOn } from "bun:test";
+import { describe, expect, test, afterAll } from "bun:test";
 import {
-  buildNextRequest,
-  buildRequest,
+  get,
+  post,
+  put,
+  del,
   parseJson,
-  routeParams,
-  makeProject,
-  getD1Handler,
-  setD1Handler,
-  resetD1Handler,
+  setupTestProject,
+  cleanupProject,
 } from "./helpers";
 
-// Mock D1 at the boundary
-mock.module("@/lib/db/d1-client", () => ({
-  isD1Configured: () => true,
-  executeD1Query: async (sql: string, params: unknown[] = []) => getD1Handler()(sql, params),
-}));
+// Track projects created during tests for cleanup
+const createdProjectIds: string[] = [];
 
-const project = makeProject();
-
-beforeEach(() => {
-  resetD1Handler();
-  spyOn(console, "error").mockImplementation(() => {});
-  spyOn(console, "warn").mockImplementation(() => {});
+afterAll(async () => {
+  for (const id of createdProjectIds) {
+    await cleanupProject(id);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -35,30 +29,19 @@ beforeEach(() => {
 
 describe("GET /api/projects", () => {
   test("returns project list (webhook_token stripped)", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("SELECT * FROM projects")) return [project];
-      return [];
-    });
+    const project = await setupTestProject();
+    createdProjectIds.push(project.id);
 
-    const { GET } = await import("@/app/api/projects/route");
-    const response = await GET();
-
+    const response = await get("/api/projects");
     expect(response.status).toBe(200);
+
     const body = await parseJson<Record<string, unknown>[]>(response);
-    expect(body).toHaveLength(1);
-    expect(body[0]!.id).toBe(project.id);
-    expect(body[0]!.webhook_token).toBeUndefined();
-  });
+    expect(body.length).toBeGreaterThanOrEqual(1);
 
-  test("returns empty array when no projects exist", async () => {
-    setD1Handler(() => []);
-
-    const { GET } = await import("@/app/api/projects/route");
-    const response = await GET();
-
-    expect(response.status).toBe(200);
-    const body = await parseJson<unknown[]>(response);
-    expect(body).toHaveLength(0);
+    // Find our test project
+    const found = body.find((p) => p.id === project.id);
+    expect(found).toBeDefined();
+    expect(found!.webhook_token).toBeUndefined(); // sanitized in list
   });
 });
 
@@ -68,48 +51,37 @@ describe("GET /api/projects", () => {
 
 describe("POST /api/projects", () => {
   test("creates project with valid input and returns token", async () => {
-    setD1Handler(() => []);
-
-    const { POST } = await import("@/app/api/projects/route");
-    const request = buildRequest("/api/projects", {
-      method: "POST",
+    const response = await post("/api/projects", {
       body: {
-        name: "New Project",
+        name: "E2E Create Test",
         email_prefix: "hello",
         from_name: "Hello App",
       },
     });
 
-    const response = await POST(request);
     expect(response.status).toBe(201);
     const body = await parseJson<Record<string, unknown>>(response);
-    expect(body.name).toBe("New Project");
+    expect(body.name).toBe("E2E Create Test");
     expect(body.webhook_token).toBeDefined();
     expect(typeof body.webhook_token).toBe("string");
     expect((body.webhook_token as string).length).toBe(48);
+
+    createdProjectIds.push(body.id as string);
   });
 
   test("rejects request with missing required fields", async () => {
-    const { POST } = await import("@/app/api/projects/route");
-    const request = buildRequest("/api/projects", {
-      method: "POST",
+    const response = await post("/api/projects", {
       body: { email_prefix: "x" },
     });
-
-    const response = await POST(request);
     expect(response.status).toBe(400);
     const body = await parseJson<{ error: string }>(response);
     expect(body.error).toBe("Invalid input");
   });
 
   test("rejects empty name", async () => {
-    const { POST } = await import("@/app/api/projects/route");
-    const request = buildRequest("/api/projects", {
-      method: "POST",
+    const response = await post("/api/projects", {
       body: { name: "", email_prefix: "x", from_name: "App" },
     });
-
-    const response = await POST(request);
     expect(response.status).toBe(400);
   });
 });
@@ -120,32 +92,19 @@ describe("POST /api/projects", () => {
 
 describe("GET /api/projects/[id]", () => {
   test("returns sanitized project when found", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("WHERE id = ?")) return [project];
-      return [];
-    });
+    const project = await setupTestProject();
+    createdProjectIds.push(project.id);
 
-    const { GET } = await import("@/app/api/projects/[id]/route");
-    const response = await GET(
-      buildRequest(`/api/projects/${project.id}`),
-      routeParams({ id: project.id }),
-    );
-
+    const response = await get(`/api/projects/${project.id}`);
     expect(response.status).toBe(200);
+
     const body = await parseJson<Record<string, unknown>>(response);
     expect(body.id).toBe(project.id);
-    expect(body.webhook_token).toBeUndefined();
+    expect(body.webhook_token).toBeUndefined(); // sanitized
   });
 
   test("returns 404 when project not found", async () => {
-    setD1Handler(() => []);
-
-    const { GET } = await import("@/app/api/projects/[id]/route");
-    const response = await GET(
-      buildRequest("/api/projects/nonexistent"),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await get("/api/projects/nonexistent_id_12345");
     expect(response.status).toBe(404);
   });
 });
@@ -156,53 +115,33 @@ describe("GET /api/projects/[id]", () => {
 
 describe("PUT /api/projects/[id]", () => {
   test("updates project with valid input", async () => {
-    let callCount = 0;
-    setD1Handler((sql) => {
-      callCount++;
-      // First call: getProject (existence check), second: UPDATE, third: getProject (return)
-      if (sql.includes("WHERE id = ?")) return [{ ...project, name: callCount > 1 ? "Updated" : project.name }];
-      return [];
-    });
+    const project = await setupTestProject();
+    createdProjectIds.push(project.id);
 
-    const { PUT } = await import("@/app/api/projects/[id]/route");
-    const response = await PUT(
-      buildRequest(`/api/projects/${project.id}`, {
-        method: "PUT",
-        body: { name: "Updated" },
-      }),
-      routeParams({ id: project.id }),
-    );
+    const response = await put(`/api/projects/${project.id}`, {
+      body: { name: "Updated E2E" },
+    });
 
     expect(response.status).toBe(200);
     const body = await parseJson<Record<string, unknown>>(response);
+    expect(body.name).toBe("Updated E2E");
     expect(body.webhook_token).toBeUndefined(); // sanitized
   });
 
   test("returns 404 for nonexistent project", async () => {
-    setD1Handler(() => []);
-
-    const { PUT } = await import("@/app/api/projects/[id]/route");
-    const response = await PUT(
-      buildRequest("/api/projects/nonexistent", {
-        method: "PUT",
-        body: { name: "X" },
-      }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await put("/api/projects/nonexistent_id_12345", {
+      body: { name: "X" },
+    });
     expect(response.status).toBe(404);
   });
 
   test("rejects invalid input", async () => {
-    const { PUT } = await import("@/app/api/projects/[id]/route");
-    const response = await PUT(
-      buildRequest(`/api/projects/${project.id}`, {
-        method: "PUT",
-        body: { name: "" },
-      }),
-      routeParams({ id: project.id }),
-    );
+    const project = await setupTestProject();
+    createdProjectIds.push(project.id);
 
+    const response = await put(`/api/projects/${project.id}`, {
+      body: { name: "" },
+    });
     expect(response.status).toBe(400);
   });
 });
@@ -213,29 +152,19 @@ describe("PUT /api/projects/[id]", () => {
 
 describe("DELETE /api/projects/[id]", () => {
   test("deletes project and returns 204", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("WHERE id = ?")) return [project];
-      return [];
-    });
+    const project = await setupTestProject();
+    // Don't add to cleanup — we're deleting it here
 
-    const { DELETE } = await import("@/app/api/projects/[id]/route");
-    const response = await DELETE(
-      buildRequest(`/api/projects/${project.id}`, { method: "DELETE" }),
-      routeParams({ id: project.id }),
-    );
-
+    const response = await del(`/api/projects/${project.id}`);
     expect(response.status).toBe(204);
+
+    // Verify it's gone
+    const getResponse = await get(`/api/projects/${project.id}`);
+    expect(getResponse.status).toBe(404);
   });
 
   test("returns 404 for nonexistent project", async () => {
-    setD1Handler(() => []);
-
-    const { DELETE } = await import("@/app/api/projects/[id]/route");
-    const response = await DELETE(
-      buildRequest("/api/projects/nonexistent", { method: "DELETE" }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await del("/api/projects/nonexistent_id_12345");
     expect(response.status).toBe(404);
   });
 });
@@ -246,32 +175,21 @@ describe("DELETE /api/projects/[id]", () => {
 
 describe("POST /api/projects/[id]/token", () => {
   test("regenerates and returns new token", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("WHERE id = ?")) return [project];
-      return [];
-    });
+    const project = await setupTestProject();
+    createdProjectIds.push(project.id);
 
-    const { POST } = await import("@/app/api/projects/[id]/token/route");
-    const response = await POST(
-      buildRequest(`/api/projects/${project.id}/token`, { method: "POST" }),
-      routeParams({ id: project.id }),
-    );
-
+    const response = await post(`/api/projects/${project.id}/token`);
     expect(response.status).toBe(200);
+
     const body = await parseJson<{ webhook_token: string }>(response);
     expect(body.webhook_token).toBeDefined();
     expect(body.webhook_token.length).toBe(48);
+    // New token should differ from original
+    expect(body.webhook_token).not.toBe(project.webhook_token);
   });
 
   test("returns 404 for nonexistent project", async () => {
-    setD1Handler(() => []);
-
-    const { POST } = await import("@/app/api/projects/[id]/token/route");
-    const response = await POST(
-      buildRequest("/api/projects/nonexistent/token", { method: "POST" }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await post("/api/projects/nonexistent_id_12345/token");
     expect(response.status).toBe(404);
   });
 });

@@ -1,32 +1,29 @@
 /**
  * E2E: Recipients API — GET/POST /api/recipients, PUT/DELETE /api/recipients/[id]
  *
- * Mocks only D1 client; all recipient logic runs for real.
+ * Real HTTP against running dev server on port 17046.
  */
-import { describe, expect, test, mock, beforeEach, spyOn } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {
-  buildNextRequest,
-  buildRequest,
+  get,
+  post,
+  put,
+  del,
   parseJson,
-  routeParams,
-  makeRecipient,
-  getD1Handler,
-  setD1Handler,
-  resetD1Handler,
+  setupTestProject,
+  setupTestRecipient,
+  cleanupProject,
 } from "./helpers";
 
-// Mock D1 at the boundary
-mock.module("@/lib/db/d1-client", () => ({
-  isD1Configured: () => true,
-  executeD1Query: async (sql: string, params: unknown[] = []) => getD1Handler()(sql, params),
-}));
+let projectId: string;
 
-const recipient = makeRecipient();
+beforeAll(async () => {
+  const project = await setupTestProject();
+  projectId = project.id;
+});
 
-beforeEach(() => {
-  resetD1Handler();
-  spyOn(console, "error").mockImplementation(() => {});
-  spyOn(console, "warn").mockImplementation(() => {});
+afterAll(async () => {
+  await cleanupProject(projectId);
 });
 
 // ---------------------------------------------------------------------------
@@ -35,27 +32,22 @@ beforeEach(() => {
 
 describe("GET /api/recipients", () => {
   test("returns recipients for a project", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("FROM recipients") && sql.includes("project_id")) return [recipient];
-      return [];
+    const recipient = await setupTestRecipient(projectId);
+
+    const response = await get("/api/recipients", {
+      searchParams: { projectId },
     });
 
-    const { GET } = await import("@/app/api/recipients/route");
-    const request = buildNextRequest("/api/recipients", {
-      searchParams: { projectId: recipient.project_id },
-    });
-
-    const response = await GET(request);
     expect(response.status).toBe(200);
-    const body = await parseJson<unknown[]>(response);
-    expect(body).toHaveLength(1);
+    const body = await parseJson<Record<string, unknown>[]>(response);
+    expect(body.length).toBeGreaterThanOrEqual(1);
+
+    const found = body.find((r) => r.id === recipient.id);
+    expect(found).toBeDefined();
   });
 
   test("returns 400 when projectId is missing", async () => {
-    const { GET } = await import("@/app/api/recipients/route");
-    const request = buildNextRequest("/api/recipients");
-
-    const response = await GET(request);
+    const response = await get("/api/recipients");
     expect(response.status).toBe(400);
   });
 });
@@ -66,54 +58,44 @@ describe("GET /api/recipients", () => {
 
 describe("POST /api/recipients", () => {
   test("creates recipient with valid input", async () => {
-    setD1Handler(() => []);
-
-    const { POST } = await import("@/app/api/recipients/route");
-    const request = buildRequest("/api/recipients", {
-      method: "POST",
+    const email = `e2e-create-${Date.now()}@example.com`;
+    const response = await post("/api/recipients", {
       body: {
-        project_id: "proj_e2e_test123456ab",
+        project_id: projectId,
         name: "New User",
-        email: "new@example.com",
+        email,
       },
     });
 
-    const response = await POST(request);
     expect(response.status).toBe(201);
     const body = await parseJson<Record<string, unknown>>(response);
     expect(body.name).toBe("New User");
-    expect(body.email).toBe("new@example.com");
+    expect(body.email).toBe(email);
   });
 
   test("rejects invalid email", async () => {
-    const { POST } = await import("@/app/api/recipients/route");
-    const request = buildRequest("/api/recipients", {
-      method: "POST",
+    const response = await post("/api/recipients", {
       body: {
-        project_id: "proj_123",
+        project_id: projectId,
         name: "User",
         email: "not-an-email",
       },
     });
-
-    const response = await POST(request);
     expect(response.status).toBe(400);
   });
 
   test("returns 409 on duplicate email", async () => {
-    setD1Handler(() => { throw new Error("UNIQUE constraint failed"); });
+    const email = `e2e-dup-${Date.now()}@example.com`;
 
-    const { POST } = await import("@/app/api/recipients/route");
-    const request = buildRequest("/api/recipients", {
-      method: "POST",
-      body: {
-        project_id: "proj_e2e_test123456ab",
-        name: "Dup User",
-        email: "dup@example.com",
-      },
+    // Create first
+    await post("/api/recipients", {
+      body: { project_id: projectId, name: "First", email },
     });
 
-    const response = await POST(request);
+    // Try duplicate
+    const response = await post("/api/recipients", {
+      body: { project_id: projectId, name: "Dup", email },
+    });
     expect(response.status).toBe(409);
   });
 });
@@ -124,39 +106,21 @@ describe("POST /api/recipients", () => {
 
 describe("PUT /api/recipients/[id]", () => {
   test("updates recipient name", async () => {
-    let callCount = 0;
-    setD1Handler((sql) => {
-      callCount++;
-      if (sql.includes("WHERE id = ?")) return [{ ...recipient, name: callCount > 1 ? "Updated" : recipient.name }];
-      return [];
-    });
+    const recipient = await setupTestRecipient(projectId);
 
-    const { PUT } = await import("@/app/api/recipients/[id]/route");
-    const response = await PUT(
-      buildRequest(`/api/recipients/${recipient.id}`, {
-        method: "PUT",
-        body: { name: "Updated" },
-      }),
-      routeParams({ id: recipient.id }),
-    );
+    const response = await put(`/api/recipients/${recipient.id}`, {
+      body: { name: "Updated Name" },
+    });
 
     expect(response.status).toBe(200);
     const body = await parseJson<Record<string, unknown>>(response);
-    expect(body.name).toBe("Updated");
+    expect(body.name).toBe("Updated Name");
   });
 
   test("returns 404 for nonexistent recipient", async () => {
-    setD1Handler(() => []);
-
-    const { PUT } = await import("@/app/api/recipients/[id]/route");
-    const response = await PUT(
-      buildRequest("/api/recipients/nonexistent", {
-        method: "PUT",
-        body: { name: "X" },
-      }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await put("/api/recipients/nonexistent_id_12345", {
+      body: { name: "X" },
+    });
     expect(response.status).toBe(404);
   });
 });
@@ -167,29 +131,14 @@ describe("PUT /api/recipients/[id]", () => {
 
 describe("DELETE /api/recipients/[id]", () => {
   test("deletes recipient and returns 204", async () => {
-    setD1Handler((sql) => {
-      if (sql.includes("WHERE id = ?")) return [recipient];
-      return [];
-    });
+    const recipient = await setupTestRecipient(projectId);
 
-    const { DELETE } = await import("@/app/api/recipients/[id]/route");
-    const response = await DELETE(
-      buildRequest(`/api/recipients/${recipient.id}`, { method: "DELETE" }),
-      routeParams({ id: recipient.id }),
-    );
-
+    const response = await del(`/api/recipients/${recipient.id}`);
     expect(response.status).toBe(204);
   });
 
   test("returns 404 for nonexistent recipient", async () => {
-    setD1Handler(() => []);
-
-    const { DELETE } = await import("@/app/api/recipients/[id]/route");
-    const response = await DELETE(
-      buildRequest("/api/recipients/nonexistent", { method: "DELETE" }),
-      routeParams({ id: "nonexistent" }),
-    );
-
+    const response = await del("/api/recipients/nonexistent_id_12345");
     expect(response.status).toBe(404);
   });
 });
