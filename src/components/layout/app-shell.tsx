@@ -112,7 +112,7 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
             aria-modal="true"
             aria-label="Navigation menu"
             tabIndex={-1}
-            className="fixed inset-y-0 left-0 z-50 w-[240px] outline-none"
+            className="fixed inset-y-0 left-0 z-50 w-[260px] outline-none"
           >
             <div className="absolute top-3 right-3 z-10">
               <button

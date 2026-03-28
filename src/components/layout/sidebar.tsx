@@ -134,7 +134,7 @@ export function Sidebar() {
     <aside
       className={cn(
         "sticky top-0 flex h-screen shrink-0 flex-col bg-background transition-all duration-300 ease-in-out overflow-hidden",
-        collapsed ? "w-[68px]" : "w-[240px]",
+        collapsed ? "w-[68px]" : "w-[260px]",
       )}
     >
       {collapsed ? (
@@ -206,7 +206,7 @@ export function Sidebar() {
         </div>
       ) : (
         /* Expanded view */
-        <div className="flex h-screen w-[240px] flex-col">
+        <div className="flex h-screen w-[260px] flex-col">
           {/* Header: logo + collapse toggle */}
           <div className="px-3 h-14 flex items-center">
             <div className="flex w-full items-center justify-between px-3">

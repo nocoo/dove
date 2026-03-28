@@ -1,5 +1,20 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import { ALLOWED_HOSTS, buildBaseUrl } from "@/lib/hosts";
+
+let savedAllowedHosts: string | undefined;
+
+beforeEach(() => {
+  savedAllowedHosts = process.env.ALLOWED_HOSTS;
+  delete process.env.ALLOWED_HOSTS;
+});
+
+afterEach(() => {
+  if (savedAllowedHosts !== undefined) {
+    process.env.ALLOWED_HOSTS = savedAllowedHosts;
+  } else {
+    delete process.env.ALLOWED_HOSTS;
+  }
+});
 
 describe("ALLOWED_HOSTS", () => {
   test("includes localhost:7046 by default", () => {
@@ -8,6 +23,13 @@ describe("ALLOWED_HOSTS", () => {
 
   test("rejects unknown hosts", () => {
     expect(ALLOWED_HOSTS.has("evil.com")).toBe(false);
+  });
+
+  test("respects ALLOWED_HOSTS env var", () => {
+    process.env.ALLOWED_HOSTS = "custom.example.com,other.example.com";
+    expect(ALLOWED_HOSTS.has("custom.example.com")).toBe(true);
+    expect(ALLOWED_HOSTS.has("other.example.com")).toBe(true);
+    expect(ALLOWED_HOSTS.has("localhost:7046")).toBe(false);
   });
 });
 
