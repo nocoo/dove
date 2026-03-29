@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.1.4
+
+### Added
+- Sakura pink theme, compact cards, unified skeleton loading
+
+### Changed
+- Replace inline GitHub SVGs with shared GithubIcon component
+
+### Fixed
+- Use PCRE2 lookbehind for stale version check
+
 ## v0.1.3
 
 ### Added
