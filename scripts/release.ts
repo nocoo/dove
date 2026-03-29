@@ -509,9 +509,10 @@ async function main(): Promise<void> {
   // --- Phase 3: Stale version verification ---
   console.log("🔍 Phase 3: Checking for stale version strings...\n");
 
+  const escapedVersion = currentVersion.replace(/\./g, "\\.");
   const rgResult = await run("rg", [
-    "-w",
-    currentVersion,
+    "--pcre2",
+    `(?<![\\d.])${escapedVersion}(?![\\d.])`,
     "--glob",
     "*.ts",
     "--glob",
