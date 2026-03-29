@@ -393,7 +393,7 @@ export default function TemplateDetailPage({
             </Card>
 
             {/* Danger zone */}
-            <Card className="border-destructive/30">
+            <Card className="ring-1 ring-destructive/30">
               <CardHeader>
                 <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
               </CardHeader>

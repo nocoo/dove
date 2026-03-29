@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function CardSkeleton({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-0">
+    <div className="rounded-[var(--radius-card)] bg-secondary p-0">
       <div className="px-5 py-4 space-y-1.5">
         <Skeleton className="h-4 w-28" />
         <Skeleton className="h-3 w-48" />
