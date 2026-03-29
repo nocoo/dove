@@ -9,6 +9,7 @@ import { SidebarProvider, useSidebar } from "./sidebar-context";
 import { ThemeToggle } from "./theme-toggle";
 import { Breadcrumbs } from "./breadcrumbs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -173,10 +174,12 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
 
 export function AppShell({ children, breadcrumbs = [] }: AppShellProps) {
   return (
-    <SidebarProvider>
-      <AppShellInner breadcrumbs={breadcrumbs}>
-        {children}
-      </AppShellInner>
-    </SidebarProvider>
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider>
+        <AppShellInner breadcrumbs={breadcrumbs}>
+          {children}
+        </AppShellInner>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

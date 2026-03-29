@@ -19,6 +19,12 @@ import { cn } from "@/lib/utils";
 import { APP_VERSION } from "@/lib/version";
 import { useSidebar } from "./sidebar-context";
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -147,14 +153,20 @@ export function Sidebar() {
           </div>
 
           {/* Expand toggle */}
-          <button
-            onClick={toggle}
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors mb-2"
-          >
-            <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-          </button>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggle}
+                aria-label="Expand sidebar"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors mb-2"
+              >
+                <PanelLeft className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              Expand sidebar
+            </TooltipContent>
+          </Tooltip>
 
           {/* Navigation (flat icons when collapsed) */}
           <nav className="flex-1 flex flex-col items-center gap-1 overflow-y-auto pt-1">
@@ -165,44 +177,46 @@ export function Sidebar() {
                   : pathname.startsWith(item.href);
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  className={cn(
-                    "relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-                    isActive
-                      ? "bg-accent text-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  )}
-                >
-                  <item.icon className="h-4 w-4" strokeWidth={1.5} />
-                </Link>
+                <Tooltip key={item.href} delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+                        isActive
+                          ? "bg-accent text-foreground"
+                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" strokeWidth={1.5} />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8}>
+                    {item.label}
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </nav>
 
           {/* User sign out */}
           <div className="py-3 flex justify-center w-full">
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              title={`${userName} - Sign out`}
-              className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all"
-            >
-              {userImage ? (
-                <Image
-                  src={userImage}
-                  alt={userName}
-                  width={36}
-                  height={36}
-                  className="h-9 w-9 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  {userInitial}
-                </span>
-              )}
-            </button>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all rounded-full"
+                >
+                  <Avatar className="h-9 w-9">
+                    {userImage && <AvatarImage src={userImage} alt={userName} />}
+                    <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
+                  </Avatar>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {userName} — Sign out
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       ) : (
@@ -214,7 +228,7 @@ export function Sidebar() {
               <div className="flex items-center gap-3">
                 <Image src="/logo-24.png" alt="dove" width={24} height={24} />
                 <span className="text-lg font-bold tracking-tighter">dove</span>
-                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
                   v{APP_VERSION}
                 </span>
               </div>
@@ -242,21 +256,10 @@ export function Sidebar() {
           {/* User info + sign out */}
           <div className="px-4 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden">
-                {userImage ? (
-                  <Image
-                    src={userImage}
-                    alt={userName}
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
-                    {userInitial}
-                  </span>
-                )}
-              </div>
+              <Avatar className="h-9 w-9 shrink-0">
+                {userImage && <AvatarImage src={userImage} alt={userName} />}
+                <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">{userName}</p>
                 <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
