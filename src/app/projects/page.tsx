@@ -52,7 +52,7 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">Projects</h1>
+            <h1 className="text-xl font-semibold font-display">Projects</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage email relay projects, quotas, and webhook tokens.
             </p>

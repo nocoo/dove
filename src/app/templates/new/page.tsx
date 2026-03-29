@@ -131,7 +131,7 @@ function NewTemplateForm() {
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
       <div>
-        <h1 className="text-xl font-semibold">New Template</h1>
+        <h1 className="text-xl font-semibold font-display">New Template</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Create a Markdown email template with optional variables.
         </p>

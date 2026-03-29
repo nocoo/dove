@@ -64,7 +64,7 @@ export default function NewProjectPage() {
     <AppShell breadcrumbs={[{ label: "Projects", href: "/projects" }, { label: "New" }]}>
       <div className="flex flex-col gap-6 max-w-lg">
         <div>
-          <h1 className="text-xl font-semibold">New Project</h1>
+          <h1 className="text-xl font-semibold font-display">New Project</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Create an email relay project. A webhook token will be generated automatically.
           </p>

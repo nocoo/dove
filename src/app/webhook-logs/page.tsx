@@ -175,7 +175,7 @@ export default function WebhookLogsPage() {
     <AppShell breadcrumbs={[{ label: "Webhook Logs", href: "/webhook-logs" }]}>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-semibold">Webhook Logs</h1>
+          <h1 className="text-xl font-semibold font-display">Webhook Logs</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Fire-and-forget request logs for observability.
           </p>

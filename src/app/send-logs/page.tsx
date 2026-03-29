@@ -182,7 +182,7 @@ export default function SendLogsPage() {
     <AppShell breadcrumbs={[{ label: "Send Logs", href: "/send-logs" }]}>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-semibold">Send Logs</h1>
+          <h1 className="text-xl font-semibold font-display">Send Logs</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Authoritative email send history.
           </p>

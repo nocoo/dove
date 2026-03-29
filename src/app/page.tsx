@@ -36,7 +36,7 @@ function StatsCard({
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs md:text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">{value}</p>
+          <p className="text-2xl md:text-3xl font-semibold font-display text-foreground tracking-tight">{value}</p>
         </div>
         <div className={`rounded-md ${accent ?? "bg-card"} p-2`}>
           <Icon className={`h-5 w-5 ${accent ? "text-current" : "text-muted-foreground"}`} />
@@ -80,7 +80,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-xl font-semibold">Dashboard</h1>
+          <h1 className="text-xl font-semibold font-display">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Email relay overview and send activity.
           </p>
