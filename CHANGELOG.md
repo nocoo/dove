@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.1.9
+
+### Added
+- Add fade-up entry animation with staggered delays on stat cards
+- Add DM Sans font-display system for titles and stat values
+- Add SortHeader component with interactive column sorting
+
+### Fixed
+- Update Card component from border+shadow to bg-secondary L2 layer
+- Remove ghost logo-288 and use logo-80 per basalt B-3 spec
+- Dashboard tooltip, avatar, and version badge per basalt B-2 spec
+- Login page aspect ratio and callbackUrl validation
+
 ## v0.1.4
 
 ### Added
