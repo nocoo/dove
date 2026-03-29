@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, ScrollText, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SortHeader } from "@/components/sort-header";
 import {
   Select,
   SelectContent,
@@ -67,6 +68,19 @@ export default function WebhookLogsPage() {
   const [total, setTotal] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Sort state
+  const [sortKey, setSortKey] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function handleSort(key: string) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = filterProject !== "all";
 
@@ -107,7 +121,50 @@ export default function WebhookLogsPage() {
     void fetchData();
   }, [fetchData]);
 
-  const projectMap = new Map(projects.map((p) => [p.id, p.name]));
+  const projectMap = useMemo(
+    () => new Map(projects.map((p) => [p.id, p.name])),
+    [projects],
+  );
+
+  const sortedLogs = useMemo(() => {
+    if (!logs) return null;
+    return [...logs].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortKey) {
+        case "status_code":
+          aVal = a.status_code;
+          bVal = b.status_code;
+          break;
+        case "method":
+          aVal = a.method;
+          bVal = b.method;
+          break;
+        case "path":
+          aVal = a.path.toLowerCase();
+          bVal = b.path.toLowerCase();
+          break;
+        case "project":
+          aVal = (projectMap.get(a.project_id) ?? a.project_id).toLowerCase();
+          bVal = (projectMap.get(b.project_id) ?? b.project_id).toLowerCase();
+          break;
+        case "duration_ms":
+          aVal = a.duration_ms ?? 0;
+          bVal = b.duration_ms ?? 0;
+          break;
+        case "created_at":
+        default:
+          aVal = a.created_at;
+          bVal = b.created_at;
+          break;
+      }
+
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [logs, sortKey, sortDir, projectMap]);
 
   function clearFilters() {
     setFilterProject("all");
@@ -183,16 +240,16 @@ export default function WebhookLogsPage() {
 
             {/* Table header — desktop */}
             <div className="hidden md:flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground border-b border-border">
-              <div className="w-[60px] shrink-0">Status</div>
-              <div className="w-[60px] shrink-0">Method</div>
-              <div className="flex-1 min-w-0">Path</div>
-              <div className="w-[120px] shrink-0">Project</div>
-              <div className="w-[80px] shrink-0 text-right">Duration</div>
-              <div className="w-[140px] shrink-0">Date</div>
+              <SortHeader label="Status" sortKey="status_code" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[60px] shrink-0" />
+              <SortHeader label="Method" sortKey="method" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[60px] shrink-0" />
+              <SortHeader label="Path" sortKey="path" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
+              <SortHeader label="Project" sortKey="project" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[120px] shrink-0" />
+              <SortHeader label="Duration" sortKey="duration_ms" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[80px] shrink-0 text-right" />
+              <SortHeader label="Date" sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[140px] shrink-0" />
             </div>
 
             <div className="flex flex-col">
-              {logs?.map((log) => (
+              {sortedLogs?.map((log) => (
                 <div key={log.id}>
                   <button
                     type="button"

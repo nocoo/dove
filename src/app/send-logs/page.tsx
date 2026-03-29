@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Mail, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SortHeader } from "@/components/sort-header";
 import {
   Select,
   SelectContent,
@@ -75,6 +76,19 @@ export default function SendLogsPage() {
   const [total, setTotal] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Sort state
+  const [sortKey, setSortKey] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function handleSort(key: string) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const hasFilters = filterProject !== "all" || filterStatus !== "all";
 
@@ -117,7 +131,46 @@ export default function SendLogsPage() {
     void fetchData();
   }, [fetchData]);
 
-  const projectMap = new Map(projects.map((p) => [p.id, p.name]));
+  const projectMap = useMemo(
+    () => new Map(projects.map((p) => [p.id, p.name])),
+    [projects],
+  );
+
+  const sortedLogs = useMemo(() => {
+    if (!logs) return null;
+    return [...logs].sort((a, b) => {
+      let aVal: string | number = "";
+      let bVal: string | number = "";
+
+      switch (sortKey) {
+        case "status":
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        case "to_email":
+          aVal = a.to_email.toLowerCase();
+          bVal = b.to_email.toLowerCase();
+          break;
+        case "subject":
+          aVal = a.subject.toLowerCase();
+          bVal = b.subject.toLowerCase();
+          break;
+        case "project":
+          aVal = (projectMap.get(a.project_id) ?? a.project_id).toLowerCase();
+          bVal = (projectMap.get(b.project_id) ?? b.project_id).toLowerCase();
+          break;
+        case "created_at":
+        default:
+          aVal = a.created_at;
+          bVal = b.created_at;
+          break;
+      }
+
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [logs, sortKey, sortDir, projectMap]);
 
   function clearFilters() {
     setFilterProject("all");
@@ -206,15 +259,15 @@ export default function SendLogsPage() {
 
             {/* Table header — desktop */}
             <div className="hidden md:flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground border-b border-border">
-              <div className="w-[80px] shrink-0">Status</div>
-              <div className="flex-1 min-w-0">Recipient</div>
-              <div className="w-[200px] shrink-0">Subject</div>
-              <div className="w-[120px] shrink-0">Project</div>
-              <div className="w-[130px] shrink-0">Date</div>
+              <SortHeader label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[80px] shrink-0" />
+              <SortHeader label="Recipient" sortKey="to_email" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
+              <SortHeader label="Subject" sortKey="subject" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[200px] shrink-0" />
+              <SortHeader label="Project" sortKey="project" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[120px] shrink-0" />
+              <SortHeader label="Date" sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[130px] shrink-0" />
             </div>
 
             <div className="flex flex-col">
-              {logs?.map((log) => (
+              {sortedLogs?.map((log) => (
                 <div key={log.id}>
                   <button
                     type="button"
