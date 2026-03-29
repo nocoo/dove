@@ -118,13 +118,19 @@ export default function TemplatesPage() {
                     <Link
                       key={t.id}
                       href={`/templates/${t.id}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{t.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{t.slug}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{t.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          <span className="font-mono">{t.slug}</span>
+                          <span className="mx-1.5 text-border">·</span>
+                          <span>{t.subject}</span>
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground ml-4 shrink-0">{t.subject}</p>
+                      <time className="hidden sm:block text-[11px] text-muted-foreground tabular-nums shrink-0">
+                        {new Date(t.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </time>
                     </Link>
                   ))}
                 </div>

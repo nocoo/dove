@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ProjectDetailSkeleton } from "@/components/skeletons";
 import {
   Card,
   CardContent,
@@ -278,9 +279,7 @@ export default function ProjectDetailPage({
   if (loading) {
     return (
       <AppShell breadcrumbs={[{ label: "Projects", href: "/projects" }, { label: "..." }]}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
+        <ProjectDetailSkeleton />
       </AppShell>
     );
   }
@@ -512,10 +511,10 @@ export default function ProjectDetailPage({
             ) : (
               <div className="divide-y divide-border rounded-lg border border-border">
                 {recipients.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{r.name}</p>
-                      <p className="text-xs text-muted-foreground">{r.email}</p>
+                  <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{r.email}</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -569,13 +568,16 @@ export default function ProjectDetailPage({
                   <Link
                     key={t.id}
                     href={`/templates/${t.id}`}
-                    className="flex items-center justify-between px-3 py-2.5 hover:bg-muted/30 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 transition-colors"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{t.name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{t.slug}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{t.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        <span className="font-mono">{t.slug}</span>
+                        <span className="mx-1.5 text-border">·</span>
+                        <span>{t.subject}</span>
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{t.subject}</p>
                   </Link>
                 ))}
               </div>

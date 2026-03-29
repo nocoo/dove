@@ -99,39 +99,28 @@ export default function ProjectsPage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="group rounded-[var(--radius-card)] bg-secondary p-4 transition-colors hover:bg-accent/60"
+                  className="group rounded-[var(--radius-card)] bg-secondary px-3.5 py-3 transition-colors hover:bg-accent/60"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-md bg-card p-2">
-                        <Mail className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="shrink-0 rounded-md bg-card p-1.5">
+                        <Mail className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{project.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {project.email_prefix}@...
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-foreground truncate">{project.name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {project.from_name} · {project.email_prefix} · {project.quota_daily}/day · {project.quota_monthly}/mo
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors" strokeWidth={1.5} />
+                    <ArrowRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-colors ml-2" strokeWidth={1.5} />
                   </div>
 
                   {project.description && (
-                    <p className="text-xs text-muted-foreground mt-3 line-clamp-2">
+                    <p className="text-[11px] text-muted-foreground mt-2 line-clamp-1 pl-[34px]">
                       {project.description}
                     </p>
                   )}
-
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-border/50">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Daily Quota</p>
-                      <p className="text-xs font-medium text-foreground">{project.quota_daily}/day</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Monthly Quota</p>
-                      <p className="text-xs font-medium text-foreground">{project.quota_monthly}/mo</p>
-                    </div>
-                  </div>
                 </Link>
               ))}
             </div>

@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NewTemplateFormSkeleton } from "@/components/skeletons";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -295,11 +296,7 @@ export default function NewTemplatePage() {
   return (
     <AppShell breadcrumbs={[{ label: "Templates", href: "/templates" }, { label: "New" }]}>
       <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        }
+        fallback={<NewTemplateFormSkeleton />}
       >
         <NewTemplateForm />
       </Suspense>

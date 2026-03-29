@@ -19,7 +19,7 @@ export function SiteFooter() {
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
         >
-          <GithubIcon className="h-3 w-3" />
+          <GithubIcon className="h-3 w-3" strokeWidth={1.5} />
           GitHub
         </a>
       </p>

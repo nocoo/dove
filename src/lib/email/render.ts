@@ -110,7 +110,7 @@ function wrapHtml(bodyHtml: string): string {
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1a1a1a; margin: 0; padding: 0; background-color: #f5f5f5; }
   .container { max-width: 600px; margin: 0 auto; padding: 24px; background-color: #ffffff; }
   h1, h2, h3 { color: #1a1a1a; margin-top: 0; }
-  a { color: #3b6fd0; }
+  a { color: #c5607d; }
   code { background-color: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
   pre { background-color: #f0f0f0; padding: 12px; border-radius: 6px; overflow-x: auto; }
   blockquote { border-left: 3px solid #d0d0d0; padding-left: 12px; margin-left: 0; color: #555; }

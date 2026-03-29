@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import { GithubIcon } from "@/components/icons/github";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { LoginSkeleton } from "@/components/skeletons";
 
 function Barcode() {
   const bars = [2, 1, 3, 1, 2, 1, 1, 3, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1];
@@ -87,7 +88,7 @@ function LoginContent() {
             aria-label="GitHub repository"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           >
-            <GithubIcon className="h-[18px] w-[18px]" />
+            <GithubIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
           </a>
           <ThemeToggle />
         </div>
@@ -192,7 +193,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>}>
+    <Suspense fallback={<LoginSkeleton />}>
       <LoginContent />
     </Suspense>
   );

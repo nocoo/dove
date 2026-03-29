@@ -154,7 +154,7 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
               aria-label="GitHub repository"
               className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
-              <GithubIcon className="h-[18px] w-[18px]" />
+              <GithubIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
             </a>
             <ThemeToggle />
           </div>

@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TemplateDetailSkeleton } from "@/components/skeletons";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -235,9 +237,7 @@ export default function TemplateDetailPage({
   if (loading) {
     return (
       <AppShell breadcrumbs={[{ label: "Templates", href: "/templates" }, { label: "..." }]}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
+        <TemplateDetailSkeleton />
       </AppShell>
     );
   }
@@ -276,6 +276,7 @@ export default function TemplateDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Template Settings</CardTitle>
+                <CardDescription>Name, slug, and subject line.</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -428,76 +429,72 @@ export default function TemplateDetailPage({
           </div>
 
           {/* Right: Preview */}
-          <div className="flex flex-col gap-4">
-            <Card className="sticky top-4">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Preview</CardTitle>
-                    <CardDescription>Rendered email output.</CardDescription>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void handlePreview()}
-                    disabled={previewing}
-                  >
-                    {previewing ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-                    )}
-                    Render
-                  </Button>
+          <Card className="sticky top-0 self-start">
+            <CardHeader>
+              <CardTitle className="text-base">Preview</CardTitle>
+              <CardDescription>Rendered email output.</CardDescription>
+              <CardAction>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handlePreview()}
+                  disabled={previewing}
+                >
+                  {previewing ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+                  )}
+                  Render
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {/* Preview variables input */}
+              {variables.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-medium text-muted-foreground">Sample Variables</p>
+                  {variables.map((v) => (
+                    <div key={v.name} className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-muted-foreground w-24 shrink-0 truncate">
+                        {v.name}
+                      </span>
+                      <Input
+                        value={previewVars[v.name] ?? v.default ?? ""}
+                        onChange={(e) =>
+                          setPreviewVars((prev) => ({ ...prev, [v.name]: e.target.value }))
+                        }
+                        className="text-xs h-7"
+                        placeholder={v.default ?? (v.required ? "required" : "optional")}
+                      />
+                    </div>
+                  ))}
                 </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                {/* Preview variables input */}
-                {variables.length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xs font-medium text-muted-foreground">Sample Variables</p>
-                    {variables.map((v) => (
-                      <div key={v.name} className="flex items-center gap-2">
-                        <span className="text-xs font-mono text-muted-foreground w-24 shrink-0 truncate">
-                          {v.name}
-                        </span>
-                        <Input
-                          value={previewVars[v.name] ?? v.default ?? ""}
-                          onChange={(e) =>
-                            setPreviewVars((prev) => ({ ...prev, [v.name]: e.target.value }))
-                          }
-                          className="text-xs h-7"
-                          placeholder={v.default ?? (v.required ? "required" : "optional")}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
+              )}
 
-                {previewSubject && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Subject</p>
-                    <p className="text-sm font-medium text-foreground">{previewSubject}</p>
-                  </div>
-                )}
+              {previewSubject && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Subject</p>
+                  <p className="text-sm font-medium text-foreground">{previewSubject}</p>
+                </div>
+              )}
 
-                {previewHtml ? (
-                  <div className="rounded-lg border border-border bg-white p-4 overflow-auto max-h-[500px]">
-                    <div
-                      className="prose prose-sm max-w-none text-foreground"
-                      dangerouslySetInnerHTML={{ __html: previewHtml }}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center py-8 rounded-lg border border-dashed border-border">
-                    <p className="text-xs text-muted-foreground">
-                      Click &quot;Render&quot; to preview the template.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+              {previewHtml ? (
+                <div className="rounded-lg border border-border bg-white p-4 overflow-auto max-h-[500px]">
+                  <div
+                    className="prose prose-sm max-w-none text-foreground"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-8 rounded-lg border border-dashed border-border">
+                  <p className="text-xs text-muted-foreground">
+                    Click &quot;Render&quot; to preview the template.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AppShell>

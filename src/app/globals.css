@@ -6,7 +6,7 @@
 /*
  * Map CSS-variable design tokens to Tailwind v4 theme namespace
  * Color space: HSL (basalt design system).
- * Primary: Blue #3b6fd0 (dove brand — email/communication).
+ * Primary: Sakura pink #c5607d (dove brand — cherry blossom from logo).
  * Luminance: 3-tier (L0 body > L1 card > L2 secondary).
  */
 @theme inline {
@@ -87,15 +87,15 @@
 /*
  * Design tokens — light (default) & dark mode
  * 3-tier luminance: L0 (background) > L1 (card) > L2 (secondary)
- * Primary: Blue #3b6fd0
+ * Primary: Sakura pink #c5607d
  */
 :root {
   /* L0 body */
-  --background: 220 14% 94%;
+  --background: 330 20% 94%;
   --foreground: 0 0% 12%;
 
   /* L1 content panel */
-  --card: 220 14% 97%;
+  --card: 330 16% 97%;
   --card-foreground: 0 0% 12%;
 
   /* L2 inner cards */
@@ -105,33 +105,33 @@
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 12%;
 
-  /* Blue primary #3b6fd0 */
-  --primary: 217 58% 52%;
+  /* Sakura pink primary #c5607d */
+  --primary: 340 50% 55%;
   --primary-foreground: 0 0% 100%;
 
-  --muted: 220 14% 92%;
+  --muted: 330 14% 92%;
   --muted-foreground: 0 0% 45%;
 
-  --accent: 220 14% 92%;
+  --accent: 330 14% 92%;
   --accent-foreground: 0 0% 12%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 13% 88%;
-  --input: 220 13% 88%;
-  --ring: 217 58% 52%;
+  --border: 330 10% 88%;
+  --input: 330 10% 88%;
+  --ring: 340 50% 55%;
 
   --radius: 0.75rem;
 
-  --sidebar-background: 220 14% 94%;
+  --sidebar-background: 330 20% 94%;
   --sidebar-foreground: 0 0% 12%;
-  --sidebar-primary: 217 58% 52%;
+  --sidebar-primary: 340 50% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 14% 90%;
+  --sidebar-accent: 330 14% 90%;
   --sidebar-accent-foreground: 0 0% 12%;
-  --sidebar-border: 220 13% 88%;
-  --sidebar-ring: 217 58% 52%;
+  --sidebar-border: 330 10% 88%;
+  --sidebar-ring: 340 50% 55%;
 
   /* Semantic */
   --success: 142 71% 35%;
@@ -143,12 +143,12 @@
   --surface-elevated: 0 0% 9%;
 
   /* Chart palette */
-  --chart-1: 217 58% 52%;
+  --chart-1: 340 50% 55%;
   --chart-2: 142 71% 35%;
   --chart-3: 262 47% 50%;
   --chart-4: 32 80% 50%;
-  --chart-5: 340 65% 50%;
-  --sidebar: hsl(0 0% 98%);
+  --chart-5: 199 59% 45%;
+  --sidebar: hsl(330 20% 98%);
 }
 
 .dark {
@@ -167,9 +167,9 @@
   --popover: 0 0% 10.6%;
   --popover-foreground: 0 0% 93%;
 
-  /* Blue primary (muted for dark) */
-  --primary: 217 48% 42%;
-  --primary-foreground: 217 40% 92%;
+  /* Sakura pink primary (muted for dark) */
+  --primary: 340 40% 48%;
+  --primary-foreground: 340 30% 93%;
 
   --muted: 0 0% 12.2%;
   --muted-foreground: 0 0% 48%;
@@ -182,16 +182,16 @@
 
   --border: 0 0% 16%;
   --input: 0 0% 12%;
-  --ring: 217 48% 42%;
+  --ring: 340 40% 48%;
 
   --sidebar-background: 0 0% 9%;
   --sidebar-foreground: 0 0% 93%;
-  --sidebar-primary: 217 48% 42%;
-  --sidebar-primary-foreground: 217 40% 92%;
+  --sidebar-primary: 340 40% 48%;
+  --sidebar-primary-foreground: 340 30% 93%;
   --sidebar-accent: 0 0% 14%;
   --sidebar-accent-foreground: 0 0% 93%;
   --sidebar-border: 0 0% 16%;
-  --sidebar-ring: 217 48% 42%;
+  --sidebar-ring: 340 40% 48%;
 
   /* Semantic */
   --success: 142 65% 38%;
@@ -203,11 +203,11 @@
   --surface-elevated: 0 0% 14%;
 
   /* Chart palette */
-  --chart-1: 217 48% 42%;
+  --chart-1: 340 40% 48%;
   --chart-2: 142 65% 38%;
   --chart-3: 262 40% 45%;
   --chart-4: 32 70% 45%;
-  --chart-5: 340 55% 45%;
+  --chart-5: 199 50% 40%;
   --sidebar: hsl(240 5.9% 10%);
 }
 
