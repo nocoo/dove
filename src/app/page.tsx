@@ -25,18 +25,23 @@ function StatsCard({
   value,
   icon: Icon,
   accent,
+  index = 0,
 }: {
   label: string;
   value: string;
   icon: React.ComponentType<{ className?: string }>;
   accent?: string;
+  index?: number;
 }) {
   return (
-    <div className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5">
+    <div
+      className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5 animate-fade-up"
+      style={{ animationDelay: `${Math.min(index * 40, 600)}ms` }}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs md:text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl md:text-3xl font-semibold font-display text-foreground tracking-tight">{value}</p>
+          <p className="text-2xl md:text-3xl font-semibold font-display text-foreground tracking-tight tabular-nums">{value}</p>
         </div>
         <div className={`rounded-md ${accent ?? "bg-card"} p-2`}>
           <Icon className={`h-5 w-5 ${accent ? "text-current" : "text-muted-foreground"}`} />
@@ -96,22 +101,26 @@ export default function DashboardPage() {
                 label="Projects"
                 value={String(stats?.total_projects ?? 0)}
                 icon={FolderKanban}
+                index={0}
               />
               <StatsCard
                 label="Sent Today"
                 value={String(stats?.total_sends_today ?? 0)}
                 icon={Mail}
+                index={1}
               />
               <StatsCard
                 label="Sent This Month"
                 value={String(stats?.total_sends_month ?? 0)}
                 icon={CalendarDays}
+                index={2}
               />
               <StatsCard
                 label="Failed Today"
                 value={String(stats?.total_failed_today ?? 0)}
                 icon={AlertTriangle}
                 accent="bg-destructive/10 text-destructive"
+                index={3}
               />
             </div>
 
