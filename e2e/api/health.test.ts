@@ -1,7 +1,7 @@
 /**
  * E2E: GET /api/live — Health check endpoint.
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  */
 import { describe, expect, test } from "bun:test";
 import { get, parseJson } from "./helpers";

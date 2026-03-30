@@ -1,7 +1,7 @@
 /**
  * E2E: Projects API — full CRUD + token regeneration.
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  */
 import { describe, expect, test, afterAll } from "bun:test";
 import {

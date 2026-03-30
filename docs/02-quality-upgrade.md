@@ -29,7 +29,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 |-----------|--------|--------|
 | **L1** | ✅ Keep | No changes needed |
 | **G1** | ✅ Keep | No changes needed |
-| **L2** | ✅ True HTTP | Real HTTP calls to running dev server on port 17046, connecting to `dove-db-test` via **separate test Worker** |
+| **L2** | ✅ True HTTP | Real HTTP calls to running dev server on port 17032, connecting to `dove-db-test` via **separate test Worker** |
 | **G2** | ✅ Hard fail | Remove soft-skip: fail if osv-scanner or gitleaks not installed |
 | **L3** | ✅ Playwright | Bypassed-auth app-flow coverage (navigation, CRUD, data rendering) — **not** real Google OAuth |
 | **D1** | ✅ Full isolation | `_test_marker` table, separate test Worker deployment, E2E connect to `dove-db-test` |
@@ -162,7 +162,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 ### Step 4: Rewrite L2 — True HTTP E2E against running server ✅
 
 **Files**:
-- `scripts/run-e2e.ts` — Rewrite to auto-start/stop dev server on port 17046
+- `scripts/run-e2e.ts` — Rewrite to auto-start/stop dev server on port 17032
 - `e2e/api/helpers.ts` — Replace mock infrastructure with real HTTP client
 - `e2e/api/*.test.ts` (7 files) — Rewrite to make real HTTP requests
 - `.env.test` (NEW) — Test environment variables pointing to `dove-db-test`
@@ -174,8 +174,8 @@ BEFORE (current):
   test → import route handler → mock D1 → call handler() in-process
 
 AFTER (target):
-  run-e2e.ts → spawn `next dev --port 17046` with E2E env
-  test → fetch("http://localhost:17046/api/...") → real HTTP → real D1 (test)
+  run-e2e.ts → spawn `next dev --port 17032` with E2E env
+  test → fetch("http://localhost:17032/api/...") → real HTTP → real D1 (test)
   run-e2e.ts → kill server
 ```
 
@@ -189,8 +189,8 @@ D1_WORKER_API_KEY=<test-worker-api-key>
 # Skip auth for E2E (already implemented in src/proxy.ts)
 E2E_SKIP_AUTH=true
 
-# Port — do NOT use "bun run dev", use "next dev --port 17046" directly
-PORT=17046
+# Port — do NOT use "bun run dev", use "next dev --port 17032" directly
+PORT=17032
 ```
 
 > **Note**: `D1_WORKER_URL` points to the **test Worker** (`dove-test.worker.hexly.ai`), which is a completely separate Cloudflare Worker deployment bound to `dove-db-test`. No request-level env switching — isolation is at the deployment level.
@@ -199,16 +199,16 @@ PORT=17046
 1. Load `.env.test` into environment — **hard fail** if file missing or `D1_WORKER_URL` not set (L2 is a required gate for Tier S; missing infrastructure must block push, same as G2)
 2. **Inequality check**: assert `D1_WORKER_URL` from `.env.test` differs from `.env.local` (refuse if same — misconfiguration)
 3. **Verify test DB marker** (`scripts/verify-test-db.ts`) — hard fail if marker missing (production safety)
-4. **Clean `.next/dev/lock`** — Next.js prevents parallel dev server instances; stale lock from port 7046 blocks port 17046 startup (backy lesson)
-5. Spawn `next dev --port 17046` directly (NOT `bun run dev` which hardcodes port 7046)
-6. Wait for server ready (poll `http://localhost:17046/api/live`)
+4. **Clean `.next/dev/lock`** — Next.js prevents parallel dev server instances; stale lock from port 7032 blocks port 17032 startup (backy lesson)
+5. Spawn `next dev --port 17032` directly (NOT `bun run dev` which hardcodes port 7032)
+6. Wait for server ready (poll `http://localhost:17032/api/live`)
 7. Run `bun test e2e/api/`
 8. Kill server
 9. Exit with test exit code
 
 **`e2e/api/helpers.ts`** rewrite:
 - Remove all `mock.module()`, `setD1Handler()`, `getD1Handler()` infrastructure
-- Export `BASE = "http://localhost:17046"`
+- Export `BASE = "http://localhost:17032"`
 - Export helper functions for real HTTP: `get()`, `post()`, `put()`, `del()`
 - Export `setupTestProject()` — creates a test project via API, returns token
 - Export `cleanupTestData()` — deletes test data created during test run
@@ -265,7 +265,7 @@ const response = await fetch(`${BASE}/api/projects`);
 ```typescript
 export default defineConfig({
   testDir: './e2e/bdd',
-  baseURL: 'http://localhost:27046',
+  baseURL: 'http://localhost:27032',
   use: { headless: true },
   retries: process.env.CI ? 2 : 0,
   webServer: {
@@ -276,15 +276,15 @@ export default defineConfig({
       'D1_WORKER_URL=${D1_WORKER_URL_TEST:?not set}',
       'D1_WORKER_API_KEY=${D1_WORKER_API_KEY_TEST:?not set}',
       'E2E_SKIP_AUTH=true',
-      'next dev --port 27046',
+      'next dev --port 27032',
     ].join(' '),
-    port: 27046,
+    port: 27032,
     reuseExistingServer: !process.env.CI,
   },
 });
 ```
 
-> **Port note**: The `dev` script in `package.json` hardcodes `--port 7046`. Playwright's `webServer.command` must call `next dev --port 27046` directly to control the port.
+> **Port note**: The `dev` script in `package.json` hardcodes `--port 7032`. Playwright's `webServer.command` must call `next dev --port 27032` directly to control the port.
 >
 > **Env injection note**: L3 Playwright needs the test Worker URL injected into the webServer shell. We use `D1_WORKER_URL_TEST` / `D1_WORKER_API_KEY_TEST` env vars (set in CI or local shell profile) and remap them to `D1_WORKER_URL` / `D1_WORKER_API_KEY` in the command prefix. The `${VAR:?}` syntax ensures a hard failure if credentials are missing — L3 is a hard gate, not soft.
 
@@ -310,7 +310,7 @@ export default defineConfig({
 
 **No hook change**: L3 is manual/CI only per the quality system spec. `.husky/pre-push` is not modified.
 
-**Verification**: Run `bun run test:e2e:bdd` — Playwright reads `playwright.config.ts`, starts webServer on 27046, runs all specs.
+**Verification**: Run `bun run test:e2e:bdd` — Playwright reads `playwright.config.ts`, starts webServer on 27032, runs all specs.
 
 **Commit**: `chore: wire test:e2e:bdd to Playwright CLI`
 
@@ -324,9 +324,9 @@ After all steps complete, verify the full matrix:
 |-------|---------|----------|--------|
 | L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage | ✅ 130 tests, 92.96% funcs / 96.83% lines |
 | G1 | `bun run typecheck && bun run lint` | 0 errors, 0 warnings | ✅ Pass |
-| L2 | `bun run test:e2e:api` | Server starts on 17046, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass |
+| L2 | `bun run test:e2e:api` | Server starts on 17032, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass |
 | G2 | `bun run gate:security` | osv-scanner + gitleaks both run and pass (hard fail if missing) | ✅ Pass |
-| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27046 | ✅ 13 tests pass |
+| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27032 | ✅ 13 tests pass |
 | D1 | Verified by L2 | `_test_marker` check passes before tests, all queries hit dove-db-test | ✅ Verified |
 | pre-commit | `git commit` | G1 + L1 sequential (<30s) | ✅ Pass |
 | pre-push | `git push` | L2 ‖ G2 parallel (<3min) | Pending push |
@@ -364,7 +364,7 @@ After all steps complete, verify the full matrix:
 | `E2E_SKIP_AUTH` leaking to production | Security | **Step 2 adds `NODE_ENV !== 'production'` guard** in `src/proxy.ts`; even if env var is set, bypass is dead in production |
 | Playwright flaky on CI | L3 unreliable | Use `retries: 2` in playwright.config, keep tests deterministic |
 | E2E test data polluting test DB | D1 | Add cleanup in test afterAll hooks; `_test_marker` guarantees we're on test DB |
-| Port conflict (7046 vs 17046/27046) | E2E breaks | Scripts use `next dev --port N` directly, never `bun run dev` |
+| Port conflict (7032 vs 17032/27032) | E2E breaks | Scripts use `next dev --port N` directly, never `bun run dev` |
 | `.next/dev/lock` stale lock | E2E server won't start | `run-e2e.ts` cleans `.next/dev/lock` before spawn (backy lesson) |
 
 ### Gate Level Policy

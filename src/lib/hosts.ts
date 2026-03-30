@@ -8,7 +8,7 @@
 /** Parse ALLOWED_HOSTS from env — reads fresh on each call. */
 function parseAllowedHosts(): Set<string> {
   return new Set(
-    (process.env.ALLOWED_HOSTS ?? "localhost:7046")
+    (process.env.ALLOWED_HOSTS ?? "localhost:7032")
       .split(",")
       .map((h) => h.trim())
       .filter(Boolean),

@@ -3,7 +3,7 @@
  *       GET /api/webhook/[projectId]/templates,
  *       POST /api/webhook/[projectId]/send
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  *
  * The happy-path send test exercises the full pipeline (auth → dedup →
  * quota → template → render → log) but uses RESEND_DRY_RUN=true from
@@ -137,7 +137,7 @@ describe("POST /api/webhook/[projectId]/send", () => {
 
   // Step 2: Parse errors (no Resend call)
   test("returns 400 for invalid JSON", async () => {
-    const url = `http://localhost:${process.env.PORT ?? 17046}/api/webhook/${projectId}/send`;
+    const url = `http://localhost:${process.env.PORT ?? 17032}/api/webhook/${projectId}/send`;
     const response = await fetch(url, {
       method: "POST",
       headers: {

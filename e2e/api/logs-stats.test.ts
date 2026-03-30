@@ -2,7 +2,7 @@
  * E2E: Logs & Stats API — GET /api/send-logs, GET /api/webhook-logs,
  *       GET /api/stats, GET /api/stats/charts
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  * Tests verify response shape and status codes; exact counts depend on test DB state.
  */
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";

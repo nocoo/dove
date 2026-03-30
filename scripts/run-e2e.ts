@@ -6,7 +6,7 @@
  *   2. Inequality check — test URL !== production URL
  *   3. Verify test DB marker (_test_marker)
  *   4. Clean .next/dev/lock (stale lock prevents parallel dev servers)
- *   5. Spawn `next dev --port 17046` with E2E env
+ *   5. Spawn `next dev --port 17032` with E2E env
  *   6. Wait for server ready (poll /api/live)
  *   7. Run `bun test e2e/api/`
  *   8. Kill server
@@ -21,7 +21,7 @@ import { resolve } from "node:path";
 import type { Subprocess } from "bun";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const E2E_PORT = 17046;
+const E2E_PORT = 17032;
 const POLL_INTERVAL_MS = 500;
 const MAX_WAIT_MS = 60_000;
 

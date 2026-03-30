@@ -109,19 +109,19 @@ git clone https://github.com/nocoo/dove.git
 cd dove
 bun install
 # 配置 .env.local（D1 Worker URL、Resend API Key、Google OAuth 等）
-bun dev  # http://localhost:7046
+bun dev  # http://localhost:7032
 ```
 
 | 命令 | 说明 |
 |---|---|
-| `bun dev` | 启动开发服务器 (port 7046) |
+| `bun dev` | 启动开发服务器 (port 7032) |
 | `bun run build` | 生产构建 |
 | `bun test` | 运行单元测试 |
 | `bun run test:coverage` | 单元测试 + 90% 覆盖率门控 |
 | `bun run typecheck` | TypeScript 类型检查 |
 | `bun run lint` | ESLint (strict, 0 warnings) |
-| `bun run test:e2e:api` | L2 API E2E 测试 (port 17046) |
-| `bun run test:e2e:bdd` | L3 Playwright BDD E2E (port 27046) |
+| `bun run test:e2e:api` | L2 API E2E 测试 (port 17032) |
+| `bun run test:e2e:bdd` | L3 Playwright BDD E2E (port 27032) |
 | `bun run gate:security` | 安全扫描 (osv-scanner + gitleaks) |
 | `bun run release` | 发版 (SemVer bump + CHANGELOG + tag + GH release) |
 
@@ -131,9 +131,9 @@ bun dev  # http://localhost:7046
 |---|---|---|
 | L1 Unit | 123 tests, ≥90% coverage (bun test) | pre-commit |
 | G1 Static | tsc strict + ESLint strict + max-warnings=0 | pre-commit |
-| L2 API E2E | 69 tests, 18 REST endpoints (port 17046) | pre-push |
+| L2 API E2E | 69 tests, 18 REST endpoints (port 17032) | pre-push |
 | G2 Security | osv-scanner + gitleaks | pre-push |
-| L3 BDD E2E | Playwright 核心流程 (port 27046) | on-demand |
+| L3 BDD E2E | Playwright 核心流程 (port 27032) | on-demand |
 
 ```bash
 bun run test:coverage        # L1 + 覆盖率

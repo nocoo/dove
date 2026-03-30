@@ -3,9 +3,9 @@
   "version": "0.1.9",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 7046",
+    "dev": "next dev --port 7032",
     "build": "next build",
-    "start": "next start --port 7046",
+    "start": "next start --port 7032",
     "lint": "eslint --max-warnings=0",
     "test": "bun test src/__tests__/",
     "test:coverage": "bun run scripts/check-coverage.ts",

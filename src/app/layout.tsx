@@ -17,7 +17,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXTAUTH_URL || "http://localhost:7046",
+    process.env.NEXTAUTH_URL || "http://localhost:7032",
   ),
   title: "Dove - Email Relay Service",
   description:

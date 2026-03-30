@@ -2,7 +2,7 @@
  * E2E: Templates API — GET/POST /api/templates, GET/PUT/DELETE /api/templates/[id],
  *       POST /api/templates/[id]/preview
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  */
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {

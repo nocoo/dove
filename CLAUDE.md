@@ -15,7 +15,7 @@ Self-hosted email relay service. Personal projects send emails via webhook; Dove
 | Auth | NextAuth v5 + Google OAuth (whitelist) |
 | Database | Cloudflare D1 via Worker proxy |
 | Email | Resend API |
-| Deployment | Railway (app) + Cloudflare (worker), port 7046 |
+| Deployment | Railway (app) + Cloudflare (worker), port 7032 |
 
 ## Project Structure
 
@@ -100,14 +100,14 @@ scripts/
 
 | Purpose | Port |
 |---|---|
-| Dev server | 7046 |
-| L2 API E2E | 17046 |
-| L3 BDD E2E | 27046 |
+| Dev server | 7032 |
+| L2 API E2E | 17032 |
+| L3 BDD E2E | 27032 |
 
 ## Common Commands
 
 ```bash
-bun dev                # Dev server (7046)
+bun dev                # Dev server (7032)
 bun run build          # Production build
 bun test               # Unit tests
 bun run test:coverage  # Unit tests + 90% coverage gate
@@ -115,8 +115,8 @@ bun run typecheck      # TypeScript type check
 bun run lint           # ESLint
 bun run lint:staged    # ESLint on staged files only
 bun run gate:security  # Security scan (osv-scanner + gitleaks)
-bun run test:e2e:api   # L2 API E2E (port 17046)
-bun run test:e2e:bdd   # L3 Playwright BDD E2E (port 27046)
+bun run test:e2e:api   # L2 API E2E (port 17032)
+bun run test:e2e:bdd   # L3 Playwright BDD E2E (port 27032)
 ```
 
 ## Release

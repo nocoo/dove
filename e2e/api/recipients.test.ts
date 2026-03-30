@@ -1,7 +1,7 @@
 /**
  * E2E: Recipients API — GET/POST /api/recipients, PUT/DELETE /api/recipients/[id]
  *
- * Real HTTP against running dev server on port 17046.
+ * Real HTTP against running dev server on port 17032.
  */
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import {
