@@ -35,7 +35,7 @@ async function main() {
   console.log("--- Security Gate ---\n");
 
   const results = await Promise.all([
-    runCommand(["osv-scanner", "--lockfile=bun.lock"], "osv-scanner (dependency vulnerabilities)"),
+    runCommand(["osv-scanner", "--config=.osv-scanner.toml", "--lockfile=bun.lock"], "osv-scanner (dependency vulnerabilities)"),
     runCommand(["gitleaks", "detect", "--source=.", "--no-banner"], "gitleaks (secret detection)"),
   ]);
 

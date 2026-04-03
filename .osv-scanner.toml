@@ -1,0 +1,10 @@
+# OSV Scanner ignore list for false positives
+#
+# GHSA-5f7q-jpqc-wp7h: PPR DoS vulnerability
+# - Requires experimental.ppr=true AND NEXT_PRIVATE_MINIMAL_MODE=1
+# - dove does not use PPR or minimal mode
+# - Actually fixed in next@16.1.5, but osv-scanner misdetects 16.2.x as affected
+
+[[IgnoredVulns]]
+id = "GHSA-5f7q-jpqc-wp7h"
+reason = "PPR not enabled; fixed in next@16.1.5 (using 16.2.2)"
