@@ -257,40 +257,42 @@ export default function SendLogsPage() {
               </div>
             )}
 
-            {/* Table header — desktop */}
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground border-b border-border">
-              <SortHeader label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[80px] shrink-0" />
-              <SortHeader label="Recipient" sortKey="to_email" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
-              <SortHeader label="Subject" sortKey="subject" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[200px] shrink-0" />
-              <SortHeader label="Project" sortKey="project" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[120px] shrink-0" />
-              <SortHeader label="Date" sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[130px] shrink-0" />
-            </div>
+            {/* Table */}
+            <div role="table" aria-label="Send logs">
+              {/* Table header — desktop */}
+              <div role="row" className="hidden md:flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground border-b border-border">
+                <SortHeader label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[80px] shrink-0" />
+                <SortHeader label="Recipient" sortKey="to_email" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="flex-1 min-w-0" />
+                <SortHeader label="Subject" sortKey="subject" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[200px] shrink-0" />
+                <SortHeader label="Project" sortKey="project" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[120px] shrink-0" />
+                <SortHeader label="Date" sortKey="created_at" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="w-[130px] shrink-0" />
+              </div>
 
-            <div className="flex flex-col">
+              <div className="flex flex-col">
               {sortedLogs?.map((log) => (
-                <div key={log.id}>
+                <div key={log.id} role="row">
                   <button
                     type="button"
                     onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
                     className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-border hover:bg-muted/30 transition-colors"
                   >
-                    <div className="w-[80px] shrink-0">
+                    <span role="cell" className="w-[80px] shrink-0">
                       <Badge variant={statusVariant(log.status)} className="text-xs">
                         {log.status}
                       </Badge>
-                    </div>
-                    <div className="flex-1 min-w-0 truncate text-sm text-foreground">
+                    </span>
+                    <span role="cell" className="flex-1 min-w-0 truncate text-sm text-foreground">
                       {log.to_email}
-                    </div>
-                    <div className="w-[200px] shrink-0 truncate text-xs text-muted-foreground">
+                    </span>
+                    <span role="cell" className="w-[200px] shrink-0 truncate text-xs text-muted-foreground">
                       {log.subject}
-                    </div>
-                    <div className="w-[120px] shrink-0 text-xs text-muted-foreground truncate">
+                    </span>
+                    <span role="cell" className="w-[120px] shrink-0 text-xs text-muted-foreground truncate">
                       {projectMap.get(log.project_id) ?? log.project_id.slice(0, 8)}
-                    </div>
-                    <div className="w-[130px] shrink-0 text-xs text-muted-foreground">
+                    </span>
+                    <span role="cell" className="w-[130px] shrink-0 text-xs text-muted-foreground">
                       {formatDate(log.created_at)}
-                    </div>
+                    </span>
                   </button>
 
                   {/* Expanded detail */}
@@ -333,7 +335,8 @@ export default function SendLogsPage() {
                     </div>
                   )}
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Pagination */}
