@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.1.10
+
+### Changed
+- Migrate to nocoo/base-ci@v2026
+- Add GitHub Actions CI workflow
+- Change dev port from 7032 to 7033
+- Add osv-scanner config for false positive suppression
+- Upgrade Next.js 16.1.7 → 16.2.2
+- Migrate ports 7046/17046/27046 → 7032/17032/27032
+
+### Fixed
+- Revert template preview sticky top to top-0
+- Use spec-compliant aria-modal value on mobile drawer
+- Use opacity for project card arrow hover transition
+- Replace direct avatar logout with dropdown menu in sidebar
+- Unify card padding and AppShell layout spacing
+- Improve login page accessibility
+- Add missing transition animations and fix performance
+- Add ARIA table roles and fix button>div semantic markup in send logs
+- Fix dark mode color warmth and hardcoded color values
+- Replace remaining non-standard font sizes
+- Improve chart title and template group heading styles
+- Replace non-standard font sizes with Tailwind defaults
+- Add responsive text-2xl to all page h1 headings
+- 迁移到 base-ci@v2026，禁用 L2 E2E
+- Update next to fix CVE
+- Correct dark mode --input token to B-5 specification
+
+### Removed
+- Remove unused next-themes dependency
+
 ## v0.1.9
 
 ### Added
