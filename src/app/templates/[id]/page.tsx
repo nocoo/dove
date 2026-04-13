@@ -429,7 +429,7 @@ export default function TemplateDetailPage({
           </div>
 
           {/* Right: Preview */}
-          <Card className="sticky top-[72px] self-start">
+          <Card className="sticky top-0 self-start">
             <CardHeader>
               <CardTitle className="text-base">Preview</CardTitle>
               <CardDescription>Rendered email output.</CardDescription>
