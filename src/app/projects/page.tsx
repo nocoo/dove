@@ -113,7 +113,7 @@ export default function ProjectsPage() {
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground/0 group-hover:text-muted-foreground transition-opacity duration-200 ml-2" strokeWidth={1.5} />
+                    <ArrowRight className="shrink-0 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2" strokeWidth={1.5} />
                   </div>
 
                   {project.description && (
