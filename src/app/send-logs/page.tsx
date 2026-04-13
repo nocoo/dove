@@ -275,7 +275,7 @@ export default function SendLogsPage() {
                     className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-border hover:bg-muted/30 transition-colors"
                   >
                     <div className="w-[80px] shrink-0">
-                      <Badge variant={statusVariant(log.status)} className="text-[10px]">
+                      <Badge variant={statusVariant(log.status)} className="text-xs">
                         {log.status}
                       </Badge>
                     </div>

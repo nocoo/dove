@@ -107,8 +107,8 @@ export default function ProjectsPage() {
                         <Mail className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-foreground truncate">{project.name}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">
+                        <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
                           {project.from_name} · {project.email_prefix} · {project.quota_daily}/day · {project.quota_monthly}/mo
                         </p>
                       </div>
@@ -117,7 +117,7 @@ export default function ProjectsPage() {
                   </div>
 
                   {project.description && (
-                    <p className="text-[11px] text-muted-foreground mt-2 line-clamp-1 pl-[34px]">
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-1 pl-[34px]">
                       {project.description}
                     </p>
                   )}
