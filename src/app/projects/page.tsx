@@ -99,7 +99,7 @@ export default function ProjectsPage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="group rounded-[var(--radius-card)] bg-secondary px-3.5 py-3 transition-colors hover:bg-accent/60"
+                  className="group rounded-[var(--radius-card)] bg-secondary p-4 md:p-5 transition-colors hover:bg-accent/60"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5 min-w-0">

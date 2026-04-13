@@ -162,8 +162,8 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
         </header>
 
         {/* Floating island content area */}
-        <div className="flex-1 px-2 pb-2 md:px-3 md:pb-3">
-          <div className="h-full rounded-[16px] md:rounded-[20px] bg-card p-3 md:p-5 overflow-y-auto">
+        <div className="flex-1 px-3 pb-3 md:px-4 md:pb-4">
+          <div className="h-full rounded-[var(--radius-card)] bg-card p-3 md:p-5 overflow-y-auto">
             {children}
           </div>
         </div>
