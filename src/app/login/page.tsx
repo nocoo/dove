@@ -3,10 +3,12 @@
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { GithubIcon } from "@/components/icons/github";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { Button } from "@/components/ui/button";
 import { LoginSkeleton } from "@/components/skeletons";
 
 function Barcode() {
@@ -55,7 +57,10 @@ function LoginContent() {
   const year = new Date().getFullYear();
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleGoogleLogin = () => {
+    setIsLoading(true);
     signIn("google", { callbackUrl });
   };
 
@@ -99,12 +104,12 @@ function LoginContent() {
             className="relative w-72 aspect-[54/86] overflow-hidden rounded-2xl bg-card flex flex-col ring-1 ring-black/[0.08] dark:ring-white/[0.06]"
             style={{
               boxShadow: [
-                "0 1px 2px rgba(0,0,0,0.06)",
-                "0 4px 8px rgba(0,0,0,0.04)",
-                "0 12px 24px rgba(0,0,0,0.06)",
-                "0 24px 48px rgba(0,0,0,0.04)",
-                "0 0 0 0.5px rgba(0,0,0,0.02)",
-                "0 0 60px rgba(0,0,0,0.03)",
+                "0 1px 2px hsl(var(--foreground) / 0.06)",
+                "0 4px 8px hsl(var(--foreground) / 0.04)",
+                "0 12px 24px hsl(var(--foreground) / 0.06)",
+                "0 24px 48px hsl(var(--foreground) / 0.04)",
+                "0 0 0 0.5px hsl(var(--foreground) / 0.02)",
+                "0 0 60px hsl(var(--foreground) / 0.03)",
               ].join(", "),
             }}
           >
@@ -115,23 +120,23 @@ function LoginContent() {
                 <div
                   className="h-4 w-8 rounded-full bg-background/80"
                   style={{
-                    boxShadow: "inset 0 1.5px 3px rgba(0,0,0,0.35), inset 0 -0.5px 1px rgba(255,255,255,0.1)",
+                    boxShadow: "inset 0 1.5px 3px hsl(var(--foreground) / 0.35), inset 0 -0.5px 1px hsl(var(--background) / 0.1)",
                   }}
                 />
                 <div className="flex items-center gap-2">
                   <Image src="/logo-24.png" alt="dove" width={16} height={16} className="brightness-0 invert" />
                   <span className="text-sm font-semibold text-primary-foreground">dove</span>
                 </div>
-                <span className="text-[10px] font-medium uppercase tracking-widest text-primary-foreground/60">
+                <span className="text-xs font-medium uppercase tracking-widest text-primary-foreground/60">
                   DEV
                 </span>
               </div>
               {/* Barcode row */}
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-[9px] font-mono text-primary-foreground/40 tracking-wider">
+                <span className="text-xs font-mono text-primary-foreground/40 tracking-wider">
                   ID {year}-{today.slice(4)}
                 </span>
-                <div className="h-6">
+                <div className="h-6" aria-hidden="true">
                   <Barcode />
                 </div>
               </div>
@@ -140,7 +145,7 @@ function LoginContent() {
             {/* Badge content */}
             <div className="flex flex-1 flex-col items-center px-6 pt-6 pb-5">
               {/* Logo */}
-              <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-[#171717] ring-1 ring-border flex items-center justify-center">
+              <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-background ring-1 ring-border flex items-center justify-center">
                 <Image src="/logo-80.png" alt="dove" width={80} height={80} className="h-full w-full object-cover" />
               </div>
 
@@ -163,16 +168,22 @@ function LoginContent() {
               <div className="mt-5" />
 
               {/* Google Sign-in button */}
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleGoogleLogin}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-secondary px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent cursor-pointer"
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <GoogleIcon />
-                Sign in with Google
-              </button>
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                {isLoading ? "Signing in..." : "Sign in with Google"}
+              </Button>
 
               {/* Terms */}
-              <p className="mt-3 text-center text-[10px] leading-relaxed text-muted-foreground/60">
+              <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground/60">
                 Access is restricted to authorized accounts only
               </p>
             </div>
@@ -181,7 +192,7 @@ function LoginContent() {
             <div className="mt-auto flex items-center justify-center border-t border-border bg-secondary/50 py-2.5">
               <div className="flex items-center gap-1.5">
                 <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-                <span className="text-[10px] text-muted-foreground">Secure Auth</span>
+                <span className="text-xs text-muted-foreground">Secure Auth</span>
               </div>
             </div>
           </div>

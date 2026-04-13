@@ -429,7 +429,7 @@ export default function TemplateDetailPage({
           </div>
 
           {/* Right: Preview */}
-          <Card className="sticky top-0 self-start">
+          <Card className="sticky top-[72px] self-start">
             <CardHeader>
               <CardTitle className="text-base">Preview</CardTitle>
               <CardDescription>Rendered email output.</CardDescription>
@@ -474,13 +474,13 @@ export default function TemplateDetailPage({
 
               {previewSubject && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Subject</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Subject</p>
                   <p className="text-sm font-medium text-foreground">{previewSubject}</p>
                 </div>
               )}
 
               {previewHtml ? (
-                <div className="rounded-lg border border-border bg-white p-4 overflow-auto max-h-[500px]">
+                <div className="rounded-lg border border-border bg-background p-4 overflow-auto max-h-[500px]">
                   <div
                     className="prose prose-sm max-w-none text-foreground"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}

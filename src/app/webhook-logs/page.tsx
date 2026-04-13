@@ -175,7 +175,7 @@ export default function WebhookLogsPage() {
     <AppShell breadcrumbs={[{ label: "Webhook Logs", href: "/webhook-logs" }]}>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-semibold font-display">Webhook Logs</h1>
+          <h1 className="text-xl md:text-2xl font-semibold font-display">Webhook Logs</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Fire-and-forget request logs for observability.
           </p>
@@ -257,7 +257,7 @@ export default function WebhookLogsPage() {
                     className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-border hover:bg-muted/30 transition-colors"
                   >
                     <div className="w-[60px] shrink-0">
-                      <Badge variant={statusCodeVariant(log.status_code)} className="text-[10px] font-mono">
+                      <Badge variant={statusCodeVariant(log.status_code)} className="text-xs font-mono">
                         {log.status_code}
                       </Badge>
                     </div>

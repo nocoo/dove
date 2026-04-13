@@ -60,7 +60,7 @@ export function ProjectsListSkeleton() {
       {Array.from({ length: 6 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-[var(--radius-card)] bg-secondary px-3.5 py-3"
+          className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5"
         >
           <div className="flex items-center gap-2.5">
             <Skeleton className="h-7 w-7 rounded-md shrink-0" />

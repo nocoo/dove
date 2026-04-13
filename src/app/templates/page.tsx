@@ -73,7 +73,7 @@ export default function TemplatesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold font-display">Templates</h1>
+            <h1 className="text-xl md:text-2xl font-semibold font-display">Templates</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Email templates across all projects.
             </p>
@@ -110,7 +110,7 @@ export default function TemplatesPage() {
           <div className="flex flex-col gap-6">
             {Array.from(grouped.entries()).map(([projectId, tmps]) => (
               <div key={projectId}>
-                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
                   {projectMap.get(projectId) ?? "Unknown Project"}
                 </h2>
                 <div className="divide-y divide-border/50 rounded-xl bg-secondary overflow-hidden">
@@ -118,7 +118,7 @@ export default function TemplatesPage() {
                     <Link
                       key={t.id}
                       href={`/templates/${t.id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground truncate">{t.name}</p>
@@ -128,7 +128,7 @@ export default function TemplatesPage() {
                           <span>{t.subject}</span>
                         </p>
                       </div>
-                      <time className="hidden sm:block text-[11px] text-muted-foreground tabular-nums shrink-0">
+                      <time className="hidden sm:block text-xs text-muted-foreground tabular-nums shrink-0">
                         {new Date(t.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                       </time>
                     </Link>

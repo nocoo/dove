@@ -47,7 +47,7 @@ export function SendsChart({ data }: { data: ChartPoint[] }) {
   if (data.length === 0) {
     return (
       <div className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5">
-        <p className="text-xs md:text-sm text-muted-foreground mb-4">Sends Over Time</p>
+        <p className="text-sm font-medium text-foreground mb-4">Sends Over Time</p>
         <div className="flex h-[200px] items-center justify-center">
           <p className="text-sm text-muted-foreground">No data available</p>
         </div>
@@ -66,7 +66,7 @@ export function SendsChart({ data }: { data: ChartPoint[] }) {
 
   return (
     <div className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5">
-      <p className="text-xs md:text-sm text-muted-foreground mb-4">Sends Over Time</p>
+      <p className="text-sm font-medium text-foreground mb-4">Sends Over Time</p>
       <ResponsiveContainer width="100%" height={200}>
         <BarChart
           data={chartData}
@@ -102,7 +102,7 @@ export function SendsChart({ data }: { data: ChartPoint[] }) {
           />
           <Bar
             dataKey="failed"
-            fill="hsl(var(--chart-5))"
+            fill="hsl(var(--destructive))"
             radius={[3, 3, 0, 0]}
             stackId="a"
           />
@@ -116,7 +116,7 @@ export function SendsChart({ data }: { data: ChartPoint[] }) {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "hsl(var(--chart-5))" }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "hsl(var(--destructive))" }} />
           <span className="text-xs text-muted-foreground">
             Failed: <span className="font-medium text-foreground">{totalFailed}</span>
           </span>

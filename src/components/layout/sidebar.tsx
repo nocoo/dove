@@ -25,6 +25,14 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import type { LucideIcon } from "lucide-react";
 
@@ -140,7 +148,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col bg-background transition-all duration-300 ease-in-out overflow-hidden",
+        "sticky top-0 flex h-screen shrink-0 flex-col bg-background transition-[width] duration-300 ease-in-out overflow-hidden",
         collapsed ? "w-[68px]" : "w-[260px]",
       )}
     >
@@ -199,24 +207,32 @@ export function Sidebar() {
             })}
           </nav>
 
-          {/* User sign out */}
+          {/* User menu */}
           <div className="py-3 flex justify-center w-full">
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
                   className="cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all rounded-full"
+                  aria-label="User menu"
                 >
                   <Avatar className="h-9 w-9">
                     {userImage && <AvatarImage src={userImage} alt={userName} />}
                     <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
                   </Avatar>
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                {userName} — Sign out
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end" sideOffset={8}>
+                <DropdownMenuLabel>
+                  <p className="text-sm font-medium">{userName}</p>
+                  {userEmail && <p className="text-xs text-muted-foreground">{userEmail}</p>}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                  <LogOut className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       ) : (
@@ -228,7 +244,7 @@ export function Sidebar() {
               <div className="flex items-center gap-3">
                 <Image src="/logo-24.png" alt="dove" width={24} height={24} />
                 <span className="text-lg font-bold tracking-tighter">dove</span>
-                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium leading-none text-muted-foreground">
                   v{APP_VERSION}
                 </span>
               </div>
@@ -253,26 +269,33 @@ export function Sidebar() {
             ))}
           </nav>
 
-          {/* User info + sign out */}
+          {/* User menu */}
           <div className="px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9 shrink-0">
-                {userImage && <AvatarImage src={userImage} alt={userName} />}
-                <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{userName}</p>
-                <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
-              </div>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                aria-label="Sign out"
-                title="Sign out"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0 cursor-pointer"
-              >
-                <LogOut className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-              </button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors cursor-pointer">
+                  <Avatar className="h-9 w-9 shrink-0">
+                    {userImage && <AvatarImage src={userImage} alt={userName} />}
+                    <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-foreground truncate">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-[--radix-dropdown-menu-trigger-width]">
+                <DropdownMenuLabel>
+                  <p className="text-sm font-medium">{userName}</p>
+                  {userEmail && <p className="text-xs text-muted-foreground">{userEmail}</p>}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                  <LogOut className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       )}
