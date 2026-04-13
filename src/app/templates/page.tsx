@@ -110,7 +110,7 @@ export default function TemplatesPage() {
           <div className="flex flex-col gap-6">
             {Array.from(grouped.entries()).map(([projectId, tmps]) => (
               <div key={projectId}>
-                <h2 className="text-sm font-medium text-muted-foreground mb-3">
+                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
                   {projectMap.get(projectId) ?? "Unknown Project"}
                 </h2>
                 <div className="divide-y divide-border/50 rounded-xl bg-secondary overflow-hidden">
