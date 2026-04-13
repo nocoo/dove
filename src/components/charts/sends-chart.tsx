@@ -116,7 +116,7 @@ export function SendsChart({ data }: { data: ChartPoint[] }) {
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "hsl(var(--chart-5))" }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "hsl(var(--destructive))" }} />
           <span className="text-xs text-muted-foreground">
             Failed: <span className="font-medium text-foreground">{totalFailed}</span>
           </span>

@@ -480,7 +480,7 @@ export default function TemplateDetailPage({
               )}
 
               {previewHtml ? (
-                <div className="rounded-lg border border-border bg-white p-4 overflow-auto max-h-[500px]">
+                <div className="rounded-lg border border-border bg-background p-4 overflow-auto max-h-[500px]">
                   <div
                     className="prose prose-sm max-w-none text-foreground"
                     dangerouslySetInnerHTML={{ __html: previewHtml }}

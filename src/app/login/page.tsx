@@ -99,12 +99,12 @@ function LoginContent() {
             className="relative w-72 aspect-[54/86] overflow-hidden rounded-2xl bg-card flex flex-col ring-1 ring-black/[0.08] dark:ring-white/[0.06]"
             style={{
               boxShadow: [
-                "0 1px 2px rgba(0,0,0,0.06)",
-                "0 4px 8px rgba(0,0,0,0.04)",
-                "0 12px 24px rgba(0,0,0,0.06)",
-                "0 24px 48px rgba(0,0,0,0.04)",
-                "0 0 0 0.5px rgba(0,0,0,0.02)",
-                "0 0 60px rgba(0,0,0,0.03)",
+                "0 1px 2px hsl(var(--foreground) / 0.06)",
+                "0 4px 8px hsl(var(--foreground) / 0.04)",
+                "0 12px 24px hsl(var(--foreground) / 0.06)",
+                "0 24px 48px hsl(var(--foreground) / 0.04)",
+                "0 0 0 0.5px hsl(var(--foreground) / 0.02)",
+                "0 0 60px hsl(var(--foreground) / 0.03)",
               ].join(", "),
             }}
           >
@@ -140,7 +140,7 @@ function LoginContent() {
             {/* Badge content */}
             <div className="flex flex-1 flex-col items-center px-6 pt-6 pb-5">
               {/* Logo */}
-              <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-[#171717] ring-1 ring-border flex items-center justify-center">
+              <div className="h-24 w-24 overflow-hidden rounded-full bg-secondary dark:bg-background ring-1 ring-border flex items-center justify-center">
                 <Image src="/logo-80.png" alt="dove" width={80} height={80} className="h-full w-full object-cover" />
               </div>
 
