@@ -140,7 +140,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 flex h-screen shrink-0 flex-col bg-background transition-all duration-300 ease-in-out overflow-hidden",
+        "sticky top-0 flex h-screen shrink-0 flex-col bg-background transition-[width] duration-300 ease-in-out overflow-hidden",
         collapsed ? "w-[68px]" : "w-[260px]",
       )}
     >
@@ -228,7 +228,7 @@ export function Sidebar() {
               <div className="flex items-center gap-3">
                 <Image src="/logo-24.png" alt="dove" width={24} height={24} />
                 <span className="text-lg font-bold tracking-tighter">dove</span>
-                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                <span className="rounded-md bg-secondary px-1.5 py-0.5 text-xs font-medium leading-none text-muted-foreground">
                   v{APP_VERSION}
                 </span>
               </div>
