@@ -3,10 +3,12 @@
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { GithubIcon } from "@/components/icons/github";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { Button } from "@/components/ui/button";
 import { LoginSkeleton } from "@/components/skeletons";
 
 function Barcode() {
@@ -55,7 +57,10 @@ function LoginContent() {
   const year = new Date().getFullYear();
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleGoogleLogin = () => {
+    setIsLoading(true);
     signIn("google", { callbackUrl });
   };
 
@@ -131,7 +136,7 @@ function LoginContent() {
                 <span className="text-xs font-mono text-primary-foreground/40 tracking-wider">
                   ID {year}-{today.slice(4)}
                 </span>
-                <div className="h-6">
+                <div className="h-6" aria-hidden="true">
                   <Barcode />
                 </div>
               </div>
@@ -163,13 +168,19 @@ function LoginContent() {
               <div className="mt-5" />
 
               {/* Google Sign-in button */}
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleGoogleLogin}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-secondary px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent cursor-pointer"
+                disabled={isLoading}
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <GoogleIcon />
-                Sign in with Google
-              </button>
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                {isLoading ? "Signing in..." : "Sign in with Google"}
+              </Button>
 
               {/* Terms */}
               <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground/60">
