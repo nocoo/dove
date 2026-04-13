@@ -8,6 +8,7 @@ import { Sidebar } from "./sidebar";
 import { SidebarProvider, useSidebar } from "./sidebar-context";
 import { ThemeToggle } from "./theme-toggle";
 import { Breadcrumbs } from "./breadcrumbs";
+import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -101,20 +102,27 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
       {!isMobile && <Sidebar />}
 
       {/* Mobile overlay */}
-      {isMobile && mobileOpen && (
+      {isMobile && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs"
+            className={cn(
+              "fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-300",
+              mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none",
+            )}
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
           <div
             ref={drawerRef}
             role="dialog"
-            aria-modal="true"
+            aria-modal={mobileOpen}
             aria-label="Navigation menu"
+            aria-hidden={!mobileOpen}
             tabIndex={-1}
-            className="fixed inset-y-0 left-0 z-50 w-[260px] outline-none"
+            className={cn(
+              "fixed inset-y-0 left-0 z-50 w-[260px] outline-none transition-transform duration-300 ease-in-out",
+              mobileOpen ? "translate-x-0" : "-translate-x-full",
+            )}
           >
             <div className="absolute top-3 right-3 z-10">
               <button
