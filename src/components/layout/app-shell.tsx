@@ -115,7 +115,7 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
           <div
             ref={drawerRef}
             role="dialog"
-            aria-modal={mobileOpen}
+            aria-modal={mobileOpen ? "true" : undefined}
             aria-label="Navigation menu"
             aria-hidden={!mobileOpen}
             tabIndex={-1}
