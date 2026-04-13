@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Mail, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -294,44 +295,51 @@ export default function SendLogsPage() {
                   </button>
 
                   {/* Expanded detail */}
-                  {expandedId === log.id && (
-                    <div className="mx-4 mb-1 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-0.5">ID</span>
-                          <span className="text-xs font-mono text-foreground break-all">{log.id}</span>
-                        </div>
-                        {log.resend_id && (
+                  <div
+                    className={cn(
+                      "grid transition-[grid-template-rows] duration-200",
+                      expandedId === log.id ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                    )}
+                  >
+                    <div className="overflow-hidden min-h-0">
+                      <div className="mx-4 mb-1 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <span className="text-xs text-muted-foreground block mb-0.5">Resend ID</span>
-                            <span className="text-xs font-mono text-foreground break-all">{log.resend_id}</span>
+                            <span className="text-xs text-muted-foreground block mb-0.5">ID</span>
+                            <span className="text-xs font-mono text-foreground break-all">{log.id}</span>
                           </div>
-                        )}
-                        {log.idempotency_key && (
+                          {log.resend_id && (
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-0.5">Resend ID</span>
+                              <span className="text-xs font-mono text-foreground break-all">{log.resend_id}</span>
+                            </div>
+                          )}
+                          {log.idempotency_key && (
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-0.5">Idempotency Key</span>
+                              <span className="text-xs font-mono text-foreground break-all">{log.idempotency_key}</span>
+                            </div>
+                          )}
+                          {log.error_message && (
+                            <div className="md:col-span-2">
+                              <span className="text-xs text-muted-foreground block mb-0.5">Error</span>
+                              <span className="text-xs text-destructive break-all">{log.error_message}</span>
+                            </div>
+                          )}
+                          {log.sent_at && (
+                            <div>
+                              <span className="text-xs text-muted-foreground block mb-0.5">Sent At</span>
+                              <span className="text-xs text-foreground">{formatDate(log.sent_at)}</span>
+                            </div>
+                          )}
                           <div>
-                            <span className="text-xs text-muted-foreground block mb-0.5">Idempotency Key</span>
-                            <span className="text-xs font-mono text-foreground break-all">{log.idempotency_key}</span>
+                            <span className="text-xs text-muted-foreground block mb-0.5">Created</span>
+                            <span className="text-xs text-foreground">{formatDate(log.created_at)}</span>
                           </div>
-                        )}
-                        {log.error_message && (
-                          <div className="md:col-span-2">
-                            <span className="text-xs text-muted-foreground block mb-0.5">Error</span>
-                            <span className="text-xs text-destructive break-all">{log.error_message}</span>
-                          </div>
-                        )}
-                        {log.sent_at && (
-                          <div>
-                            <span className="text-xs text-muted-foreground block mb-0.5">Sent At</span>
-                            <span className="text-xs text-foreground">{formatDate(log.sent_at)}</span>
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-xs text-muted-foreground block mb-0.5">Created</span>
-                          <span className="text-xs text-foreground">{formatDate(log.created_at)}</span>
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

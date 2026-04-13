@@ -118,7 +118,7 @@ export default function TemplatesPage() {
                     <Link
                       key={t.id}
                       href={`/templates/${t.id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150"
                     >
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground truncate">{t.name}</p>
