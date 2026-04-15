@@ -126,7 +126,7 @@ export function ProjectDetailSkeleton() {
 
       {/* Recipients card */}
       <CardSkeleton>
-        <div className="divide-y divide-border rounded-lg border border-border">
+        <div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex items-center justify-between px-3 py-2.5">
               <div className="space-y-1">
@@ -141,7 +141,7 @@ export function ProjectDetailSkeleton() {
 
       {/* Templates card */}
       <CardSkeleton>
-        <div className="divide-y divide-border rounded-lg border border-border">
+        <div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="flex items-center justify-between px-3 py-2.5">
               <div className="space-y-1">

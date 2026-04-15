@@ -217,7 +217,7 @@ function NewTemplateForm() {
           </div>
 
           {variables.map((v, i) => (
-            <div key={i} className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 p-3">
+            <div key={i} className="flex items-start gap-2 rounded-[var(--radius-widget)] bg-muted/20 p-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
                 <Input
                   placeholder="name"
