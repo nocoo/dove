@@ -63,7 +63,7 @@
   --color-chart-5: hsl(var(--chart-5));
 
   /* Radius tokens — unified to px */
-  --radius-card: 16px;
+  --radius-card: 14px;
   --radius-widget: 10px;
   --radius-lg: 12px;
   --radius-md: 10px;

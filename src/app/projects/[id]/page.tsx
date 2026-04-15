@@ -465,7 +465,7 @@ export default function ProjectDetailPage({
             {showAddRecipient && (
               <form
                 onSubmit={(e) => void handleAddRecipient(e)}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 p-3"
+                className="flex flex-col gap-3 rounded-[var(--radius-widget)] bg-muted/20 p-3"
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Input
@@ -504,12 +504,12 @@ export default function ProjectDetailPage({
             )}
 
             {recipients.length === 0 ? (
-              <div className="rounded-lg border border-border bg-background/50 p-6 text-center">
+              <div className="rounded-[var(--radius-card)] bg-secondary p-6 text-center">
                 <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
                 <p className="text-xs text-muted-foreground">No recipients yet. Add one to start sending emails.</p>
               </div>
             ) : (
-              <div className="divide-y divide-border rounded-lg border border-border">
+              <div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
                 {recipients.map((r) => (
                   <div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
                     <div className="min-w-0 flex-1">
@@ -558,12 +558,12 @@ export default function ProjectDetailPage({
           </CardHeader>
           <CardContent>
             {templates.length === 0 ? (
-              <div className="rounded-lg border border-border bg-background/50 p-6 text-center">
+              <div className="rounded-[var(--radius-card)] bg-secondary p-6 text-center">
                 <FileText className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
                 <p className="text-xs text-muted-foreground">No templates yet.</p>
               </div>
             ) : (
-              <div className="divide-y divide-border rounded-lg border border-border">
+              <div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
                 {templates.map((t) => (
                   <Link
                     key={t.id}
