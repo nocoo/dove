@@ -11,9 +11,10 @@ describe("GET /api/live", () => {
     const response = await get("/api/live");
 
     expect(response.status).toBe(200);
-    const body = await parseJson<{ status: string; version: string; d1: boolean }>(response);
+    const body = await parseJson<{ status: string; version: string; component: string; d1: boolean }>(response);
     expect(body.status).toBe("ok");
     expect(typeof body.version).toBe("string");
+    expect(body.component).toBe("dove");
     expect(body.d1).toBe(true);
   });
 });
