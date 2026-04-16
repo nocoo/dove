@@ -4,7 +4,7 @@
  * Mocks next/server and D1 client to test the route handler in isolation.
  */
 import { describe, expect, test, beforeEach, afterEach, spyOn, mock } from "bun:test";
-import { mockFetch, d1Success, d1Error } from "./helpers";
+import { mockFetch, d1Success } from "./helpers";
 
 // Mock next/server before importing the route
 mock.module("next/server", () => ({
