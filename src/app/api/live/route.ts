@@ -9,7 +9,7 @@ import { APP_VERSION } from "@/lib/version";
 export async function GET() {
   if (!isD1Configured()) {
     return NextResponse.json(
-      { status: "degraded", version: APP_VERSION, d1: false, error: "D1 not configured" },
+      { status: "degraded", version: APP_VERSION, component: "dove", d1: false, error: "D1 not configured" },
       { status: 503 },
     );
   }
@@ -19,12 +19,13 @@ export async function GET() {
     return NextResponse.json({
       status: "ok",
       version: APP_VERSION,
+      component: "dove",
       d1: true,
     });
   } catch (error) {
     console.error("Health check D1 ping failed:", error);
     return NextResponse.json(
-      { status: "degraded", version: APP_VERSION, d1: false, error: "D1 ping failed" },
+      { status: "degraded", version: APP_VERSION, component: "dove", d1: false, error: "D1 ping failed" },
       { status: 503 },
     );
   }
