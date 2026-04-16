@@ -1,5 +1,4 @@
 // Auto-resolved at build time by wrangler's bundler (esbuild).
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error — JSON import handled by bundler
 import pkg from "../../package.json";
 
