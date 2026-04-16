@@ -5,13 +5,15 @@
  * The Dove app (on Railway) calls this worker over HTTPS
  * instead of connecting to D1 directly.
  *
- * Single endpoint: POST /query
- * Auth: X-API-Key header (shared secret)
- * Body: { sql: string, params?: unknown[] }
+ * Endpoints:
+ *   GET  /api/live  — Surety-standard health check (public)
+ *   POST /query     — D1 SQL proxy (requires X-API-Key)
  *
  * Required secrets (set via `wrangler secret put`):
  *   API_KEY — shared secret matching D1_WORKER_API_KEY on Railway side
  */
+
+import { APP_VERSION } from "./version";
 
 interface Env {
   DB: D1Database;
@@ -23,10 +25,47 @@ interface QueryRequest {
   params?: unknown[];
 }
 
+const bootedAt = Date.now();
+
+function handleLive(env: Env): Promise<Response> {
+  const timestamp = new Date().toISOString();
+  const uptime = Math.round((Date.now() - bootedAt) / 1000);
+
+  const base = {
+    version: APP_VERSION,
+    component: "dove-worker",
+    timestamp,
+    uptime,
+  };
+
+  return (async () => {
+    try {
+      await env.DB.prepare("SELECT 1 AS probe").first();
+      return Response.json(
+        { status: "ok", ...base, database: { connected: true } },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : "D1 probe failed";
+      const sanitized = raw.replace(/\bok\b/gi, "***");
+      return Response.json(
+        { status: "error", ...base, database: { connected: false, error: sanitized } },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  })();
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Only allow POST /query
     const url = new URL(request.url);
+
+    // GET /api/live — public health check
+    if (url.pathname === "/api/live" && request.method === "GET") {
+      return handleLive(env);
+    }
+
+    // Only allow POST /query for everything else
     if (request.method !== "POST" || url.pathname !== "/query") {
       return Response.json(
         { success: false, error: "Not found. Use POST /query" },
