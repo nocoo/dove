@@ -55,6 +55,34 @@ describe("GET /api/live", () => {
     expect(body.database).toEqual({ connected: true });
   });
 
+  test("returns 503 when D1 is not configured", async () => {
+    delete process.env.D1_WORKER_URL;
+    delete process.env.D1_WORKER_API_KEY;
+
+    const { GET } = await import("@/app/api/live/route");
+    const res = await GET();
+    expect(res.status).toBe(503);
+
+    const body = await res.json();
+    expect(body.status).toBe("error");
+    expect(body.component).toBe("dove");
+    expect(body.database.connected).toBe(false);
+    expect(body.database.error).toBe("D1 not configured");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  test("sanitizes 'ok' tokens in error messages", async () => {
+    globalThis.fetch = mockFetch(async () => {
+      throw new Error("connection not ok, stack OK trace");
+    });
+
+    const { GET } = await import("@/app/api/live/route");
+    const res = await GET();
+    const body = await res.json();
+    expect(body.database.error).not.toMatch(/\bok\b/i);
+    expect(body.database.error).toContain("***");
+  });
+
   test("returns 503 error when D1 ping fails", async () => {
     globalThis.fetch = mockFetch(async () => {
       throw new Error("connection refused");
