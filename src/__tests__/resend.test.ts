@@ -136,6 +136,46 @@ describe("sendEmail", () => {
     expect(fetchCount).toBe(2);
   }, 10000);
 
+  test("throws after exhausting retries on persistent network errors", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      throw new Error("Network failure");
+    });
+
+    const { sendEmail } = await import("@/lib/email/resend");
+    await expect(sendEmail(params)).rejects.toThrow("Network failure");
+    expect(fetchCount).toBe(4); // initial + 3 retries
+  }, 15000);
+
+  test("throws after exhausting retries on persistent 5xx errors", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      return new Response("Internal Server Error", { status: 500 });
+    });
+
+    const { sendEmail } = await import("@/lib/email/resend");
+    await expect(sendEmail(params)).rejects.toThrow("Resend API error: 500");
+    expect(fetchCount).toBe(4);
+  }, 15000);
+
+  test("throws after exhausting retries on persistent 409", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      return new Response(JSON.stringify({ error: "concurrent" }), {
+        status: 409,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const { sendEmail } = await import("@/lib/email/resend");
+    // After 3 retries on 409, loop falls through and final iteration returns empty (no final branch runs) — reaches fallback throw
+    await expect(sendEmail(params)).rejects.toThrow();
+    expect(fetchCount).toBe(4);
+  }, 20000);
+
   test("dry-run mode returns fake ID without calling fetch", async () => {
     process.env.RESEND_DRY_RUN = "true";
     let fetchCalled = false;
