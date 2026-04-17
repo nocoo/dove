@@ -1547,6 +1547,6 @@ Atomic commits tracking the rollout of this design.
 | C3 | Provider layer — interface + Resend + Cloudflare + factory | ✅ done |
 | C4 | Sanitize layer — provider_id + sanitizeProvider | ✅ done |
 | C5 | Webhook /send — provider dispatch, dry-run toggle, new response | ✅ done |
-| C6 | Provider CRUD API — /api/providers | ⏳ pending |
+| C6 | Provider CRUD API — /api/providers | ✅ done |
 | C7 | Project API — accept provider_id | ⏳ pending |
 | C8 | worker-email — dedicated CF Email Worker | ⏳ pending |
