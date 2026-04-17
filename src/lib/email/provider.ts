@@ -154,13 +154,22 @@ export function getProviderDomain(
 }
 
 /**
- * Provider-agnostic dry-run toggle. Webhook reads this once and applies
- * `provider.setDryRun(true)`. Keeps RESEND_DRY_RUN as a legacy alias for
- * Resend-only callers.
+ * Provider-agnostic dry-run toggle.
+ *
+ * EMAIL_DRY_RUN is the canonical, provider-agnostic switch. RESEND_DRY_RUN
+ * is a legacy alias kept for backward-compat with existing deploys that
+ * only ever ran through Resend — it must only affect Resend/legacy sends,
+ * never Cloudflare. Callers that want to gate on the legacy alias should
+ * check the `providerType` argument.
  */
-export function isDryRunEnabled(): boolean {
-  return (
-    process.env.EMAIL_DRY_RUN === "true" ||
-    process.env.RESEND_DRY_RUN === "true"
-  );
+export function isDryRunEnabled(
+  providerType?: ProviderType | "legacy",
+): boolean {
+  if (process.env.EMAIL_DRY_RUN === "true") return true;
+  if (process.env.RESEND_DRY_RUN === "true") {
+    // Legacy alias: Resend/legacy only. Cloudflare must not be silently
+    // forced into dry-run by an env var that predates multi-provider.
+    return providerType === undefined || providerType !== "cloudflare";
+  }
+  return false;
 }

@@ -156,18 +156,30 @@ describe("getProviderDomain", () => {
 });
 
 describe("isDryRunEnabled", () => {
-  test("true when EMAIL_DRY_RUN=true", () => {
+  test("true when EMAIL_DRY_RUN=true (any provider)", () => {
     process.env.EMAIL_DRY_RUN = "true";
     expect(isDryRunEnabled()).toBe(true);
+    expect(isDryRunEnabled("resend")).toBe(true);
+    expect(isDryRunEnabled("cloudflare")).toBe(true);
+    expect(isDryRunEnabled("legacy")).toBe(true);
   });
 
-  test("true when RESEND_DRY_RUN=true (legacy alias)", () => {
+  test("RESEND_DRY_RUN legacy alias applies to resend/legacy only", () => {
+    process.env.RESEND_DRY_RUN = "true";
+    expect(isDryRunEnabled("resend")).toBe(true);
+    expect(isDryRunEnabled("legacy")).toBe(true);
+    // Critical: must not silently dry-run Cloudflare.
+    expect(isDryRunEnabled("cloudflare")).toBe(false);
+  });
+
+  test("RESEND_DRY_RUN with no provider type falls back to legacy behaviour", () => {
     process.env.RESEND_DRY_RUN = "true";
     expect(isDryRunEnabled()).toBe(true);
   });
 
   test("false by default", () => {
     expect(isDryRunEnabled()).toBe(false);
+    expect(isDryRunEnabled("cloudflare")).toBe(false);
   });
 });
 

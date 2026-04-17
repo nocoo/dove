@@ -342,8 +342,10 @@ export async function POST(
       );
     }
 
-    // Dry-run toggle — provider-agnostic EMAIL_DRY_RUN (RESEND_DRY_RUN as legacy alias)
-    if (isDryRunEnabled() && provider.supportsDryRun()) {
+    // Dry-run toggle — provider-agnostic EMAIL_DRY_RUN. RESEND_DRY_RUN
+    // stays as a legacy alias but only affects Resend/legacy sends; see
+    // isDryRunEnabled() for the scoping rule.
+    if (isDryRunEnabled(providerType) && provider.supportsDryRun()) {
       provider.setDryRun(true);
     }
 
