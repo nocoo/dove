@@ -73,6 +73,15 @@ describe("initializeSchema", () => {
 
     const allSql = capturedBodies.map((b) => (JSON.parse(b) as { sql: string }).sql).join("\n");
     expect(allSql).toContain("UPDATE send_logs SET provider_type = 'legacy'");
+    // Must backfill ALL NULLs (including historical failed rows), not
+    // just those with a resend_id — otherwise old failed legacy sends
+    // lose provider provenance.
+    expect(allSql).toContain(
+      "UPDATE send_logs SET provider_type = 'legacy' WHERE provider_type IS NULL",
+    );
+    expect(allSql).not.toContain(
+      "provider_type = 'legacy' WHERE provider_type IS NULL AND resend_id IS NOT NULL",
+    );
     expect(allSql).toContain("UPDATE send_logs SET provider_message_id = resend_id");
   });
 });

@@ -173,8 +173,15 @@ export async function initializeSchema(): Promise<void> {
 
   // One-time backfill for rows predating the new columns.
   // Safe to run repeatedly — only updates NULLs.
+  //
+  // Every pre-migration send_logs row necessarily came from the legacy
+  // env-var Resend path, so provider_type is 'legacy' regardless of
+  // whether the send ultimately succeeded (resend_id NOT NULL) or
+  // failed (resend_id NULL). Filtering on resend_id would strand
+  // historical failed rows with NULL provider_type and break
+  // "show me all legacy sends" auditing.
   await executeD1Query(
-    `UPDATE send_logs SET provider_type = 'legacy' WHERE provider_type IS NULL AND resend_id IS NOT NULL`,
+    `UPDATE send_logs SET provider_type = 'legacy' WHERE provider_type IS NULL`,
   );
   await executeD1Query(
     `UPDATE send_logs SET provider_message_id = resend_id
