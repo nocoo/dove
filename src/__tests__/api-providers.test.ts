@@ -196,6 +196,58 @@ describe("POST /api/providers", () => {
     expect(res.status).toBe(400);
   });
 
+  test("normalizes domain (trim + lowercase) before persisting", async () => {
+    // Uniqueness on (type, domain) is a case-sensitive UNIQUE constraint
+    // at the DB level. Without normalization, "Mail.Example.com " and
+    // "mail.example.com" would coexist and produce inconsistent sender
+    // addresses. Normalize at the API boundary so the stored form is
+    // canonical.
+    let insertedParams: unknown[] = [];
+    globalThis.fetch = routeFetch([
+      {
+        match: /INSERT INTO email_providers/i,
+        respond: (b) => {
+          insertedParams = b.params ?? [];
+          return d1Success([]);
+        },
+      },
+    ]);
+    const { POST } = await import("@/app/api/providers/route");
+    const res = await POST(
+      jsonRequest("http://localhost/api/providers", "POST", {
+        name: "Mixed case",
+        type: "resend",
+        domain: "  Mail.Example.COM  ",
+        config: { api_key: "re_xyz" },
+      }),
+    );
+    expect(res.status).toBe(201);
+    // 4th param = domain (index 3: id, name, type, domain)
+    expect(insertedParams[3]).toBe("mail.example.com");
+  });
+
+  test("rejects malformed domain (bare label, protocol, spaces)", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+    const { POST } = await import("@/app/api/providers/route");
+    for (const domain of [
+      "com",
+      "https://mail.example.com",
+      "mail example.com",
+      "mail..example.com",
+      "-mail.example.com",
+    ]) {
+      const res = await POST(
+        jsonRequest("http://localhost/api/providers", "POST", {
+          name: "X",
+          type: "resend",
+          domain,
+          config: { api_key: "re_abc" },
+        }),
+      );
+      expect(res.status).toBe(400);
+    }
+  });
+
   test("returns 500 on db error", async () => {
     globalThis.fetch = mockFetch(async () => {
       throw new Error("boom");
@@ -329,6 +381,42 @@ describe("PUT /api/providers/[id]", () => {
     const { PUT } = await import("@/app/api/providers/[id]/route");
     const res = await PUT(
       jsonRequest("http://x/api/providers/prov_1", "PUT", { name: "" }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("normalizes domain on update", async () => {
+    let updateParams: unknown[] = [];
+    globalThis.fetch = routeFetch([
+      { match: /^SELECT \* FROM email_providers/i, respond: () => d1Success([makeProviderRecord()]) },
+      {
+        match: /^UPDATE email_providers/i,
+        respond: (b) => {
+          updateParams = b.params ?? [];
+          return d1Success([]);
+        },
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        domain: "  Sub.MAIL.Example.com  ",
+      }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(200);
+    // update param order: name, type, domain, config
+    expect(updateParams[2]).toBe("sub.mail.example.com");
+  });
+
+  test("rejects malformed domain on update", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        domain: "https://mail.example.com",
+      }),
       { params: Promise.resolve({ id: "prov_1" }) },
     );
     expect(res.status).toBe(400);

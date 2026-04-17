@@ -7,12 +7,12 @@ import {
   countProjectsByProvider,
 } from "@/lib/db/email-providers";
 import { sanitizeProvider } from "@/lib/sanitize";
-import { parseConfigForType } from "@/lib/email/provider-schema";
+import { parseConfigForType, DomainSchema } from "@/lib/email/provider-schema";
 
 const UpdateProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   type: z.enum(["resend", "cloudflare"]).optional(),
-  domain: z.string().min(1).max(253).optional(),
+  domain: DomainSchema.optional(),
   config: z.record(z.string(), z.string()).optional(),
 });
 

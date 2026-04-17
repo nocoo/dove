@@ -5,12 +5,12 @@ import {
   createEmailProvider,
 } from "@/lib/db/email-providers";
 import { sanitizeProvider } from "@/lib/sanitize";
-import { parseConfigForType } from "@/lib/email/provider-schema";
+import { parseConfigForType, DomainSchema } from "@/lib/email/provider-schema";
 
 const CreateProviderSchema = z.object({
   name: z.string().min(1).max(100),
   type: z.enum(["resend", "cloudflare"]),
-  domain: z.string().min(1).max(253),
+  domain: DomainSchema,
   config: z.record(z.string(), z.string()),
 });
 
