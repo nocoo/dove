@@ -1,0 +1,40 @@
+name = "dove-email"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# --- Production ---
+[[routes]]
+pattern = "dove-email.worker.hexly.ai"
+custom_domain = true
+
+[[send_email]]
+name = "EMAIL"
+
+# D1 binding for atomic idempotency dedup.
+# Reuses the main dove-db for operational simplicity.
+[[d1_databases]]
+binding = "IDEMPOTENCY_DB"
+database_name = "dove-db"
+database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
+
+# API_KEY set via: wrangler secret put API_KEY
+
+# --- Test ---
+# Separate route + D1 so E2E runs never touch the production idempotency table.
+# Reuses the existing dove-db-test database used by worker/wrangler.toml.
+[env.test]
+
+[[env.test.routes]]
+pattern = "dove-email-test.worker.hexly.ai"
+custom_domain = true
+
+[[env.test.send_email]]
+name = "EMAIL"
+
+[[env.test.d1_databases]]
+binding = "IDEMPOTENCY_DB"
+database_name = "dove-db-test"
+database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
+
+# API_KEY for the test env set via:
+#   wrangler secret put API_KEY --env test

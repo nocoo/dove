@@ -1,6 +1,7 @@
 # dependencies
 /node_modules
 worker/node_modules
+worker-email/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -27,6 +28,8 @@ worker/node_modules
 .wrangler/
 worker/.wrangler/
 worker/bun.lock
+worker-email/.wrangler/
+worker-email/bun.lock
 
 # debug
 npm-debug.log*
