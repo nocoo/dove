@@ -65,8 +65,14 @@ export async function PUT(
 
     const { config, type, ...rest } = parsed.data;
 
+    // Re-validate config whenever either `type` or `config` is moving.
+    // Type-only transitions are the subtle case: without re-validation,
+    // updateEmailProvider() preserves the old stored config, which may be
+    // structurally incompatible with the new type (e.g. switching resend →
+    // cloudflare while keeping `{api_key}` and no `worker_url`). The record
+    // would appear valid until webhook send time, then blow up.
     let normalizedConfig: string | undefined;
-    if (config !== undefined) {
+    if (config !== undefined || type !== undefined) {
       const existing = await getEmailProvider(id);
       if (!existing) {
         return NextResponse.json(
@@ -75,17 +81,51 @@ export async function PUT(
         );
       }
       const effectiveType = type ?? existing.type;
-      const configResult = parseConfigForType(effectiveType, config);
-      if (!configResult.success) {
-        return NextResponse.json(
-          {
-            error: "Invalid provider config",
-            details: configResult.error.flatten(),
-          },
-          { status: 400 },
-        );
+
+      if (config !== undefined) {
+        const configResult = parseConfigForType(effectiveType, config);
+        if (!configResult.success) {
+          return NextResponse.json(
+            {
+              error: "Invalid provider config",
+              details: configResult.error.flatten(),
+            },
+            { status: 400 },
+          );
+        }
+        normalizedConfig = JSON.stringify(configResult.data);
+      } else if (type !== undefined && type !== existing.type) {
+        // Type changed but caller didn't supply a new config. Re-check the
+        // stored config against the new type's schema. If incompatible,
+        // reject so the caller must provide a matching config explicitly.
+        let storedConfig: unknown;
+        try {
+          storedConfig = JSON.parse(existing.config);
+        } catch {
+          return NextResponse.json(
+            {
+              error:
+                "Stored config is malformed; supply a new `config` compatible with the target type.",
+            },
+            { status: 400 },
+          );
+        }
+        const configResult = parseConfigForType(effectiveType, storedConfig);
+        if (!configResult.success) {
+          return NextResponse.json(
+            {
+              error:
+                "Stored config is incompatible with the target type; supply a new `config` along with `type`.",
+              details: configResult.error.flatten(),
+            },
+            { status: 400 },
+          );
+        }
+        // Stored config happens to already satisfy the new type's schema
+        // (e.g. nothing required changed). Re-serialize through the parsed
+        // shape to drop any extraneous keys that slipped in historically.
+        normalizedConfig = JSON.stringify(configResult.data);
       }
-      normalizedConfig = JSON.stringify(configResult.data);
     }
 
     const updated = await updateEmailProvider(id, {

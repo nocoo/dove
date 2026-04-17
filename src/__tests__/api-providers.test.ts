@@ -372,6 +372,79 @@ describe("PUT /api/providers/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  test("rejects type change when stored config is incompatible with new type", async () => {
+    // resend record has only {api_key}; switching to cloudflare requires
+    // worker_url too. Without re-validation, the stored config would be
+    // preserved and the record would silently become unusable until the
+    // next send. Guard at the API boundary instead.
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () =>
+          d1Success([
+            makeProviderRecord({
+              type: "resend",
+              config: JSON.stringify({ api_key: "re_only" }),
+            }),
+          ]),
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        type: "cloudflare",
+        // no config — stored {api_key} is missing worker_url for CF
+      }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/incompatible with the target type/);
+  });
+
+  test("allows type change when stored config happens to satisfy the new type", async () => {
+    // CF-style config stored under a resend record (api_key + worker_url)
+    // satisfies both schemas — a transition should go through.
+    let updateParams: unknown[] = [];
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () =>
+          d1Success([
+            makeProviderRecord({
+              type: "resend",
+              config: JSON.stringify({
+                api_key: "re_abc",
+                worker_url: "https://w.example.com",
+              }),
+            }),
+          ]),
+      },
+      {
+        match: /^UPDATE email_providers/i,
+        respond: (b) => {
+          updateParams = b.params ?? [];
+          return d1Success([]);
+        },
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        type: "cloudflare",
+      }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(200);
+    // config param (index 3) is the re-serialized normalized form
+    expect(updateParams[3]).toBe(
+      JSON.stringify({
+        api_key: "re_abc",
+        worker_url: "https://w.example.com",
+      }),
+    );
+  });
+
   test("returns 404 when updating config of a missing provider", async () => {
     globalThis.fetch = routeFetch([
       {
