@@ -1,0 +1,196 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type ProviderType = "resend" | "cloudflare";
+
+export default function NewProviderPage() {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [type, setType] = useState<ProviderType>("resend");
+  const [domain, setDomain] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [workerUrl, setWorkerUrl] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    const config: Record<string, string> = { api_key: apiKey.trim() };
+    if (type === "cloudflare") {
+      config["worker_url"] = workerUrl.trim();
+    }
+
+    try {
+      setSaving(true);
+      const res = await fetch("/api/providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          type,
+          domain: domain.trim(),
+          config,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to create provider");
+      }
+
+      const provider = (await res.json()) as { id: string };
+      toast.success("Provider created");
+      router.push(`/providers/${provider.id}`);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create provider";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const canSubmit =
+    name.trim() &&
+    domain.trim() &&
+    apiKey.trim() &&
+    (type === "resend" || workerUrl.trim()) &&
+    !saving;
+
+  return (
+    <AppShell
+      breadcrumbs={[
+        { label: "Providers", href: "/providers" },
+        { label: "New" },
+      ]}
+    >
+      <div className="flex flex-col gap-6 max-w-lg">
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold font-display">
+            New Provider
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Register an email backend. The config is validated against the
+            type&apos;s schema before it&apos;s saved.
+          </p>
+        </div>
+
+        <form
+          onSubmit={(e) => void handleSubmit(e)}
+          className="flex flex-col gap-5"
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Production Resend"
+              maxLength={100}
+              autoFocus
+              disabled={saving}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="type">Type</Label>
+            <Select
+              value={type}
+              onValueChange={(v) => setType(v as ProviderType)}
+              disabled={saving}
+            >
+              <SelectTrigger id="type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="resend">Resend</SelectItem>
+                <SelectItem value="cloudflare">Cloudflare Email</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="domain">Sending Domain</Label>
+            <Input
+              id="domain"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="mail.example.com"
+              maxLength={253}
+              disabled={saving}
+            />
+            <p className="text-xs text-muted-foreground">
+              Verified sender domain. Normalized to lowercase before storage.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="api_key">API Key</Label>
+            <Input
+              id="api_key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={
+                type === "resend" ? "re_xxxxxxxxxxxx" : "Bearer token"
+              }
+              disabled={saving}
+            />
+          </div>
+
+          {type === "cloudflare" && (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="worker_url">Worker URL</Label>
+              <Input
+                id="worker_url"
+                value={workerUrl}
+                onChange={(e) => setWorkerUrl(e.target.value)}
+                placeholder="https://dove-email.worker.example.com"
+                disabled={saving}
+              />
+              <p className="text-xs text-muted-foreground">
+                Base URL of the dedicated CF Email Worker (no trailing slash).
+              </p>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button type="submit" disabled={!canSubmit}>
+              {saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Create Provider
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </div>
+    </AppShell>
+  );
+}
