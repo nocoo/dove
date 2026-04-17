@@ -150,6 +150,52 @@ describe("POST /api/providers", () => {
     expect(res.status).toBe(400);
   });
 
+  test("rejects cloudflare config missing worker_url at the API boundary", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+    const { POST } = await import("@/app/api/providers/route");
+    const res = await POST(
+      jsonRequest("http://localhost/api/providers", "POST", {
+        name: "Bad CF",
+        type: "cloudflare",
+        domain: "mail.example.com",
+        config: { api_key: "cf_abc" },
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Invalid provider config");
+  });
+
+  test("rejects resend config missing api_key at the API boundary", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+    const { POST } = await import("@/app/api/providers/route");
+    const res = await POST(
+      jsonRequest("http://localhost/api/providers", "POST", {
+        name: "Bad Resend",
+        type: "resend",
+        domain: "mail.example.com",
+        config: {},
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Invalid provider config");
+  });
+
+  test("rejects cloudflare worker_url that isn't a URL", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+    const { POST } = await import("@/app/api/providers/route");
+    const res = await POST(
+      jsonRequest("http://localhost/api/providers", "POST", {
+        name: "Bad URL",
+        type: "cloudflare",
+        domain: "mail.example.com",
+        config: { api_key: "cf_abc", worker_url: "not a url" },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   test("returns 500 on db error", async () => {
     globalThis.fetch = mockFetch(async () => {
       throw new Error("boom");
@@ -286,6 +332,61 @@ describe("PUT /api/providers/[id]", () => {
       { params: Promise.resolve({ id: "prov_1" }) },
     );
     expect(res.status).toBe(400);
+  });
+
+  test("rejects config lacking fields required by the effective type", async () => {
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () => d1Success([makeProviderRecord({ type: "cloudflare" })]),
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        // missing worker_url; existing is cloudflare
+        config: { api_key: "cf_new_abc" },
+      }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Invalid provider config");
+  });
+
+  test("uses incoming type to pick config schema when type is changing", async () => {
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () => d1Success([makeProviderRecord({ type: "resend" })]),
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/prov_1", "PUT", {
+        type: "cloudflare",
+        config: { api_key: "cf_abc" }, // no worker_url → invalid for CF
+      }),
+      { params: Promise.resolve({ id: "prov_1" }) },
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test("returns 404 when updating config of a missing provider", async () => {
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () => d1Success([]),
+      },
+    ]);
+    const { PUT } = await import("@/app/api/providers/[id]/route");
+    const res = await PUT(
+      jsonRequest("http://x/api/providers/none", "PUT", {
+        config: { api_key: "re_abc" },
+      }),
+      { params: Promise.resolve({ id: "none" }) },
+    );
+    expect(res.status).toBe(404);
   });
 
   test("returns 500 on error", async () => {

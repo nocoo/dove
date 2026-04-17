@@ -7,6 +7,7 @@ import {
   countProjectsByProvider,
 } from "@/lib/db/email-providers";
 import { sanitizeProvider } from "@/lib/sanitize";
+import { parseConfigForType } from "@/lib/email/provider-schema";
 
 const UpdateProviderSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -40,6 +41,11 @@ export async function GET(
 
 /**
  * PUT /api/providers/[id] — Update a provider.
+ *
+ * When the config is being changed, it's re-validated against the
+ * effective provider type (the incoming `type` if provided, else the
+ * existing record's type) so a Cloudflare provider can't be rewritten
+ * into an invalid state.
  */
 export async function PUT(
   request: Request,
@@ -57,10 +63,35 @@ export async function PUT(
       );
     }
 
-    const { config, ...rest } = parsed.data;
+    const { config, type, ...rest } = parsed.data;
+
+    let normalizedConfig: string | undefined;
+    if (config !== undefined) {
+      const existing = await getEmailProvider(id);
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Provider not found" },
+          { status: 404 },
+        );
+      }
+      const effectiveType = type ?? existing.type;
+      const configResult = parseConfigForType(effectiveType, config);
+      if (!configResult.success) {
+        return NextResponse.json(
+          {
+            error: "Invalid provider config",
+            details: configResult.error.flatten(),
+          },
+          { status: 400 },
+        );
+      }
+      normalizedConfig = JSON.stringify(configResult.data);
+    }
+
     const updated = await updateEmailProvider(id, {
       ...rest,
-      config: config !== undefined ? JSON.stringify(config) : undefined,
+      type,
+      config: normalizedConfig,
     });
 
     if (!updated) {

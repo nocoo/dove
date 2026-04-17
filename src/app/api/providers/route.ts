@@ -5,6 +5,7 @@ import {
   createEmailProvider,
 } from "@/lib/db/email-providers";
 import { sanitizeProvider } from "@/lib/sanitize";
+import { parseConfigForType } from "@/lib/email/provider-schema";
 
 const CreateProviderSchema = z.object({
   name: z.string().min(1).max(100),
@@ -31,8 +32,12 @@ export async function GET() {
 
 /**
  * POST /api/providers — Create a new email provider.
- * The config object is JSON-serialized before storage; the response is
- * sanitized (api_key masked).
+ *
+ * Validation runs in two stages: the outer envelope (name, type, domain,
+ * config object shape) is checked here, then the config is re-parsed
+ * against the type-specific schema so, e.g., a Cloudflare provider
+ * without worker_url is rejected with 400 rather than surfacing as a
+ * 500 provider_config_invalid at send time.
  */
 export async function POST(request: Request) {
   try {
@@ -47,11 +52,23 @@ export async function POST(request: Request) {
     }
 
     const { name, type, domain, config } = parsed.data;
+
+    const configResult = parseConfigForType(type, config);
+    if (!configResult.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid provider config",
+          details: configResult.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
     const created = await createEmailProvider({
       name,
       type,
       domain,
-      config: JSON.stringify(config),
+      config: JSON.stringify(configResult.data),
     });
     return NextResponse.json(sanitizeProvider(created), { status: 201 });
   } catch (error) {
