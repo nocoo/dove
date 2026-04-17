@@ -14,6 +14,7 @@ import {
   ScrollText,
   Mail,
   ChevronUp,
+  Server,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_VERSION } from "@/lib/version";
@@ -55,6 +56,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Dashboard", icon: LayoutDashboard },
       { href: "/projects", label: "Projects", icon: FolderKanban },
+      { href: "/providers", label: "Providers", icon: Server },
       { href: "/templates", label: "Templates", icon: FileText },
     ],
   },
