@@ -132,4 +132,4 @@ bun run release -- --dry-run # preview without side effects
 
 ## Retrospective
 
-(none yet)
+- **2026-03-30 Port migration miss**: Global port rename (7046→7032) missed `.env.test` because it's in `.gitignore`. Lesson: when doing project-wide config changes (ports, URLs, keys), always grep untracked/ignored files too (`git ls-files --others --ignored --exclude-standard | xargs grep`).
