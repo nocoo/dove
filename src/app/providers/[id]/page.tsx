@@ -45,13 +45,6 @@ interface SanitizedProvider {
   updated_at: string;
 }
 
-/**
- * The GET /api/providers response returns config with `api_key` masked as
- * "••••••last4". We treat an api_key field that starts with bullets as
- * "unchanged" — the user only sends a new api_key if they type one.
- */
-const MASK_PREFIX = "••••••";
-
 export default function ProviderEditPage({
   params,
 }: {
@@ -90,7 +83,11 @@ export default function ProviderEditPage({
       setName(data.name);
       setType(data.type);
       setDomain(data.domain);
-      setApiKey(data.config["api_key"] ?? "");
+      // Never bind the masked placeholder to the input value — typing would
+      // append to "••••••abcd" and submit garbage. Keep the input empty
+      // until the user explicitly types a replacement; the display-only
+      // "last4" hint lives in the helper text below.
+      setApiKey("");
       setApiKeyChanged(false);
       setWorkerUrl(data.config["worker_url"] ?? "");
     } catch {
@@ -116,14 +113,16 @@ export default function ProviderEditPage({
   async function handleTestSend() {
     try {
       setTesting(true);
+      // Omit `to` when blank so the backend falls back to session.user.email.
+      // The Input stays optional: emptying it is a documented happy path,
+      // not an error.
+      const to = testRecipient.trim();
       const res = await fetch(
         `/api/providers/${providerId}/test-send`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            testRecipient ? { to: testRecipient } : {},
-          ),
+          body: JSON.stringify(to ? { to } : {}),
         },
       );
       if (!res.ok) {
@@ -167,39 +166,29 @@ export default function ProviderEditPage({
     setError(null);
 
     // Only include `config` in the payload when something about it has
-    // actually changed; otherwise we'd accidentally re-send the masked
-    // api_key string and overwrite the real secret.
-    const configTouched =
-      apiKeyChanged ||
-      (type === "cloudflare" &&
-        workerUrl !== (record.config["worker_url"] ?? "")) ||
-      type !== record.type;
+    // actually changed. The backend treats `config` as a full replacement
+    // (re-validated against the effective type), so we MUST supply the
+    // real api_key whenever we send it — we never have the real key client
+    // side, so require the user to retype when config is touched.
+    const workerUrlChanged =
+      type === "cloudflare" &&
+      workerUrl !== (record.config["worker_url"] ?? "");
+    const typeChanged = type !== record.type;
+    const configTouched = apiKeyChanged || workerUrlChanged || typeChanged;
 
     const payload: Record<string, unknown> = {};
     if (name !== record.name) payload["name"] = name.trim();
     if (domain !== record.domain) payload["domain"] = domain.trim();
-    if (type !== record.type) payload["type"] = type;
+    if (typeChanged) payload["type"] = type;
 
     if (configTouched) {
-      const cfg: Record<string, string> = {};
-      // If the user left the key field alone, we reuse the stored real key
-      // by NOT including api_key in the payload. But the outer config field
-      // is a full replacement — so the backend needs the real key. Only
-      // re-send the masked/unchanged key if the user has explicitly typed
-      // something; otherwise we have to send the full current config with
-      // the real key, which we don't have client-side.
-      //
-      // Resolution: require the user to retype the api_key whenever `type`
-      // changes or the worker_url changes too. The backend returns 400 if
-      // api_key looks like the masked placeholder.
-      if (apiKeyChanged) {
-        cfg["api_key"] = apiKey.trim();
-      } else if (apiKey.startsWith(MASK_PREFIX)) {
-        setError("Re-enter the API key to change the config.");
+      if (!apiKeyChanged) {
+        setError(
+          "Re-enter the API key to change the provider config.",
+        );
         return;
-      } else {
-        cfg["api_key"] = apiKey.trim();
       }
+      const cfg: Record<string, string> = { api_key: apiKey.trim() };
       if (type === "cloudflare") {
         cfg["worker_url"] = workerUrl.trim();
       }
@@ -379,12 +368,16 @@ export default function ProviderEditPage({
                     setApiKeyChanged(true);
                   }}
                   disabled={saving}
-                  placeholder={apiKeyChanged ? "" : "Retype to change"}
+                  placeholder={
+                    apiKeyChanged
+                      ? ""
+                      : `Current: ${record.config["api_key"] ?? "(unset)"}`
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   {apiKeyChanged
-                    ? "New key staged."
-                    : "Leaving unchanged keeps the existing secret."}
+                    ? "New key staged — will replace the stored secret on save."
+                    : "Leave blank to keep the current secret. Type a new key to replace it."}
                 </p>
               </div>
 
@@ -446,7 +439,7 @@ export default function ProviderEditPage({
             <Button
               variant="outline"
               onClick={() => void handleTestSend()}
-              disabled={testing || !testRecipient.trim()}
+              disabled={testing}
               className="w-fit"
             >
               {testing ? (
