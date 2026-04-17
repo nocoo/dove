@@ -632,3 +632,152 @@ describe("DELETE /api/providers/[id]", () => {
     expect(res.status).toBe(500);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /api/providers/[id]/health
+// ---------------------------------------------------------------------------
+
+describe("GET /api/providers/[id]/health", () => {
+  test("returns 404 when provider missing", async () => {
+    globalThis.fetch = routeFetch([
+      { match: /^SELECT \* FROM email_providers/i, respond: () => d1Success([]) },
+    ]);
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "none" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  test("reports healthy for resend with valid config; reachable=null", async () => {
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () => d1Success([makeProviderRecord()]),
+      },
+    ]);
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "prov_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      healthy: boolean;
+      configValid: boolean;
+      reachable: boolean | null;
+    };
+    expect(body.configValid).toBe(true);
+    expect(body.reachable).toBeNull();
+    expect(body.healthy).toBe(true);
+  });
+
+  test("reports unhealthy when stored config is malformed JSON", async () => {
+    globalThis.fetch = routeFetch([
+      {
+        match: /^SELECT \* FROM email_providers/i,
+        respond: () =>
+          d1Success([makeProviderRecord({ config: "not-json" })]),
+      },
+    ]);
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "prov_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      healthy: boolean;
+      configValid: boolean;
+      configError: string | null;
+    };
+    expect(body.configValid).toBe(false);
+    expect(body.healthy).toBe(false);
+    expect(body.configError).toBeTruthy();
+  });
+
+  test("reports healthy for cloudflare when worker /health returns 200", async () => {
+    const record = makeProviderRecord({
+      type: "cloudflare",
+      config: JSON.stringify({
+        api_key: "cf_key_abcd",
+        worker_url: "https://cfw.example.com",
+      }),
+    });
+    globalThis.fetch = mockFetch(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url === "https://cfw.example.com/health") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return d1Success([record]);
+    });
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "prov_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      healthy: boolean;
+      reachable: boolean | null;
+    };
+    expect(body.reachable).toBe(true);
+    expect(body.healthy).toBe(true);
+  });
+
+  test("reports unhealthy for cloudflare when worker /health unreachable", async () => {
+    const record = makeProviderRecord({
+      type: "cloudflare",
+      config: JSON.stringify({
+        api_key: "cf_key_abcd",
+        worker_url: "https://cfw.example.com",
+      }),
+    });
+    globalThis.fetch = mockFetch(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url === "https://cfw.example.com/health") {
+        throw new Error("network down");
+      }
+      return d1Success([record]);
+    });
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "prov_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      healthy: boolean;
+      reachable: boolean | null;
+      reachableError: string | null;
+    };
+    expect(body.reachable).toBe(false);
+    expect(body.healthy).toBe(false);
+    expect(body.reachableError).toContain("network");
+  });
+
+  test("reports unhealthy for cloudflare when worker /health returns non-2xx", async () => {
+    const record = makeProviderRecord({
+      type: "cloudflare",
+      config: JSON.stringify({
+        api_key: "cf_key_abcd",
+        worker_url: "https://cfw.example.com",
+      }),
+    });
+    globalThis.fetch = mockFetch(async (input) => {
+      const url = typeof input === "string" ? input : (input as Request).url;
+      if (url === "https://cfw.example.com/health") {
+        return new Response("nope", { status: 503 });
+      }
+      return d1Success([record]);
+    });
+    const { GET } = await import("@/app/api/providers/[id]/health/route");
+    const res = await GET(jsonRequest("http://x/", "GET"), {
+      params: Promise.resolve({ id: "prov_1" }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      healthy: boolean;
+      reachable: boolean | null;
+      reachableError: string | null;
+    };
+    expect(body.reachable).toBe(false);
+    expect(body.reachableError).toContain("503");
+  });
+});
