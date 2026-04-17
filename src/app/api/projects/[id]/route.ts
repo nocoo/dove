@@ -10,6 +10,7 @@ const UpdateProjectSchema = z.object({
   from_name: z.string().min(1).max(128).optional(),
   quota_daily: z.number().int().min(1).optional(),
   quota_monthly: z.number().int().min(1).optional(),
+  provider_id: z.string().min(1).nullable().optional(),
 });
 
 /**
