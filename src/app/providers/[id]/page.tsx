@@ -2,7 +2,8 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Loader2, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,9 @@ export default function ProviderEditPage({
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testRecipient, setTestRecipient] = useState("");
+  const { data: session } = useSession();
 
   const fetchRecord = useCallback(async () => {
     try {
@@ -99,6 +103,44 @@ export default function ProviderEditPage({
   useEffect(() => {
     void fetchRecord();
   }, [fetchRecord]);
+
+  // Pre-fill the test recipient with the signed-in admin's email. The
+  // backend defaults to it anyway when `to` is omitted, but showing it
+  // here makes the UX transparent ("I know where this goes").
+  useEffect(() => {
+    if (!testRecipient && session?.user?.email) {
+      setTestRecipient(session.user.email);
+    }
+  }, [session, testRecipient]);
+
+  async function handleTestSend() {
+    try {
+      setTesting(true);
+      const res = await fetch(
+        `/api/providers/${providerId}/test-send`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            testRecipient ? { to: testRecipient } : {},
+          ),
+        },
+      );
+      if (!res.ok) {
+        const data = (await res.json()) as {
+          error?: string;
+          details?: string;
+        };
+        throw new Error(data.details ?? data.error ?? "Send failed");
+      }
+      const data = (await res.json()) as { to: string; id: string };
+      toast.success(`Test sent to ${data.to}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setTesting(false);
+    }
+  }
 
   const dirty = useMemo(() => {
     if (!record) return false;
@@ -378,6 +420,42 @@ export default function ProviderEditPage({
                 </span>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Send Test Email</CardTitle>
+            <CardDescription>
+              Dispatch a canned test through this provider. Defaults to
+              your admin email. Respects EMAIL_DRY_RUN locally.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="test_to">Recipient</Label>
+              <Input
+                id="test_to"
+                type="email"
+                value={testRecipient}
+                onChange={(e) => setTestRecipient(e.target.value)}
+                placeholder="admin@example.com"
+                disabled={testing}
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => void handleTestSend()}
+              disabled={testing || !testRecipient.trim()}
+              className="w-fit"
+            >
+              {testing ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
+              )}
+              Send Test
+            </Button>
           </CardContent>
         </Card>
 
