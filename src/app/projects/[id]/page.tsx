@@ -37,6 +37,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Project {
   id: string;
@@ -46,8 +53,16 @@ interface Project {
   from_name: string;
   quota_daily: number;
   quota_monthly: number;
+  provider_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface ProviderOption {
+  id: string;
+  name: string;
+  type: "resend" | "cloudflare";
+  domain: string;
 }
 
 interface Recipient {
@@ -88,6 +103,10 @@ export default function ProjectDetailPage({
   const [fromName, setFromName] = useState("");
   const [quotaDaily, setQuotaDaily] = useState("");
   const [quotaMonthly, setQuotaMonthly] = useState("");
+
+  // Provider selector. `providerId` is "" when using legacy env-var fallback.
+  const [providerId, setProviderId] = useState<string>("");
+  const [providers, setProviders] = useState<ProviderOption[]>([]);
 
   // Token state
   const [token, setToken] = useState<string | null>(null);
@@ -130,6 +149,7 @@ export default function ProjectDetailPage({
       setFromName(proj.from_name);
       setQuotaDaily(String(proj.quota_daily));
       setQuotaMonthly(String(proj.quota_monthly));
+      setProviderId(proj.provider_id ?? "");
 
       if (recipientsRes.ok) setRecipients(await recipientsRes.json() as Recipient[]);
       if (templatesRes.ok) setTemplates(await templatesRes.json() as Template[]);
@@ -145,6 +165,22 @@ export default function ProjectDetailPage({
     void fetchData();
   }, [fetchData]);
 
+  // Separate fetch: provider options don't depend on the current project
+  // and should be cached across projects.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/providers");
+        if (!res.ok) return;
+        const list = (await res.json()) as ProviderOption[];
+        setProviders(list);
+      } catch {
+        // Non-fatal — the selector just stays empty and the user can
+        // still save the project.
+      }
+    })();
+  }, []);
+
   // Dirty tracking
   const dirty = useMemo(() => {
     if (!project) return false;
@@ -154,9 +190,10 @@ export default function ProjectDetailPage({
       emailPrefix !== project.email_prefix ||
       fromName !== project.from_name ||
       quotaDaily !== String(project.quota_daily) ||
-      quotaMonthly !== String(project.quota_monthly)
+      quotaMonthly !== String(project.quota_monthly) ||
+      providerId !== (project.provider_id ?? "")
     );
-  }, [project, name, description, emailPrefix, fromName, quotaDaily, quotaMonthly]);
+  }, [project, name, description, emailPrefix, fromName, quotaDaily, quotaMonthly, providerId]);
 
   async function handleSave() {
     if (!projectId) return;
@@ -172,6 +209,8 @@ export default function ProjectDetailPage({
           from_name: fromName.trim(),
           quota_daily: parseInt(quotaDaily, 10) || 100,
           quota_monthly: parseInt(quotaMonthly, 10) || 1000,
+          // Empty string = legacy fallback → send null to clear the column.
+          provider_id: providerId === "" ? null : providerId,
         }),
       });
 
@@ -194,6 +233,7 @@ export default function ProjectDetailPage({
     setFromName(project.from_name);
     setQuotaDaily(String(project.quota_daily));
     setQuotaMonthly(String(project.quota_monthly));
+    setProviderId(project.provider_id ?? "");
   }
 
   async function handleRegenerateToken() {
@@ -379,6 +419,34 @@ export default function ProjectDetailPage({
                   min={1}
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="provider_id">Email Provider</Label>
+              <Select
+                value={providerId === "" ? "__legacy__" : providerId}
+                onValueChange={(v) =>
+                  setProviderId(v === "__legacy__" ? "" : v)
+                }
+              >
+                <SelectTrigger id="provider_id">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__legacy__">
+                    Legacy (RESEND_API_KEY env)
+                  </SelectItem>
+                  {providers.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} — {p.type} · {p.domain}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Picks the outbound backend. Legacy uses the RESEND_API_KEY /
+                RESEND_FROM_DOMAIN env vars for backward compat.
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+interface ProviderOption {
+  id: string;
+  name: string;
+  type: "resend" | "cloudflare";
+  domain: string;
+}
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -21,6 +35,21 @@ export default function NewProjectPage() {
   const [fromName, setFromName] = useState("");
   const [quotaDaily, setQuotaDaily] = useState("100");
   const [quotaMonthly, setQuotaMonthly] = useState("1000");
+  // "" = legacy env-var fallback.
+  const [providerId, setProviderId] = useState<string>("");
+  const [providers, setProviders] = useState<ProviderOption[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/providers");
+        if (!res.ok) return;
+        setProviders((await res.json()) as ProviderOption[]);
+      } catch {
+        /* non-fatal */
+      }
+    })();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +67,9 @@ export default function NewProjectPage() {
           from_name: fromName.trim(),
           quota_daily: parseInt(quotaDaily, 10) || 100,
           quota_monthly: parseInt(quotaMonthly, 10) || 1000,
+          // Only send provider_id if the user chose an explicit provider.
+          // Omitted = backend keeps column NULL (legacy fallback).
+          ...(providerId !== "" ? { provider_id: providerId } : {}),
         }),
       });
 
@@ -155,6 +187,35 @@ export default function NewProjectPage() {
                 disabled={saving}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="provider_id">Email Provider</Label>
+            <Select
+              value={providerId === "" ? "__legacy__" : providerId}
+              onValueChange={(v) =>
+                setProviderId(v === "__legacy__" ? "" : v)
+              }
+              disabled={saving}
+            >
+              <SelectTrigger id="provider_id">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__legacy__">
+                  Legacy (RESEND_API_KEY env)
+                </SelectItem>
+                {providers.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} — {p.type} · {p.domain}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Choose a configured provider, or stay on Legacy to use the
+              existing RESEND_API_KEY env-var fallback.
+            </p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
