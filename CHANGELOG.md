@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.2.0
+
+### Added
+- Admin test-send button on provider edit page
+- Project-level provider switcher
+- Provider create and edit pages
+- Providers list page with health badges
+- POST /api/providers/[id]/test-send
+- GET /api/providers/[id]/health for config sanity
+- CF Email Worker with D1-atomic idempotency
+- Accept provider_id on project create/update
+- Provider CRUD endpoints (/api/providers)
+- Provider dispatch, dry-run toggle, richer response
+- SanitizeProvider() + SanitizedProvider type
+- Provider abstraction — ResendProvider + CloudflareProvider
+- Provider CRUD + provider_id/provider_type on projects & send-logs
+- Add email_providers table and schema migration helper
+
+### Changed
+- Page-level regression tests for provider + project selector flows
+- Record dashboard UI phase (C9–C14) in progress table
+
+### Fixed
+- Gate Happy DOM preload on ENABLE_DOM_TESTS env
+- Provider edit form — key replace vs append, allow blank test recipient
+- Enable nodejs_compat for mimetext build
+- Normalize + validate provider domain at the API boundary
+- Re-validate stored config on provider type change
+- Backfill provider_type='legacy' for all pre-migration rows
+- Scope RESEND_DRY_RUN legacy alias to resend/legacy only
+- Validate provider-specific config at the API boundary
+
 ## v0.1.11
 
 ### Changed

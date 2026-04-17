@@ -1,6 +1,6 @@
 {
   "name": "dove",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --port 7034",
