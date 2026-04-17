@@ -7,13 +7,23 @@ import {
   findByIdempotencyKey,
   createSendLog,
   resetSendLogForRetry,
+  updateSendLogProvider,
   markSendLogSent,
   markSendLogFailed,
+  type ProviderType,
 } from "@/lib/db/send-logs";
 import { createWebhookLog } from "@/lib/db/webhook-logs";
+import { getEmailProvider } from "@/lib/db/email-providers";
 import { checkQuota } from "@/lib/email/quota";
 import { renderTemplate } from "@/lib/email/render";
-import { sendEmail } from "@/lib/email/resend";
+import {
+  createProvider,
+  createLegacyProvider,
+  parseProviderConfig,
+  getProviderDomain,
+  isDryRunEnabled,
+  type EmailProvider,
+} from "@/lib/email/provider";
 
 const SendSchema = z.object({
   template: z.string().min(1),
@@ -54,7 +64,9 @@ async function computePayloadHash(payload: {
 /**
  * POST /api/webhook/[projectId]/send — Core: send email.
  *
- * Implements the 12-step processing pipeline from the architecture doc.
+ * Implements the 12-step processing pipeline. Provider layer is pluggable:
+ * each project may point at an email_providers row via provider_id, or fall
+ * back to the legacy env-var Resend path when provider_id is NULL.
  */
 export async function POST(
   request: Request,
@@ -165,10 +177,15 @@ export async function POST(
 
         // Already sent — return cached result
         if (existingSendLog.status === "sent") {
+          const cachedMessageId =
+            existingSendLog.provider_message_id ?? existingSendLog.resend_id;
+          const cachedType = existingSendLog.provider_type ?? "legacy";
           return respond(
             NextResponse.json({
               id: existingSendLog.id,
               resend_id: existingSendLog.resend_id,
+              provider_message_id: cachedMessageId,
+              provider_type: cachedType,
               status: "sent",
             }),
             200,
@@ -264,7 +281,12 @@ export async function POST(
         to_email: recipient.email,
         subject: rendered.subject,
       });
-      sendLog = { ...existingSendLog, status: "sending" as const, to_email: recipient.email, subject: rendered.subject };
+      sendLog = {
+        ...existingSendLog,
+        status: "sending" as const,
+        to_email: recipient.email,
+        subject: rendered.subject,
+      };
     } else {
       const payloadHash = idempotencyKey
         ? await computePayloadHash({ template: templateSlug, to, variables: providedVars })
@@ -281,10 +303,56 @@ export async function POST(
       });
     }
 
-    // Step 10: Send — POST to Resend API
-    const fromDomain = process.env.RESEND_FROM_DOMAIN;
-    if (!fromDomain) {
-      await markSendLogFailed(sendLog.id, "RESEND_FROM_DOMAIN not configured");
+    // Step 10: Resolve provider — project-configured or legacy env-var fallback
+    let provider: EmailProvider;
+    let providerRecord: Awaited<ReturnType<typeof getEmailProvider>> | null = null;
+    let providerType: ProviderType;
+
+    try {
+      if (project.provider_id) {
+        const record = await getEmailProvider(project.provider_id);
+        if (!record) {
+          await markSendLogFailed(sendLog.id, "Provider not found");
+          return respond(
+            errorResponse(
+              "provider_not_found",
+              "Configured email provider not found",
+              500,
+            ),
+            500,
+            "provider_not_found",
+          );
+        }
+        providerRecord = record;
+        provider = await createProvider(parseProviderConfig(record));
+        providerType = record.type;
+      } else {
+        provider = await createLegacyProvider();
+        providerType = "legacy";
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Provider init failed";
+      await markSendLogFailed(sendLog.id, message);
+      return respond(
+        errorResponse("provider_config_invalid", message, 500),
+        500,
+        "provider_config_invalid",
+        message,
+      );
+    }
+
+    // Dry-run toggle — provider-agnostic EMAIL_DRY_RUN (RESEND_DRY_RUN as legacy alias)
+    if (isDryRunEnabled() && provider.supportsDryRun()) {
+      provider.setDryRun(true);
+    }
+
+    let domain: string;
+    try {
+      domain = getProviderDomain(providerRecord);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Domain resolution failed";
+      await markSendLogFailed(sendLog.id, message);
       return respond(
         errorResponse("internal_error", "Email sender not configured", 500),
         500,
@@ -292,10 +360,16 @@ export async function POST(
       );
     }
 
-    const fromAddress = `${project.from_name} <${project.email_prefix}@${fromDomain}>`;
+    const fromAddress = `${project.from_name} <${project.email_prefix}@${domain}>`;
+
+    // Snapshot which provider handled this send BEFORE calling it.
+    await updateSendLogProvider(sendLog.id, {
+      provider_id: providerRecord?.id ?? null,
+      provider_type: providerType,
+    });
 
     try {
-      const result = await sendEmail({
+      const result = await provider.send({
         from: fromAddress,
         to: recipient.email,
         subject: rendered.subject,
@@ -303,28 +377,37 @@ export async function POST(
         idempotencyKey: sendLog.id,
       });
 
-      // Step 11: Update log — sent
+      // Step 11: Update log — sent. DB layer dual-writes resend_id when
+      // providerType is resend/legacy; cloudflare populates only
+      // provider_message_id.
       await markSendLogSent(sendLog.id, {
         providerMessageId: result.id,
-        providerType: "legacy",
+        providerType,
       });
 
-      // Step 12: Response
+      // Step 12: Response — additive shape. resend_id retained for Resend
+      // callers; CF callers read provider_message_id / provider_type.
       return respond(
         NextResponse.json({
           id: sendLog.id,
-          resend_id: result.id,
+          resend_id: providerType === "cloudflare" ? null : result.id,
+          provider_message_id: result.id,
+          provider_type: providerType,
           status: "sent",
         }),
         200,
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Resend API error";
+      const message = error instanceof Error ? error.message : "Provider send failed";
       await markSendLogFailed(sendLog.id, message);
       return respond(
-        errorResponse("resend_failed", "Failed to send email via Resend", 502),
+        errorResponse(
+          providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed",
+          "Failed to send email via provider",
+          502,
+        ),
         502,
-        "resend_failed",
+        providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed",
         message,
       );
     }

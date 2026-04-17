@@ -29,9 +29,30 @@ interface SendLog {
   subject: string;
   status: "sending" | "sent" | "failed";
   resend_id: string | null;
+  provider_id: string | null;
+  provider_type: "resend" | "cloudflare" | "legacy" | null;
+  provider_message_id: string | null;
   error_message: string | null;
   created_at: string;
   sent_at: string | null;
+}
+
+function providerMessageLabel(log: {
+  provider_type: SendLog["provider_type"];
+}): string {
+  switch (log.provider_type) {
+    case "cloudflare":
+      return "Cloudflare Message ID";
+    case "resend":
+    case "legacy":
+      return "Resend ID";
+    default:
+      return "Provider Message ID";
+  }
+}
+
+function providerMessageValue(log: SendLog): string | null {
+  return log.provider_message_id ?? log.resend_id ?? null;
 }
 
 interface Project {
@@ -310,10 +331,10 @@ export default function SendLogsPage() {
                             <span className="text-xs text-muted-foreground block mb-0.5">ID</span>
                             <span className="text-xs font-mono text-foreground break-all">{log.id}</span>
                           </div>
-                          {log.resend_id && (
+                          {providerMessageValue(log) && (
                             <div>
-                              <span className="text-xs text-muted-foreground block mb-0.5">Resend ID</span>
-                              <span className="text-xs font-mono text-foreground break-all">{log.resend_id}</span>
+                              <span className="text-xs text-muted-foreground block mb-0.5">{providerMessageLabel(log)}</span>
+                              <span className="text-xs font-mono text-foreground break-all">{providerMessageValue(log)}</span>
                             </div>
                           )}
                           {log.idempotency_key && (
