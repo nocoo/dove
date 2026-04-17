@@ -64,6 +64,49 @@ describe("listAllSendLogs", () => {
   });
 });
 
+describe("listAllSendLogs with status filter", () => {
+  test("applies status filter across projects", async () => {
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBody = init?.body as string;
+      return d1Success([]);
+    });
+
+    const { listAllSendLogs } = await import("@/lib/db/send-logs");
+    await listAllSendLogs({ status: "sent" });
+
+    const body = JSON.parse(capturedBody) as { sql: string; params: unknown[] };
+    expect(body.sql).not.toContain("WHERE project_id");
+    expect(body.sql).toContain("WHERE status = ?");
+    expect(body.params).toContain("sent");
+  });
+});
+
+describe("getSendLog", () => {
+  test("returns log when found", async () => {
+    const log = makeSendLog();
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBody = init?.body as string;
+      return d1Success([log]);
+    });
+
+    const { getSendLog } = await import("@/lib/db/send-logs");
+    const result = await getSendLog(log.id);
+
+    expect(result?.id).toBe(log.id);
+    const body = JSON.parse(capturedBody) as { sql: string; params: string[] };
+    expect(body.sql).toContain("SELECT * FROM send_logs WHERE id = ?");
+    expect(body.params).toContain(log.id);
+  });
+
+  test("returns undefined when not found", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+
+    const { getSendLog } = await import("@/lib/db/send-logs");
+    const result = await getSendLog("missing");
+    expect(result).toBeUndefined();
+  });
+});
+
 describe("findByIdempotencyKey", () => {
   test("finds existing log by project and key", async () => {
     const log = makeSendLog({ idempotency_key: "test-key-123" });
