@@ -15,7 +15,7 @@ Dove currently supports only Resend as the email sending provider. This design i
 ### Non-Goals
 
 - Migration tooling (handled separately)
-- UI changes (deferred to implementation phase)
+- UI changes (deferred to implementation phase) — *delivered in C11–C14*
 
 ---
 
@@ -1550,3 +1550,9 @@ Atomic commits tracking the rollout of this design.
 | C6 | Provider CRUD API — /api/providers | ✅ done |
 | C7 | Project API — accept provider_id | ✅ done |
 | C8 | worker-email — dedicated CF Email Worker | ✅ done |
+| C9 | API — GET /api/providers/[id]/health (config + reachability probe) | ✅ done |
+| C10 | API — POST /api/providers/[id]/test-send (admin canned test email) | ✅ done |
+| C11 | UI — /providers list page with health badges + sidebar nav | ✅ done |
+| C12 | UI — /providers/new + /providers/[id] create/edit pages | ✅ done |
+| C13 | UI — provider selector on project detail + new project pages | ✅ done |
+| C14 | UI — admin test-send button on provider edit page | ✅ done |
