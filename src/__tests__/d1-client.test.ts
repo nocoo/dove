@@ -138,6 +138,80 @@ describe("executeD1Query", () => {
     const { executeD1Query } = await getModule();
     await expect(executeD1Query("INVALID SQL")).rejects.toThrow("D1 query failed");
   });
+  test("throws UNIQUE constraint when error body contains unique", async () => {
+    globalThis.fetch = mockFetch(async () =>
+      new Response("UNIQUE constraint failed: foo.bar", { status: 500 }),
+    );
+
+    const { executeD1Query } = await getModule();
+    await expect(executeD1Query("INSERT ...")).rejects.toThrow("UNIQUE constraint failed");
+  });
+
+  test("retries on 5xx responses and eventually succeeds", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      if (fetchCount <= 2) {
+        return new Response("Internal Server Error", { status: 500 });
+      }
+      return d1Success([{ id: "ok" }]);
+    });
+
+    const { executeD1Query } = await getModule();
+    const result = await executeD1Query<{ id: string }>("SELECT 1");
+    expect(result).toEqual([{ id: "ok" }]);
+    expect(fetchCount).toBe(3);
+  }, 10000);
+
+  test("retries on D1 timeout (7429) and eventually succeeds", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return new Response(
+          JSON.stringify({ success: false, error: "D1_ERROR: 7429 too many" }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return d1Success([{ id: "retry-ok" }]);
+    });
+
+    const { executeD1Query } = await getModule();
+    const result = await executeD1Query<{ id: string }>("SELECT 1");
+    expect(result).toEqual([{ id: "retry-ok" }]);
+    expect(fetchCount).toBe(2);
+  }, 10000);
+
+  test("retries on 'exceeded timeout' api error", async () => {
+    let fetchCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        return new Response(
+          JSON.stringify({ success: false, error: "exceeded timeout after 30s" }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return d1Success([]);
+    });
+
+    const { executeD1Query } = await getModule();
+    const result = await executeD1Query("SELECT 1");
+    expect(result).toEqual([]);
+    expect(fetchCount).toBe(2);
+  }, 10000);
+
+  test("throws UNIQUE constraint when api error message includes unique", async () => {
+    globalThis.fetch = mockFetch(async () =>
+      new Response(
+        JSON.stringify({ success: false, error: "UNIQUE constraint failed on column" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const { executeD1Query } = await getModule();
+    await expect(executeD1Query("INSERT ...")).rejects.toThrow("UNIQUE constraint failed");
+  });
 });
 
 describe("isD1Configured", () => {

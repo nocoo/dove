@@ -54,6 +54,32 @@ describe("getProject", () => {
   });
 });
 
+describe("getProjectByToken", () => {
+  test("returns project when token matches", async () => {
+    const proj = makeProject();
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBodies.push(init?.body as string);
+      return d1Success([proj]);
+    });
+
+    const { getProjectByToken } = await import("@/lib/db/projects");
+    const result = await getProjectByToken(proj.webhook_token);
+
+    expect(result?.id).toBe(proj.id);
+    const body = JSON.parse(capturedBodies[0]!) as { sql: string; params: string[] };
+    expect(body.sql).toContain("webhook_token = ?");
+    expect(body.params).toContain(proj.webhook_token);
+  });
+
+  test("returns undefined when token not found", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+
+    const { getProjectByToken } = await import("@/lib/db/projects");
+    const result = await getProjectByToken("unknown-token");
+    expect(result).toBeUndefined();
+  });
+});
+
 describe("createProject", () => {
   test("generates ID and webhook token", async () => {
     globalThis.fetch = mockFetch(async (_input, init) => {
