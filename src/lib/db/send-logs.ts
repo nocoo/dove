@@ -8,6 +8,13 @@
 import { executeD1Query } from "./d1-client";
 import { generateId } from "@/lib/id";
 
+/**
+ * Identifies which provider handled the send. `"legacy"` marks rows
+ * written before multi-provider support landed (or NULL provider_id
+ * on the project, falling back to env-var Resend).
+ */
+export type ProviderType = "resend" | "cloudflare" | "legacy";
+
 export interface SendLog {
   id: string;
   project_id: string;
@@ -18,7 +25,14 @@ export interface SendLog {
   to_email: string;
   subject: string;
   status: "sending" | "sent" | "failed";
+  /** DEPRECATED: retained for Resend backward compat. Prefer provider_message_id. */
   resend_id: string | null;
+  /** FK to email_providers.id; NULL for legacy env-var path. */
+  provider_id: string | null;
+  /** Snapshot of provider type at send time. */
+  provider_type: ProviderType | null;
+  /** Provider-agnostic message id. Successor to resend_id. */
+  provider_message_id: string | null;
   error_message: string | null;
   created_at: string;
   sent_at: string | null;
@@ -96,7 +110,10 @@ export async function findByIdempotencyKey(
 
 /**
  * Create a new send log with status "sending" (pre-log step).
- * The returned ID is used as the Resend Idempotency-Key.
+ * The returned ID is used as the provider Idempotency-Key.
+ *
+ * provider_id/provider_type may be set here (snapshot) or filled in later
+ * via updateSendLogProvider() once the webhook resolves which provider to use.
  */
 export async function createSendLog(data: {
   project_id: string;
@@ -106,13 +123,17 @@ export async function createSendLog(data: {
   recipient_id: string;
   to_email: string;
   subject: string;
+  provider_id?: string | null | undefined;
+  provider_type?: ProviderType | null | undefined;
 }): Promise<SendLog> {
   const id = generateId();
   const now = new Date().toISOString();
+  const provider_id = data.provider_id ?? null;
+  const provider_type = data.provider_type ?? null;
 
   await executeD1Query(
-    `INSERT INTO send_logs (id, project_id, idempotency_key, payload_hash, template_id, recipient_id, to_email, subject, status, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'sending', ?)`,
+    `INSERT INTO send_logs (id, project_id, idempotency_key, payload_hash, template_id, recipient_id, to_email, subject, status, provider_id, provider_type, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'sending', ?, ?, ?)`,
     [
       id,
       data.project_id,
@@ -122,6 +143,8 @@ export async function createSendLog(data: {
       data.recipient_id,
       data.to_email,
       data.subject,
+      provider_id,
+      provider_type,
       now,
     ],
   );
@@ -137,10 +160,28 @@ export async function createSendLog(data: {
     subject: data.subject,
     status: "sending",
     resend_id: null,
+    provider_id,
+    provider_type,
+    provider_message_id: null,
     error_message: null,
     created_at: now,
     sent_at: null,
   };
+}
+
+/**
+ * Snapshot which provider handled this send. Typically called AFTER
+ * createSendLog() but BEFORE provider.send() so the row is annotated
+ * even if the send fails.
+ */
+export async function updateSendLogProvider(
+  id: string,
+  data: { provider_id: string | null; provider_type: ProviderType },
+): Promise<void> {
+  await executeD1Query(
+    `UPDATE send_logs SET provider_id = ?, provider_type = ? WHERE id = ?`,
+    [data.provider_id, data.provider_type, id],
+  );
 }
 
 /**
@@ -159,16 +200,39 @@ export async function resetSendLogForRetry(
 
 /**
  * Mark a send log as successfully sent.
+ *
+ * Always populates provider_message_id. Also dual-writes resend_id when
+ * providerType ∈ {"resend","legacy"} so legacy SQL consumers (quota counters,
+ * ad-hoc queries) keep working. For "cloudflare" sends, resend_id is left
+ * NULL — readers should prefer provider_message_id with a resend_id fallback.
  */
 export async function markSendLogSent(
   id: string,
-  resendId: string,
+  data: { providerMessageId: string; providerType: ProviderType },
 ): Promise<void> {
   const now = new Date().toISOString();
-  await executeD1Query(
-    "UPDATE send_logs SET status = 'sent', resend_id = ?, sent_at = ? WHERE id = ?",
-    [resendId, now, id],
-  );
+  const writeResendId = data.providerType !== "cloudflare";
+
+  if (writeResendId) {
+    await executeD1Query(
+      `UPDATE send_logs
+         SET status = 'sent',
+             resend_id = ?,
+             provider_message_id = ?,
+             sent_at = ?
+       WHERE id = ?`,
+      [data.providerMessageId, data.providerMessageId, now, id],
+    );
+  } else {
+    await executeD1Query(
+      `UPDATE send_logs
+         SET status = 'sent',
+             provider_message_id = ?,
+             sent_at = ?
+       WHERE id = ?`,
+      [data.providerMessageId, now, id],
+    );
+  }
 }
 
 /**

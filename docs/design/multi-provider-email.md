@@ -1543,7 +1543,7 @@ Atomic commits tracking the rollout of this design.
 | # | Commit | Status |
 |---|--------|--------|
 | C1 | Schema — add email_providers + columns + ensureColumn helper | ✅ done |
-| C2 | DB layer — email-providers.ts + projects.ts + send-logs.ts | ⏳ pending |
+| C2 | DB layer — email-providers.ts + projects.ts + send-logs.ts | ✅ done |
 | C3 | Provider layer — interface + Resend + Cloudflare + factory | ⏳ pending |
 | C4 | Sanitize layer — provider_id + sanitizeProvider | ⏳ pending |
 | C5 | Webhook /send — provider dispatch, dry-run toggle, new response | ⏳ pending |

@@ -178,18 +178,80 @@ describe("createSendLog", () => {
 });
 
 describe("markSendLogSent", () => {
-  test("updates status and sets resend_id", async () => {
+  test("updates status and dual-writes resend_id for resend provider", async () => {
     globalThis.fetch = mockFetch(async (_input, init) => {
       capturedBody = init?.body as string;
       return d1Success([]);
     });
 
     const { markSendLogSent } = await import("@/lib/db/send-logs");
-    await markSendLogSent("slog_123", "resend_xyz");
+    await markSendLogSent("slog_123", {
+      providerMessageId: "resend_xyz",
+      providerType: "resend",
+    });
 
     const body = JSON.parse(capturedBody) as { sql: string; params: unknown[] };
-    expect(body.sql).toContain("UPDATE send_logs SET status = 'sent'");
+    expect(body.sql).toContain("UPDATE send_logs");
+    expect(body.sql).toContain("status = 'sent'");
+    expect(body.sql).toContain("resend_id = ?");
+    expect(body.sql).toContain("provider_message_id = ?");
     expect(body.params).toContain("resend_xyz");
+  });
+
+  test("legacy providerType also dual-writes resend_id", async () => {
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBody = init?.body as string;
+      return d1Success([]);
+    });
+
+    const { markSendLogSent } = await import("@/lib/db/send-logs");
+    await markSendLogSent("slog_123", {
+      providerMessageId: "msg_abc",
+      providerType: "legacy",
+    });
+
+    const body = JSON.parse(capturedBody) as { sql: string };
+    expect(body.sql).toContain("resend_id = ?");
+  });
+
+  test("cloudflare providerType only writes provider_message_id", async () => {
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBody = init?.body as string;
+      return d1Success([]);
+    });
+
+    const { markSendLogSent } = await import("@/lib/db/send-logs");
+    await markSendLogSent("slog_123", {
+      providerMessageId: "cf_msg_1",
+      providerType: "cloudflare",
+    });
+
+    const body = JSON.parse(capturedBody) as { sql: string; params: unknown[] };
+    expect(body.sql).not.toContain("resend_id = ?");
+    expect(body.sql).toContain("provider_message_id = ?");
+    expect(body.params).toContain("cf_msg_1");
+  });
+});
+
+describe("updateSendLogProvider", () => {
+  test("updates provider_id and provider_type", async () => {
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBody = init?.body as string;
+      return d1Success([]);
+    });
+
+    const { updateSendLogProvider } = await import("@/lib/db/send-logs");
+    await updateSendLogProvider("slog_123", {
+      provider_id: "prov_1",
+      provider_type: "resend",
+    });
+
+    const body = JSON.parse(capturedBody) as { sql: string; params: unknown[] };
+    expect(body.sql).toContain("UPDATE send_logs");
+    expect(body.sql).toContain("provider_id = ?");
+    expect(body.sql).toContain("provider_type = ?");
+    expect(body.params).toContain("prov_1");
+    expect(body.params).toContain("resend");
   });
 });
 

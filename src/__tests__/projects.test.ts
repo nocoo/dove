@@ -116,6 +116,38 @@ describe("createProject", () => {
     expect(result.quota_daily).toBe(500);
     expect(result.quota_monthly).toBe(5000);
   });
+
+  test("persists provider_id when provided", async () => {
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      capturedBodies.push(init?.body as string);
+      return d1Success([]);
+    });
+
+    const { createProject } = await import("@/lib/db/projects");
+    const result = await createProject({
+      name: "Test",
+      email_prefix: "hello",
+      from_name: "Hello",
+      provider_id: "prov_123",
+    });
+
+    expect(result.provider_id).toBe("prov_123");
+    const body = JSON.parse(capturedBodies[0]!) as { params: unknown[] };
+    expect(body.params).toContain("prov_123");
+  });
+
+  test("defaults provider_id to null (legacy mode)", async () => {
+    globalThis.fetch = mockFetch(async () => d1Success([]));
+
+    const { createProject } = await import("@/lib/db/projects");
+    const result = await createProject({
+      name: "Test",
+      email_prefix: "hello",
+      from_name: "Hello",
+    });
+
+    expect(result.provider_id).toBeNull();
+  });
 });
 
 describe("updateProject", () => {
@@ -144,6 +176,38 @@ describe("updateProject", () => {
     const { updateProject } = await import("@/lib/db/projects");
     const result = await updateProject("nonexistent", { name: "New" });
     expect(result).toBeUndefined();
+  });
+
+  test("can unassign provider by passing provider_id: null", async () => {
+    const proj = makeProject({ provider_id: "prov_old" });
+    let callCount = 0;
+    globalThis.fetch = mockFetch(async (_input, init) => {
+      callCount++;
+      capturedBodies.push(init?.body as string);
+      if (callCount === 1) return d1Success([proj]);
+      return d1Success([]);
+    });
+
+    const { updateProject } = await import("@/lib/db/projects");
+    const result = await updateProject(proj.id, { provider_id: null });
+
+    expect(result?.provider_id).toBeNull();
+    const updateBody = JSON.parse(capturedBodies[1]!) as { params: unknown[] };
+    expect(updateBody.params).toContain(null);
+  });
+
+  test("leaves provider_id unchanged when not provided", async () => {
+    const proj = makeProject({ provider_id: "prov_keep" });
+    let callCount = 0;
+    globalThis.fetch = mockFetch(async () => {
+      callCount++;
+      if (callCount === 1) return d1Success([proj]);
+      return d1Success([]);
+    });
+
+    const { updateProject } = await import("@/lib/db/projects");
+    const result = await updateProject(proj.id, { name: "Renamed" });
+    expect(result?.provider_id).toBe("prov_keep");
   });
 });
 

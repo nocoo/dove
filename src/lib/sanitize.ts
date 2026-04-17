@@ -23,6 +23,7 @@ export function sanitizeProject(project: Project): SanitizedProject {
     from_name: project.from_name,
     quota_daily: project.quota_daily,
     quota_monthly: project.quota_monthly,
+    provider_id: project.provider_id,
     created_at: project.created_at,
     updated_at: project.updated_at,
   };

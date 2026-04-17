@@ -14,6 +14,11 @@ export interface Project {
   webhook_token: string;
   quota_daily: number;
   quota_monthly: number;
+  /**
+   * FK to email_providers.id. NULL means "legacy mode" —
+   * fall back to RESEND_API_KEY / RESEND_FROM_DOMAIN env vars.
+   */
+  provider_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -61,17 +66,31 @@ export async function createProject(data: {
   from_name: string;
   quota_daily?: number | undefined;
   quota_monthly?: number | undefined;
+  provider_id?: string | null | undefined;
 }): Promise<Project> {
   const id = generateId();
   const token = generateWebhookToken();
   const now = new Date().toISOString();
   const quota_daily = data.quota_daily ?? 100;
   const quota_monthly = data.quota_monthly ?? 1000;
+  const provider_id = data.provider_id ?? null;
 
   await executeD1Query(
-    `INSERT INTO projects (id, name, description, email_prefix, from_name, webhook_token, quota_daily, quota_monthly, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.name, data.description ?? null, data.email_prefix, data.from_name, token, quota_daily, quota_monthly, now, now],
+    `INSERT INTO projects (id, name, description, email_prefix, from_name, webhook_token, quota_daily, quota_monthly, provider_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.name,
+      data.description ?? null,
+      data.email_prefix,
+      data.from_name,
+      token,
+      quota_daily,
+      quota_monthly,
+      provider_id,
+      now,
+      now,
+    ],
   );
 
   return {
@@ -83,6 +102,7 @@ export async function createProject(data: {
     webhook_token: token,
     quota_daily,
     quota_monthly,
+    provider_id,
     created_at: now,
     updated_at: now,
   };
@@ -90,6 +110,11 @@ export async function createProject(data: {
 
 /**
  * Update a project's settings.
+ *
+ * provider_id accepts three shapes:
+ *   - undefined → unchanged
+ *   - null      → unassign (legacy mode)
+ *   - string    → set to that provider
  */
 export async function updateProject(
   id: string,
@@ -100,6 +125,7 @@ export async function updateProject(
     from_name?: string | undefined;
     quota_daily?: number | undefined;
     quota_monthly?: number | undefined;
+    provider_id?: string | null | undefined;
   },
 ): Promise<Project | undefined> {
   const existing = await getProject(id);
@@ -111,15 +137,37 @@ export async function updateProject(
   const from_name = data.from_name ?? existing.from_name;
   const quota_daily = data.quota_daily ?? existing.quota_daily;
   const quota_monthly = data.quota_monthly ?? existing.quota_monthly;
+  const provider_id =
+    data.provider_id !== undefined ? data.provider_id : existing.provider_id;
   const now = new Date().toISOString();
 
   await executeD1Query(
     `UPDATE projects SET name = ?, description = ?, email_prefix = ?, from_name = ?,
-     quota_daily = ?, quota_monthly = ?, updated_at = ? WHERE id = ?`,
-    [name, description, email_prefix, from_name, quota_daily, quota_monthly, now, id],
+     quota_daily = ?, quota_monthly = ?, provider_id = ?, updated_at = ? WHERE id = ?`,
+    [
+      name,
+      description,
+      email_prefix,
+      from_name,
+      quota_daily,
+      quota_monthly,
+      provider_id,
+      now,
+      id,
+    ],
   );
 
-  return { ...existing, name, description, email_prefix, from_name, quota_daily, quota_monthly, updated_at: now };
+  return {
+    ...existing,
+    name,
+    description,
+    email_prefix,
+    from_name,
+    quota_daily,
+    quota_monthly,
+    provider_id,
+    updated_at: now,
+  };
 }
 
 /**

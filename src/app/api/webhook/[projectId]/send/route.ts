@@ -304,7 +304,10 @@ export async function POST(
       });
 
       // Step 11: Update log — sent
-      await markSendLogSent(sendLog.id, result.id);
+      await markSendLogSent(sendLog.id, {
+        providerMessageId: result.id,
+        providerType: "legacy",
+      });
 
       // Step 12: Response
       return respond(
