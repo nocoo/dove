@@ -149,8 +149,13 @@ async function waitForServer(): Promise<void> {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
       if (response.ok) {
-        const body = await response.json() as { status: string; d1: boolean };
-        if (body.status === "ok" && body.d1) {
+        // /api/live now follows the surety standard:
+        // { status, version, component, timestamp, uptime, database: { connected } }
+        const body = (await response.json()) as {
+          status: string;
+          database?: { connected?: boolean };
+        };
+        if (body.status === "ok" && body.database?.connected === true) {
           console.log(`  Server ready (${Date.now() - start}ms)`);
           return;
         }
