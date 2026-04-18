@@ -103,7 +103,7 @@ export default function ProjectsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="shrink-0 rounded-md bg-card p-1.5">
+                      <div className="shrink-0 rounded-md bg-background p-1.5">
                         <Mail className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
                       </div>
                       <div className="min-w-0">

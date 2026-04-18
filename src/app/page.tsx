@@ -43,7 +43,7 @@ function StatsCard({
           <p className="text-xs md:text-sm text-muted-foreground">{label}</p>
           <p className="text-2xl md:text-3xl font-semibold font-display text-foreground tracking-tight tabular-nums">{value}</p>
         </div>
-        <div className={`rounded-md ${accent ?? "bg-card"} p-2`}>
+        <div className={`rounded-md ${accent ?? "bg-background"} p-2`}>
           <Icon className={`h-5 w-5 ${accent ? "text-current" : "text-muted-foreground"}`} />
         </div>
       </div>
