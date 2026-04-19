@@ -19,8 +19,10 @@
 
 **业务行为完全保持不变**——01-architecture.md 与 design/multi-provider-email.md 仍是单一权威源：
 
-- `/api/webhook/{projectId}/send` **同步返回**：成功 200 `{ id, resend_id, status: "sent" }`，provider 失败 502
-- **幂等语义**：`send_logs` 在发送前写入 `status: 'pending'`，发送后更新；重复请求返回 409 `send_in_progress` 或复用已有记录
+- `/api/webhook/{projectId}/send` **同步返回**：
+  - 成功 200 `{ id, resend_id, provider_message_id, provider_type, status: "sent" }`
+  - Provider 失败 502 `{ error: { code: "resend_failed"|"cloudflare_failed", message } }`
+- **幂等语义**：`send_logs` 在发送前写入 `status: 'sending'`，发送后更新为 `sent`/`failed`；重复请求返回 409 `send_in_progress` 或复用已有记录
 - **配额模型**：soft limit，按 `send_logs.status = 'sent'` 和 `sent_at` 的 UTC 窗口计数，失败发送不占额度
 - **webhook_logs**：保留 D1 表 + 分页 API，fire-and-forget 写入（现有实现已是异步）
 
@@ -98,11 +100,11 @@
 │                     │    │    ├─ 2. Idempotency check (D1 send_logs)        │
 │                     │    │    ├─ 3. Quota check (D1 COUNT, soft limit)      │
 │                     │    │    ├─ 4. Validate recipient + template           │
-│                     │    │    ├─ 5. Write send_logs (status: pending)       │
+│                     │    │    ├─ 5. Write send_logs (status: 'sending')    │
 │                     │    │    ├─ 6. Send email (Resend / CF Email)          │
 │                     │    │    ├─ 7. Update send_logs (status: sent/failed)  │
 │                     │    │    ├─ 8. Fire-and-forget webhook_logs            │
-│                     │    │    └─ 9. Return 200 { id, resend_id, status }    │
+│                     │    │    └─ 9. Return 200 { id, provider_message_id }  │
 │                     │    │                                                  │
 │                     │    └─ /api/live           ──► Health (D1 ping)        │
 │                     │                                                       │
@@ -123,9 +125,10 @@
 POST /api/webhook/{projectId}/send
 Authorization: Bearer <token>
 {
-  "to": "user@example.com",
-  "template_id": "welcome",
-  "variables": { "name": "Alice" }
+  "template": "welcome",              // template slug (not template_id)
+  "to": "user@example.com",           // email or recipient ID
+  "idempotency_key": "unique-key",    // optional
+  "variables": { "name": "Alice" }    // optional
 }
 
      │
@@ -137,9 +140,12 @@ Authorization: Bearer <token>
          ▼
 ┌─────────────────┐
 │  2. Idempotency │  D1: SELECT FROM send_logs WHERE idempotency_key = ?
-│     check       │  → 返回 existing / send_in_progress / 409 payload_mismatch
+│     check       │  → status='sent': 返回已有记录 (200)
+│                 │  → status='sending': 返回 409 send_in_progress
+│                 │  → status='failed': 复用记录重试
+│                 │  → payload_hash 不匹配: 返回 409 idempotency_payload_mismatch
 └────────┬────────┘
-         │ (new request)
+         │ (new request or retry failed)
          ▼
 ┌─────────────────┐
 │  3. Quota check │  D1: SELECT COUNT(*) FROM send_logs
@@ -154,8 +160,8 @@ Authorization: Bearer <token>
          │
          ▼
 ┌─────────────────┐
-│  5. Write       │  D1: INSERT send_logs (status: 'pending')
-│    pending      │  → Layer 1 幂等保证
+│  5. Write       │  D1: INSERT send_logs (status: 'sending')
+│    sending      │  → Layer 1 幂等保证 (UNIQUE on idempotency_key)
 └────────┬────────┘
          │
          ▼
@@ -175,13 +181,22 @@ Authorization: Bearer <token>
          │
          ▼
 ┌─────────────────┐
-│  9. Return 200  │  { success: true, id, resend_id, status: "sent" }
+│  9. Return 200  │  {
+│                 │    id: "send_log_id",
+│                 │    resend_id: "re_xxx" | null,  // null for cloudflare
+│                 │    provider_message_id: "...",
+│                 │    provider_type: "resend" | "cloudflare" | "legacy",
+│                 │    status: "sent"
+│                 │  }
 └─────────────────┘
 
 失败路径:
-- Provider 失败 → 502 { success: false, error: "provider_error" }
-- 配额超限 → 429 { error: "quota_daily_exceeded" }
-- 幂等冲突 → 409 / 200 (复用已有)
+- Provider 失败 → 502 { error: { code: "resend_failed"|"cloudflare_failed", message: "..." } }
+- 配额超限 → 429 { error: { code: "quota_daily_exceeded"|"quota_monthly_exceeded", message: "..." } }
+- 幂等冲突 → 409 { error: { code: "send_in_progress"|"idempotency_payload_mismatch", message: "..." } }
+- 收件人不存在 → 404 { error: { code: "recipient_not_found", message: "..." } }
+- 模板不存在 → 404 { error: { code: "template_not_found", message: "..." } }
+- 变量校验失败 → 422 { error: { code: "variables_invalid", message: "..." } }
 ```
 
 这与 01-architecture.md 中的 12 步 pipeline 完全一致，只是基础设施从 "Railway + D1 proxy" 变为 "Worker + D1 native binding"。
@@ -256,10 +271,111 @@ bucket_name = "dove-assets-test"
 保留并迁移：
 
 - `src/lib/db/{projects,recipients,templates,send-logs,webhook-logs,email-providers}.ts` — 业务函数签名不变，只改底层 D1 调用方式
-- `src/lib/email/{provider,providers/*,render,quota}.ts` — 完全保留现有逻辑
+- `src/lib/email/{provider,providers/*,render,quota}.ts` — 见下方 Cloudflare Provider 迁移说明
 - `src/lib/{id,pagination,sanitize,version}.ts` — 直接搬
 - `src/components/**` — 直接搬到 Vite 项目下
 - `src/lib/db/schema.ts` — **完整保留**，包括 `webhook_logs` 表
+
+---
+
+## Cloudflare Provider Migration
+
+当前 `CloudflareProvider` 通过 HTTP 调用 `worker-email/` Worker：
+
+```typescript
+// 现有实现 (src/lib/email/providers/cloudflare.ts)
+export class CloudflareProvider implements EmailProvider {
+  constructor(
+    private readonly workerUrl: string,  // 来自 email_providers.config.worker_url
+    private readonly apiKey: string,     // 来自 email_providers.config.api_key
+  ) {}
+
+  async send(params: SendParams): Promise<SendResult> {
+    const response = await fetch(`${this.workerUrl}/send`, {
+      headers: { "X-API-Key": this.apiKey, ... },
+      ...
+    });
+    ...
+  }
+}
+```
+
+重写后改为直接使用 `env.EMAIL` binding：
+
+```typescript
+// 重写后 (src/server/lib/email/providers/cloudflare.ts)
+import type { SendEmail } from "cloudflare:email";
+
+export class CloudflareProvider implements EmailProvider {
+  constructor(
+    private readonly emailBinding: SendEmail,
+    private readonly idempotencyDb: D1Database,  // 用于 Layer 2 幂等
+  ) {}
+
+  async send(params: SendParams): Promise<SendResult> {
+    // Layer 2 幂等检查 (原 worker-email 的逻辑)
+    const existing = await this.checkIdempotency(params.idempotencyKey);
+    if (existing) return existing;
+
+    // 直接调用 CF Email binding
+    const message = createMimeMessage(params);
+    await this.emailBinding.send(message);
+
+    // 写入幂等记录
+    const id = await this.recordSent(params.idempotencyKey);
+    return { id };
+  }
+}
+```
+
+### 关键迁移点
+
+| 组件 | 现有 | 重写后 |
+|---|---|---|
+| `email_providers.config` schema | `{ worker_url, api_key }` | `{ type: "cloudflare" }`（不再需要 URL/key，binding 在 wrangler.toml） |
+| Provider 工厂 | `new CloudflareProvider(config.worker_url, config.api_key)` | `new CloudflareProvider(c.env.EMAIL, c.env.DB)` |
+| Provider 构造 | 无状态，可复用 | **需要 request-scoped env**，每次请求从 `c.env` 获取 |
+| Layer 2 幂等 | `worker-email/` 里的 D1 表 `cf_email_idempotency` | 合并进主 Worker，同一个 `env.DB` |
+| 现有 DB 记录 | `email_providers` 表有 `config: { worker_url, api_key }` 的记录 | 需要迁移脚本更新 config 字段，或保持兼容（忽略旧字段） |
+
+### Provider CRUD 影响
+
+1. **创建 Cloudflare provider**：UI 不再需要输入 `worker_url` / `api_key`
+2. **编辑 Cloudflare provider**：只需要 `domain` 字段（发件域）
+3. **校验逻辑**：`parseProviderConfig()` 需要兼容旧格式 + 新格式
+4. **工厂模式**：`createProvider()` 签名需要接受 `env` 参数
+
+```typescript
+// 重写后的 createProvider
+export async function createProvider(
+  config: ProviderConfig,
+  env: Env,  // 新增：request-scoped env
+): Promise<EmailProvider> {
+  switch (config.type) {
+    case "resend":
+      return new ResendProvider(config.api_key);
+    case "cloudflare":
+      return new CloudflareProvider(env.EMAIL, env.DB);
+  }
+}
+```
+
+### 数据迁移
+
+现有 `email_providers` 表中 `type='cloudflare'` 的记录：
+
+```sql
+-- 现有数据
+{ "worker_url": "https://dove-email.worker.hexly.ai", "api_key": "xxx" }
+
+-- 迁移后（兼容模式：保留旧字段，新代码忽略）
+{ "worker_url": "https://...", "api_key": "xxx" }  -- 旧字段被忽略
+
+-- 或清理迁移
+{ }  -- 空 config，type='cloudflare' 足够标识使用 binding
+```
+
+**推荐兼容模式**：旧字段保留不删，`parseProviderConfig()` 对 cloudflare 类型直接返回 `{ type: "cloudflare" }`，忽略 `worker_url`/`api_key`。这样无需数据迁移脚本。
 
 ---
 
@@ -347,7 +463,8 @@ dove/
 19. `routes/stats.ts`
 20. `routes/webhook.ts`（**核心**）：
     - **完全复制现有逻辑**：幂等检查 → 配额检查 → 发送 → 更新 send_logs → 同步返回
-    - CloudflareProvider 从 HTTP proxy 改为直接 `env.EMAIL.send()`
+    - `send_logs.status` 使用 `'sending'`（不是 `'pending'`）
+    - CloudflareProvider 从 HTTP proxy 改为直接 `env.EMAIL.send()`，见 Cloudflare Provider Migration 章节
     - Resend provider 不变
 21. `routes/live.ts`
 
@@ -409,10 +526,12 @@ database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
 
 | 契约 | 保持方式 |
 |---|---|
-| `POST /send` → 200 `{ id, resend_id, status: "sent" }` | 同步发送，不改 202 |
-| `POST /send` → 502 on provider failure | 同步返回错误 |
-| 幂等语义（409 / send_in_progress / payload_mismatch） | send_logs 先写 pending，发送前检查 |
-| 配额（soft limit, sent_at UTC window） | SQL COUNT 逻辑不变 |
+| 请求体 `{ template, to, idempotency_key?, variables? }` | `template` 是 slug，不是 ID |
+| 成功响应 `{ id, resend_id, provider_message_id, provider_type, status: "sent" }` | 同步发送，不改 202 |
+| Provider 失败 502 `{ error: { code: "resend_failed"\|"cloudflare_failed", message } }` | 区分 provider 类型 |
+| 幂等语义：`status='sending'` 时返回 409 `send_in_progress` | send_logs 先写 `sending`，发送前检查 |
+| 幂等语义：payload hash 不匹配返回 409 `idempotency_payload_mismatch` | 同现有逻辑 |
+| 配额超限 429 `{ error: { code: "quota_daily_exceeded", message } }` | SQL COUNT 逻辑不变 |
 | `GET /api/webhook-logs` 分页 | D1 表 + limit/offset 保留 |
 | 所有错误码字符串 | 逐字保留 |
 
