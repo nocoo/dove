@@ -1,15 +1,19 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router";
 import "./styles/globals.css";
+import { Layout } from "./routes/_layout";
+import { Dashboard } from "./routes/index";
 
 function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-foreground">Dove</h1>
-        <p className="mt-2 text-muted-foreground">Email relay service</p>
-      </div>
-    </div>
+    <BrowserRouter>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+        </Routes>
+      </Layout>
+    </BrowserRouter>
   );
 }
 
