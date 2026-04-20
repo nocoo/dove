@@ -1,0 +1,47 @@
+name = "dove"
+main = "src/server/index.ts"
+compatibility_date = "2026-04-01"
+
+# Static assets (Vite build output)
+[assets]
+directory = "./dist/client"
+not_found_handling = "single-page-application"
+
+# Custom domain
+[[routes]]
+pattern = "dove.hexly.ai"
+custom_domain = true
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "dove-db"
+database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
+
+# KV Namespace (sessions)
+[[kv_namespaces]]
+binding = "KV"
+id = "c621cd9894154497a8ffa82a0cd32beb"
+
+# Email
+[send_email]
+name = "EMAIL"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test environment
+# ─────────────────────────────────────────────────────────────────────────────
+
+[env.test]
+
+[[env.test.routes]]
+pattern = "dove-test.hexly.ai"
+custom_domain = true
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "dove-db-test"
+database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
+
+[[env.test.kv_namespaces]]
+binding = "KV"
+id = "322833e8ef9d424fad5690a88a405efd"

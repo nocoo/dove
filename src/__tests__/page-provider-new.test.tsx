@@ -96,7 +96,7 @@ describe("NewProviderPage", () => {
     // Initially resend → no worker URL field.
     expect(screen.queryByLabelText("Worker URL")).toBeNull();
 
-    const select = screen.getByTestId("stub-select") as HTMLSelectElement;
+    const select = screen.getByTestId("stub-select") as unknown as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "cloudflare" } });
 
     expect(await screen.findByLabelText("Worker URL")).toBeDefined();

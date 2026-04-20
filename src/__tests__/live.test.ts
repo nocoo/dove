@@ -48,7 +48,7 @@ describe("GET /api/live", () => {
     const res = await GET();
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe("ok");
     expect(typeof body.version).toBe("string");
     expect(body.component).toBe("dove");
@@ -63,11 +63,11 @@ describe("GET /api/live", () => {
     const res = await GET();
     expect(res.status).toBe(503);
 
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe("error");
     expect(body.component).toBe("dove");
-    expect(body.database.connected).toBe(false);
-    expect(body.database.error).toBe("D1 not configured");
+    expect((body.database as Record<string, unknown>).connected).toBe(false);
+    expect((body.database as Record<string, unknown>).error).toBe("D1 not configured");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
@@ -78,9 +78,9 @@ describe("GET /api/live", () => {
 
     const { GET } = await import("@/app/api/live/route");
     const res = await GET();
-    const body = await res.json();
-    expect(body.database.error).not.toMatch(/\bok\b/i);
-    expect(body.database.error).toContain("***");
+    const body = (await res.json()) as Record<string, unknown>;
+    expect((body.database as Record<string, unknown>).error).not.toMatch(/\bok\b/i);
+    expect((body.database as Record<string, unknown>).error).toContain("***");
   });
 
   test("returns 503 error when D1 ping fails", async () => {
@@ -92,10 +92,10 @@ describe("GET /api/live", () => {
     const res = await GET();
     expect(res.status).toBe(503);
 
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
     expect(body.status).toBe("error");
     expect(typeof body.version).toBe("string");
     expect(body.component).toBe("dove");
-    expect(body.database.connected).toBe(false);
+    expect((body.database as Record<string, unknown>).connected).toBe(false);
   });
 });

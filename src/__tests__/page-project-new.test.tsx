@@ -192,11 +192,11 @@ describe("NewProjectPage — provider selector", () => {
 
     // Wait for providers list to hydrate before switching.
     await waitFor(() => {
-      const select = screen.getByTestId("stub-select") as HTMLSelectElement;
+      const select = screen.getByTestId("stub-select") as unknown as HTMLSelectElement;
       expect(select.options.length).toBeGreaterThan(1);
     });
 
-    const select = screen.getByTestId("stub-select") as HTMLSelectElement;
+    const select = screen.getByTestId("stub-select") as unknown as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "prov_abc" } });
 
     await userEvent.click(
