@@ -685,32 +685,37 @@ export async function signOut(): Promise<void>;
 
 **C049** `src/client/routes/templates/index.tsx`：模板列表
 
-**C050** `src/client/routes/templates/$id.tsx`：模板编辑
+**C050** `src/client/routes/templates/new.tsx`：新建模板
 
-**C051** `src/client/routes/providers/index.tsx`：Provider 列表
+**C051** `src/client/routes/templates/$id.tsx`：模板编辑
+
+**C052** `src/client/routes/providers/index.tsx`：Provider 列表
 - **关键**：健康徽章逻辑适配（不再依赖 `reachable`）
 
-**C052** `src/client/routes/providers/$id.tsx`：Provider 详情
+**C053** `src/client/routes/providers/new.tsx`：新建 Provider
+- **关键**：cloudflare 类型隐藏 `worker_url`/`api_key` 字段
 
-**C053** `src/client/routes/send-logs.tsx`：发送日志页面
+**C054** `src/client/routes/providers/$id.tsx`：Provider 详情/编辑
 
-**C054** `src/client/routes/webhook-logs.tsx`：Webhook 日志页面
+**C055** `src/client/routes/send-logs.tsx`：发送日志页面
 
-**C055** 更新 React Router 配置，集成所有路由
+**C056** `src/client/routes/webhook-logs.tsx`：Webhook 日志页面
+
+**C057** 更新 React Router 配置，集成所有路由
 
 ---
 
 ### Phase F — Quality
 
-**C056** `src/server/routes/db-init.ts`：Schema 初始化 API
+**C058** `src/server/routes/db-init.ts`：Schema 初始化 API
 - `POST /api/db/init` — 执行 schema.sql（仅 non-production）
 - 用于 L2/L3 测试前置初始化
 
-**C057** 配置 L1 单测：vitest + miniflare mock
+**C059** 配置 L1 单测：vitest + miniflare mock
 
-**C058** 迁移现有单测到新目录结构
+**C060** 迁移现有单测到新目录结构
 
-**C059** 配置 L2 API E2E
+**C061** 配置 L2 API E2E
 - `scripts/run-e2e.ts` 重写：
   - 启动 `wrangler dev --env test --port 17032`（替代 `next dev`）
   - 调用 `POST /api/db/init` 初始化 schema（替代 `verify-test-db.ts`）
@@ -718,24 +723,24 @@ export async function signOut(): Promise<void>;
   - 停止 wrangler dev
 - 移除 `.env.test` 依赖（环境通过 `--env test` 指定）
 
-**C060** 迁移现有 E2E 测试
+**C062** 迁移现有 E2E 测试
 
-**C061** 配置 L3 Playwright
+**C063** 配置 L3 Playwright
 - `wrangler dev --env test --port 27032`
 
-**C062** 迁移现有 Playwright 测试
+**C064** 迁移现有 Playwright 测试
 
-**C063** 更新构建脚本：`scripts/check-coverage.ts`
+**C065** 更新构建脚本：`scripts/check-coverage.ts`
 
-**C064** 更新 Husky hooks：pre-commit = G1 + L1，pre-push = L2 ‖ G2
+**C066** 更新 Husky hooks：pre-commit = G1 + L1，pre-push = L2 ‖ G2
 
-**C065** 验证所有测试通过
+**C067** 验证所有测试通过
 
 ---
 
 ### Phase G — Deploy
 
-**C066** 设置 secrets
+**C068** 设置 secrets
 ```bash
 wrangler secret put AUTH_SECRET
 wrangler secret put GOOGLE_CLIENT_ID
@@ -750,19 +755,19 @@ wrangler secret put RESEND_API_KEY --env test
 wrangler secret put ALLOWED_EMAILS --env test
 ```
 
-**C067** 部署 test 环境
+**C069** 部署 test 环境
 ```bash
 wrangler deploy --env test
 ```
 
-**C068** 验证 test 环境 + 运行 L3 E2E
+**C070** 验证 test 环境 + 运行 L3 E2E
 
-**C069** 部署 production
+**C071** 部署 production
 ```bash
 wrangler deploy
 ```
 
-**C070** Smoke test production
+**C072** Smoke test production
 - `curl https://dove.hexly.ai/api/live`
 - 登录测试（Google OAuth）
 - 发送测试邮件
@@ -771,7 +776,7 @@ wrangler deploy
 
 ### Phase H — Cleanup（部署成功后）
 
-**C071** 删除旧代码
+**C073** 删除旧代码
 - `worker/`（D1 proxy Worker）
 - `worker-email/`（邮件 Worker）
 - `src/app/`（Next.js pages）
@@ -781,16 +786,16 @@ wrangler deploy
 - `Dockerfile`、`railway.json`
 - `next.config.*`、`next-env.d.ts`
 
-**C072** 删除旧测试脚本
+**C074** 删除旧测试脚本
 - `scripts/deploy-test-worker.ts`
 - `scripts/verify-test-db.ts`
 - `.env.test`（不再需要）
 
-**C073** 更新 `CLAUDE.md`
+**C075** 更新 `CLAUDE.md`
 - 移除 Railway 相关说明
 - 更新 Tech Stack 为 Cloudflare Workers
 
-**C074** 删除旧 Workers
+**C076** 删除旧 Workers
 ```bash
 # dove.worker.hexly.ai (D1 proxy)
 cd worker && wrangler delete
@@ -799,7 +804,7 @@ cd worker && wrangler delete
 cd worker-email && wrangler delete
 ```
 
-**C075** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
+**C077** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
 
 ---
 
