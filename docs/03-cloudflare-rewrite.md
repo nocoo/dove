@@ -496,23 +496,26 @@ dove/
 
 直接在 main 分支重建。Railway 部署已切断，无需考虑迁移兼容性。每一步都是独立 commit。
 
-### Phase 0 — Infrastructure Setup（手动）
+### Phase 0 — Infrastructure Setup（手动）✅
 
 在开始代码工作前，手动完成以下配置：
 
-1. **创建 KV namespaces**
+1. ✅ **创建 KV namespaces**
    ```bash
-   wrangler kv:namespace create dove
-   wrangler kv:namespace create dove-test
+   wrangler kv namespace create dove
+   # id: c621cd9894154497a8ffa82a0cd32beb
+   
+   wrangler kv namespace create dove-test
+   # id: 322833e8ef9d424fad5690a88a405efd
    ```
 
-2. **Google Console 添加新 OAuth callback URLs**
+2. ⏳ **Google Console 添加新 OAuth callback URLs**（部署时添加）
    ```
    https://dove.hexly.ai/api/auth/google/callback
    https://dove-test.hexly.ai/api/auth/google/callback
    ```
 
-3. **配置 DNS**（如果尚未配置）
+3. ⏳ **配置 DNS**（部署时自动配置 custom domain）
    - `dove.hexly.ai` → CF Worker custom domain
    - `dove-test.hexly.ai` → CF Worker custom domain (env.test)
 
@@ -520,48 +523,48 @@ dove/
 
 ### Phase A — Scaffold
 
-**C001** `wrangler.toml` + `src/server/env.ts`：Worker 配置和类型定义
+**C001** ✅ `wrangler.toml` + `src/server/env.ts`：Worker 配置和类型定义
 - 所有 bindings（DB, KV, EMAIL）
 - `[env.test]` 配置
 - custom domain routes
 
-**C002** `src/server/index.ts` + `src/server/lib/version.ts`：最小 Hono app
+**C002** ✅ `src/server/index.ts` + `src/server/lib/version.ts`：最小 Hono app
 - `GET /api/live` 健康检查
 - D1 连接验证
 
-**C003** Vite + React 19 骨架
+**C003** ✅ Vite + React 19 骨架
 - `vite.config.ts`
 - `src/client/main.tsx`
 - `src/client/styles/globals.css`（Tailwind v4）
 
-**C004** React Router v7 配置
+**C004** ✅ React Router v7 配置
 - `src/client/routes/_layout.tsx`（AppShell 骨架）
 - 路由配置文件
 
-**C005** 验证 `bun run build && wrangler dev` 可访问 SPA + `/api/live`
+**C005** ✅ 验证 `bun run build && wrangler dev` 可访问 SPA + `/api/live`
 
 ---
 
 ### Phase B — Data Layer
 
-**C006** `src/server/lib/db/d1.ts`：D1 native binding 薄包装
+**C006** ✅ `src/server/lib/db/d1.ts`：D1 native binding 薄包装
 ```typescript
 export async function query<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T[]>;
 export async function queryOne<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T | null>;
 export async function execute(db: D1Database, sql: string, params?: unknown[]): Promise<D1Result>;
 ```
 
-**C007** `src/server/lib/db/projects.ts`：项目 CRUD（从现有迁移）
+**C007** ✅ `src/server/lib/db/projects.ts`：项目 CRUD（从现有迁移）
 
-**C008** `src/server/lib/db/recipients.ts`：收件人 CRUD
+**C008** ✅ `src/server/lib/db/recipients.ts`：收件人 CRUD
 
-**C009** `src/server/lib/db/templates.ts`：模板 CRUD
+**C009** ✅ `src/server/lib/db/templates.ts`：模板 CRUD
 
-**C010** `src/server/lib/db/send-logs.ts`：发送日志 CRUD
+**C010** ✅ `src/server/lib/db/send-logs.ts`：发送日志 CRUD
 
-**C011** `src/server/lib/db/webhook-logs.ts`：Webhook 日志 CRUD
+**C011** ✅ `src/server/lib/db/webhook-logs.ts`：Webhook 日志 CRUD
 
-**C012** `src/server/lib/db/email-providers.ts`：Provider CRUD
+**C012** ✅ `src/server/lib/db/email-providers.ts`：Provider CRUD
 
 **C013** `src/server/schema.sql`：完整 schema
 - 现有所有表
