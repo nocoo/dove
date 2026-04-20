@@ -63,14 +63,13 @@
 |---|---|---|
 | **运行时** | Cloudflare Workers | `compatibility_date` 取最新 |
 | **框架** | Hono | Worker HTTP 框架，TS 一等公民 |
-| **前端** | Vite 7 + React 19 + React Router v7 | SPA 形态，Workers Static Assets 服务 |
+| **前端** | Vite + React 19 + React Router v7 | SPA 形态，Workers Static Assets 服务 |
 | **UI** | Tailwind CSS v4 + shadcn/ui | 保持现有 basalt 风格 |
 | **图表** | Recharts | 不变 |
 | **校验** | Zod v4 | 不变 |
 | **鉴权** | `@hono/oauth-providers` (Google) + KV session | 替换 NextAuth v5 |
 | **关系数据** | D1 | projects / recipients / templates / send_logs / webhook_logs / email_providers |
 | **会话存储** | KV | session token → user info，TTL 7 天 |
-| **对象存储** | R2 | 模板资产 / 长期归档（可选） |
 | **邮件发送** | Resend HTTP + CF Email Routing | 双 provider 架构保留 |
 | **模板渲染** | marked | 不变 |
 | **ID 生成** | nanoid | 不变 |
@@ -111,7 +110,7 @@
 │                     └─► Bindings                                            │
 │                          ├─ DB            : D1 (dove-db)                    │
 │                          ├─ KV            : KV namespace (sessions)         │
-│                          ├─ BUCKET        : R2 (optional, assets/archive)   │
+│                          ├─ ASSETS        : Workers Static Assets           │
 │                          ├─ EMAIL         : send_email binding              │
 │                          └─ Secrets       : AUTH_SECRET, GOOGLE_*,          │
 │                                             RESEND_API_KEY, ...             │
@@ -212,9 +211,16 @@ name = "dove"
 main = "src/server/index.ts"
 compatibility_date = "2026-04-01"
 
+# Custom domain
+[[routes]]
+pattern = "dove.hexly.ai"
+custom_domain = true
+
 # Static assets (Vite build output)
 [assets]
 directory = "./dist/client"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
 not_found_handling = "single-page-application"
 
 # D1 Database
@@ -226,19 +232,18 @@ database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
 # KV Namespace (sessions)
 [[kv_namespaces]]
 binding = "KV"
-id = "<kv-namespace-id>"
-
-# R2 Bucket (optional)
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "dove-assets"
+id = "c621cd9894154497a8ffa82a0cd32beb"
 
 # Email
-[send_email]
+[[send_email]]
 name = "EMAIL"
 
 # Environment: test
 [env.test]
+[[env.test.routes]]
+pattern = "dove-test.hexly.ai"
+custom_domain = true
+
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "dove-db-test"
@@ -246,12 +251,172 @@ database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
 
 [[env.test.kv_namespaces]]
 binding = "KV"
-id = "<kv-namespace-id-test>"
-
-[[env.test.r2_buckets]]
-binding = "BUCKET"
-bucket_name = "dove-assets-test"
+id = "322833e8ef9d424fad5690a88a405efd"
 ```
+
+### Static Asset Serving (Wrangler Assets v4)
+
+SPA 由 Vite 构建到 `dist/client/`，Wrangler 的 `[assets]` 配置在边缘服务这些文件：
+
+1. **`run_worker_first = ["/api/*"]`** — 匹配 `/api/*` 的请求先进 Worker 代码（路由处理器）。其余请求（JS、CSS、HTML）直接从 static asset bundle 返回，不经过 Worker。
+2. **`not_found_handling = "single-page-application"`** — 静态文件未命中时（如 `/projects/abc123`），Wrangler 返回 `index.html` 而非 404。这启用了客户端路由——React Router 处理路径。
+3. **Content-addressed assets** — Wrangler assets 按内容哈希寻址并带 immutable cache headers。`index.html` 入口点有合适的 cache headers 以拾取新部署。
+
+### Build Pipeline
+
+```
+src/client/  ──(vite build)──►  dist/client/
+                                     │
+                               ┌─────┴──────┐
+                               │  wrangler   │
+                               │  deploy     │──►  Cloudflare Edge
+                               └────────────┘
+```
+
+`bun run build` 构建 SPA。`wrangler deploy` 同时上传 Worker 代码和静态资产。
+
+---
+
+## Authentication Architecture
+
+### Two auth scopes
+
+Dove 有两个认证域，对应两类调用方：
+
+| Scope | Mechanism | Who uses it | Routes |
+|-------|-----------|-------------|--------|
+| **Browser** | Google OAuth → KV session cookie | Dashboard 用户 | `GET/POST /api/projects`, `/api/templates`, `/api/stats`, etc. |
+| **Webhook** | Bearer token (`webhook_token`) | 外部项目 | `POST /api/webhook/:projectId/send`, `GET /api/webhook/:projectId/templates` |
+| **Public** | None | Anyone | `GET /api/live`, `GET /api/auth/*` |
+
+### Middleware chain
+
+每个请求经过两层中间件：
+
+```
+Request → authSession → authBearer → Route handler
+```
+
+#### 1. Session Auth (`middleware/auth-session.ts`)
+
+KV session 校验，保护 dashboard API。
+
+**Skip conditions**（直接调用 `next()`）：
+- 公开路由：`/api/live`、`/api/auth/*`
+- Webhook 路由：`/api/webhook/*`
+- Localhost（本地开发）
+
+**验证流程**：
+
+```
+1. Read session token from cookie (dove_session)
+   ├── Missing → 401 Unauthorized
+   └── Present ↓
+
+2. KV lookup: GET dove_session:{token}
+   ├── Missing/expired → 401 Unauthorized (clear cookie)
+   └── Found ↓
+
+3. Parse session data: { email, name, image, expiresAt }
+   ├── Expired → 401 (delete KV key, clear cookie)
+   └── Valid ↓
+
+4. Check email in ALLOWED_EMAILS whitelist
+   ├── Not in list → 403 Forbidden
+   └── Allowed ↓
+
+5. Set context: c.set("user", sessionData)
+```
+
+**Fail-closed design**：如果 `ALLOWED_EMAILS` 环境变量缺失，返回 **500**，不会退化为无鉴权。
+
+#### 2. Bearer Auth (`middleware/auth-bearer.ts`)
+
+Webhook API 的 Bearer token 校验。仅在 `/api/webhook/:projectId/*` 路由上激活。
+
+**验证流程**：
+
+```
+1. Extract Bearer token from Authorization header
+   ├── Missing → 401 Unauthorized
+   └── Present ↓
+
+2. D1 lookup: SELECT * FROM projects WHERE webhook_token = ?
+   ├── No match → 403 Forbidden
+   └── Found ↓
+
+3. Set context: c.set("project", project)
+```
+
+**安全隔离**：Session cookie 和 Bearer token 互不跨用。Dashboard 用户看到的 webhook_token 已脱敏（`sanitize.ts`），防止 CSRF 攻击通过 cookie 触发 webhook 端点。
+
+---
+
+## Login Flow (Browser)
+
+```
+1. Browser → dove.hexly.ai
+   │
+   ├── Path: / (or any non-/api/* path)
+   │   └── Wrangler assets serves index.html → SPA loads
+   │
+   ├── SPA checks auth: GET /api/auth/me
+   │   ├── Valid session cookie → { user: { email, name, image } }
+   │   └── No session → { user: null } → redirect to /login
+   │
+   ├── User clicks "Sign in with Google"
+   │   │
+   │   ▼
+   │   GET /api/auth/google → 302 redirect to Google OAuth
+   │   │
+   │   ▼
+   │   Google login → callback
+   │   │
+   │   ▼
+   │   GET /api/auth/google/callback
+   │   ├── Verify OAuth code → get { email, name, image }
+   │   ├── Check email in ALLOWED_EMAILS → reject if not whitelisted
+   │   ├── Create KV session: PUT dove_session:{nanoid} = { email, name, image, expiresAt }
+   │   ├── Set cookie: dove_session={token}; HttpOnly; Secure; SameSite=Lax; Max-Age=604800
+   │   └── 302 redirect to /
+   │
+   ▼
+2. SPA renders, fetches /api/projects, /api/stats, etc.
+   (All API calls include cookie automatically — same-origin)
+```
+
+**Key insight**：SPA 不存储任何 token 或 secret。Cookie 是 HttpOnly 的，JS 无法读取。Session 的 7 天 TTL 在 KV 的 `expirationTtl` 和 cookie 的 `Max-Age` 双重保证。
+
+---
+
+## Webhook Flow (External Project)
+
+```
+1. External service → dove.hexly.ai/api/webhook/{projectId}/send
+   │                  (POST, Authorization: Bearer <webhook_token>)
+   │
+   ▼
+2. Worker receives request
+   ├── authSession: /api/webhook/* → skip
+   ├── authBearer: extract Bearer token → match project → set context
+   └── Route handler: 12-step send pipeline (see Architecture § 关键数据流)
+```
+
+无 cookie、无 session、无 OAuth。外部项目只用 Bearer token 认证。
+
+---
+
+## Security Boundaries
+
+| Boundary | Enforcement | Fail mode |
+|----------|-------------|-----------|
+| Browser → dashboard API | KV session cookie + email whitelist | 401 (no session) / 403 (not whitelisted) |
+| External → webhook API | Bearer token (per-project `webhook_token`) | 401 (no token) / 403 (wrong token) |
+| Cookie on webhook routes | authSession skips `/api/webhook/*` | Cookie ignored — no CSRF vector |
+| Missing `ALLOWED_EMAILS` | Fail-closed check in authSession | 500 (not silent pass-through) |
+| `webhook_token` visibility | `sanitize.ts` strips from API responses | Token never exposed to browser |
+| SPA client-side routes | `not_found_handling = "single-page-application"` | Returns index.html (React Router handles) |
+| Session expiry | KV `expirationTtl` (7 days) + cookie `Max-Age` | Auto-expired, user re-authenticates |
 
 ---
 
@@ -442,29 +607,45 @@ dove/
 ├── src/
 │   ├── server/
 │   │   ├── index.ts           # Worker entry: Hono app
-│   │   ├── env.ts             # Env 类型 (D1, KV, R2, Email, secrets)
+│   │   ├── env.ts             # Env 类型 (D1, KV, Email, secrets)
 │   │   ├── middleware/
-│   │   │   ├── auth-session.ts   # KV session check
-│   │   │   └── auth-bearer.ts    # webhook bearer check
+│   │   │   ├── auth-session.ts   # KV session check (dashboard)
+│   │   │   └── auth-bearer.ts    # webhook bearer check (external)
 │   │   ├── routes/
-│   │   │   ├── auth.ts        # /api/auth/google/*
+│   │   │   ├── auth.ts        # /api/auth/google/*, /api/auth/me, /api/auth/signout
 │   │   │   ├── projects.ts
 │   │   │   ├── recipients.ts
 │   │   │   ├── templates.ts
 │   │   │   ├── providers.ts
 │   │   │   ├── send-logs.ts
-│   │   │   ├── webhook-logs.ts   # 保留分页 API
+│   │   │   ├── webhook-logs.ts
 │   │   │   ├── stats.ts
-│   │   │   ├── webhook.ts        # 同步发送，保持现有契约
+│   │   │   ├── webhook.ts     # send + templates + health (bearer auth)
+│   │   │   ├── db-init.ts     # schema init (non-production only)
 │   │   │   └── live.ts
 │   │   ├── lib/
 │   │   │   ├── db/            # D1 CRUD (native binding)
+│   │   │   │   ├── d1.ts      # query/queryOne/execute/batch
+│   │   │   │   ├── projects.ts
+│   │   │   │   ├── recipients.ts
+│   │   │   │   ├── templates.ts
+│   │   │   │   ├── send-logs.ts
+│   │   │   │   ├── webhook-logs.ts
+│   │   │   │   └── email-providers.ts
 │   │   │   ├── email/         # provider 层 (保持现有逻辑)
+│   │   │   │   ├── provider.ts    # interface + factory
+│   │   │   │   ├── providers/
+│   │   │   │   │   ├── resend.ts
+│   │   │   │   │   └── cloudflare.ts
+│   │   │   │   ├── render.ts      # markdown → HTML
+│   │   │   │   └── quota.ts       # soft limit check
+│   │   │   ├── session.ts     # KV session helpers
 │   │   │   ├── id.ts
 │   │   │   ├── pagination.ts
 │   │   │   ├── sanitize.ts
 │   │   │   └── version.ts
-│   │   └── schema.sql         # 完整 schema (含 webhook_logs)
+│   │   ├── schema.sql         # 完整 schema (含 webhook_logs, cf_email_idempotency)
+│   │   └── __tests__/         # L1 unit tests (colocated)
 │   └── client/
 │       ├── main.tsx
 │       ├── routes/
@@ -475,6 +656,104 @@ dove/
 ├── scripts/
 ├── e2e/
 └── docs/
+```
+
+---
+
+## Local Development
+
+### Mode 1: Full local stack (recommended)
+
+```
+localhost:7034 (wrangler dev)
+      │
+      ├── /* → static assets (vite build or wrangler proxies vite dev)
+      └── /api/* → Worker handlers → local D1 (miniflare)
+```
+
+- `wrangler dev --port 7034` 启动本地 Worker
+- D1 使用 miniflare 本地模拟（`.wrangler/state/`）
+- Auth 完全绕过：authSession 检测 `localhost` → skip
+- 适合后端开发和调试
+
+### Mode 2: Vite HMR + local Worker
+
+```
+localhost:5173 (vite dev, HMR)
+      │
+      └── /api/* proxy → localhost:7034 (wrangler dev)
+```
+
+- Vite dev server 提供前端 HMR
+- `vite.config.ts` 配置 `/api/*` 代理到 wrangler dev
+- 适合前端开发，实时刷新
+
+### Mode 3: Production-like
+
+```
+localhost:7034 (wrangler dev, serving built static from dist/client/)
+```
+
+- 先 `bun run build` 构建 SPA，再 `wrangler dev`
+- 测试与生产完全一致的静态资产服务路径
+- L3 Playwright 测试使用此模式
+
+### Auth During Local Development
+
+authSession 检测到 `localhost` / `127.0.0.1` 时跳过所有认证检查。Dashboard 以匿名模式运行，`/api/auth/me` 返回固定的 dev 用户。这与 bat 项目的 entry-control localhost bypass 模式一致。
+
+---
+
+## Deployment Procedure
+
+### Prerequisites (one-time)
+
+Worker secrets 必须预先配置：
+
+```bash
+wrangler secret put AUTH_SECRET
+wrangler secret put GOOGLE_CLIENT_ID
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put RESEND_API_KEY
+wrangler secret put ALLOWED_EMAILS
+```
+
+Google Console 添加 OAuth callback URL：
+```
+https://dove.hexly.ai/api/auth/google/callback
+```
+
+### Deploy sequence
+
+**顺序很重要**：D1 migrations 必须在 Worker 部署之前。如果 Worker 代码引用了新列但 migration 未应用，所有相关路由会 500。
+
+```bash
+# 1. Build SPA into static assets
+bun run build
+
+# 2. Apply D1 migrations (if any new ones)
+wrangler d1 migrations apply dove-db --remote
+
+# 3. Deploy Worker (code + static assets)
+wrangler deploy
+```
+
+### Verify
+
+```bash
+# Health check
+curl -s https://dove.hexly.ai/api/live | jq .
+
+# Browser access
+open https://dove.hexly.ai
+```
+
+### Test environment deploy
+
+```bash
+wrangler d1 migrations apply dove-db-test --remote --env test
+wrangler deploy --env test
+curl -s https://dove-test.hexly.ai/api/live | jq .
 ```
 
 ---
@@ -566,7 +845,7 @@ export async function execute(db: D1Database, sql: string, params?: unknown[]): 
 
 **C012** ✅ `src/server/lib/db/email-providers.ts`：Provider CRUD
 
-**C013** `src/server/schema.sql`：完整 schema
+**C013** ✅ `src/server/schema.sql`：完整 schema
 - 现有所有表
 - `cf_email_idempotency`（合并自 worker-email）
 
@@ -831,10 +1110,93 @@ cd worker-email && wrangler delete
 binding = "DB"
 database_name = "dove-db-test"
 database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
+
+[[env.test.kv_namespaces]]
+binding = "KV"
+id = "322833e8ef9d424fad5690a88a405efd"
 ```
 
-- L2：Miniflare 内存
-- L3：`wrangler dev --env test`
+### Resource Separation
+
+| Resource | Production | Test |
+|----------|-----------|------|
+| D1 Database | `dove-db` (2a8b6614) | `dove-db-test` (1adca6ff) |
+| KV Namespace | `dove` (c621cd98) | `dove-test` (322833e8) |
+| Worker domain | `dove.hexly.ai` | `dove-test.hexly.ai` |
+
+### Test Layer Architecture
+
+| Layer | How D1 works | How auth works |
+|-------|-------------|----------------|
+| **L1 Unit** | Mock D1 (in-memory stubs) | N/A (pure logic only) |
+| **L2 API E2E** | Miniflare local D1 (`--persist-to .wrangler/e2e`) | Localhost → auth bypassed |
+| **L3 Browser E2E** | Wrangler dev local D1 (`--persist-to .wrangler/e2e-pw`) | Localhost → auth bypassed |
+
+### L2 Architecture
+
+```
+bun test e2e/api/
+      │
+      ▼
+  localhost:17034 (wrangler dev --port 17034 --persist-to .wrangler/e2e)
+      │
+      └── /api/* → Worker handlers → local D1
+```
+
+1. `scripts/run-e2e.ts` 启动 wrangler dev（port 17034）
+2. 调用 `POST /api/db/init` 应用 schema.sql 初始化数据库
+3. 运行 bun test 对 `localhost:17034` 发起 HTTP 请求
+4. authSession 检测 localhost → 所有认证绕过
+5. 测试完成后 kill wrangler 进程
+
+### L3 Architecture
+
+```
+Playwright (Chromium)
+      │
+      ▼
+  localhost:27034 (wrangler dev --port 27034 --persist-to .wrangler/e2e-pw)
+      │
+      ├── /* → static assets (built SPA)
+      └── /api/* → Worker handlers → local D1
+```
+
+1. Playwright `webServer.command` 先构建 SPA，再启动 wrangler dev（port 27034）
+2. `POST /api/db/init` 初始化 schema
+3. 种子数据通过 API 调用写入（self-contained tests）
+4. SPA 以匿名模式运行，无需登录流程
+5. 每个 spec 创建自己的测试数据，测后清理
+
+### Port Convention
+
+| Purpose | Port |
+|---------|------|
+| Dev server / Production-like | 7034 |
+| L2 API E2E | 17034 |
+| L3 Playwright E2E | 27034 |
+
+### Hook Execution Model
+
+**pre-commit**: G1 + L1（并行）
+
+| Stage | Command | What |
+|-------|---------|------|
+| `typecheck` | `bun run typecheck` | G1: TypeScript type checking |
+| `lint` | `bun run lint:staged` | G1: ESLint on staged files |
+| `unit_cov` | `bun run test:coverage` | L1: Unit tests with 90% coverage gate |
+
+**pre-push**: L2 ‖ G2（并行）
+
+| Stage | Command | What |
+|-------|---------|------|
+| `l2_e2e` | `bun run test:e2e:api` | L2: Full API E2E |
+| `security` | `bun run gate:security` | G2: osv-scanner + gitleaks |
+
+**on-demand**: L3
+
+| Stage | Command | What |
+|-------|---------|------|
+| `l3_pw` | `bun run test:e2e:bdd` | L3: Playwright browser E2E |
 
 ---
 
@@ -874,7 +1236,6 @@ database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
 | Workers requests | ~100k/月 | Free tier |
 | D1 reads/writes | ~500k reads, ~10k writes | ~$0.50 |
 | KV reads/writes | ~200k reads, ~20k writes | ~$0.50 |
-| R2 storage | <1GB | Free tier |
 | **Total** | | **< $5/月** |
 
 ---

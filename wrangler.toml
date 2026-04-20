@@ -5,6 +5,8 @@ compatibility_date = "2026-04-01"
 # Static assets (Vite build output)
 [assets]
 directory = "./dist/client"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
 not_found_handling = "single-page-application"
 
 # Custom domain
