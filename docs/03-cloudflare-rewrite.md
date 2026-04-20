@@ -143,7 +143,7 @@ Authorization: Bearer <token>
 │     check       │  → status='sent': 返回已有记录 (200)
 │                 │  → status='sending': 返回 409 send_in_progress
 │                 │  → status='failed': 复用记录重试
-│                 │  → payload_hash 不匹配: 返回 409 idempotency_payload_mismatch
+│                 │  → payload_hash 不匹配: 返回 422 idempotency_payload_mismatch
 └────────┬────────┘
          │ (new request or retry failed)
          ▼
@@ -193,7 +193,7 @@ Authorization: Bearer <token>
 失败路径:
 - Provider 失败 → 502 { error: { code: "resend_failed"|"cloudflare_failed", message: "..." } }
 - 配额超限 → 429 { error: { code: "quota_daily_exceeded"|"quota_monthly_exceeded", message: "..." } }
-- 幂等冲突 → 409 { error: { code: "send_in_progress"|"idempotency_payload_mismatch", message: "..." } }
+- 幂等冲突 → 409 send_in_progress / 422 idempotency_payload_mismatch
 - 收件人不存在 → 404 { error: { code: "recipient_not_found", message: "..." } }
 - 模板不存在 → 404 { error: { code: "template_not_found", message: "..." } }
 - 变量校验失败 → 422 { error: { code: "variables_invalid", message: "..." } }
@@ -377,6 +377,18 @@ export async function createProvider(
 
 **推荐兼容模式**：旧字段保留不删，`parseProviderConfig()` 对 cloudflare 类型直接返回 `{ type: "cloudflare" }`，忽略 `worker_url`/`api_key`。这样无需数据迁移脚本。
 
+### 实现检查清单
+
+迁移时必须同步修改以下组件，避免半迁移状态：
+
+- [ ] `parseProviderConfig()` — cloudflare 类型忽略 `worker_url`/`api_key`
+- [ ] `CloudflareProvider` 构造函数 — 接受 `env.EMAIL` + `env.DB`
+- [ ] `createProvider()` — 签名加 `env` 参数
+- [ ] `POST /api/providers` — cloudflare 类型不再校验 `worker_url`/`api_key`
+- [ ] `PUT /api/providers/:id` — 同上
+- [ ] Provider 创建/编辑 UI 表单 — cloudflare 类型隐藏 `worker_url`/`api_key` 字段
+- [ ] `cf_email_idempotency` 表 — 合并进主 `schema.sql`
+
 ---
 
 ## Repository Layout (Target)
@@ -530,7 +542,7 @@ database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
 | 成功响应 `{ id, resend_id, provider_message_id, provider_type, status: "sent" }` | 同步发送，不改 202 |
 | Provider 失败 502 `{ error: { code: "resend_failed"\|"cloudflare_failed", message } }` | 区分 provider 类型 |
 | 幂等语义：`status='sending'` 时返回 409 `send_in_progress` | send_logs 先写 `sending`，发送前检查 |
-| 幂等语义：payload hash 不匹配返回 409 `idempotency_payload_mismatch` | 同现有逻辑 |
+| 幂等语义：payload hash 不匹配返回 **422** `idempotency_payload_mismatch` | 同现有逻辑（422 不是 409） |
 | 配额超限 429 `{ error: { code: "quota_daily_exceeded", message } }` | SQL COUNT 逻辑不变 |
 | `GET /api/webhook-logs` 分页 | D1 表 + limit/offset 保留 |
 | 所有错误码字符串 | 逐字保留 |
