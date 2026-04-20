@@ -439,69 +439,373 @@ dove/
 
 ---
 
+## Worker Naming
+
+| Worker | 环境 | 域名 | KV Namespace |
+|---|---|---|---|
+| `dove` | 生产 | `dove.hexly.ai` | `dove` |
+| `dove` + `[env.test]` | 测试（E2E） | `dove-test.hexly.ai` | `dove-test` |
+
+重写完成后删除：
+- `dove.worker.hexly.ai`（D1 proxy Worker）
+- `dove-email.worker.hexly.ai`（邮件 Worker）
+
+---
+
 ## Cutover Plan (Branch: `cf-rewrite`)
 
 每一步都是一个独立 commit，可单独 review、回滚。
 
+### Phase 0 — Infrastructure Setup
+
+**C001** 创建 KV namespaces
+```bash
+wrangler kv:namespace create dove
+wrangler kv:namespace create dove-test
+```
+
+**C002** Google Console 添加新 OAuth callback URLs
+```
+https://dove.hexly.ai/api/auth/google/callback
+https://dove-test.hexly.ai/api/auth/google/callback
+```
+
+**C003** 创建 `cf-rewrite` 分支
+```bash
+git checkout -b cf-rewrite
+```
+
 ### Phase A — Scaffold（1–2 天）
 
-1. 新建 `src/server/index.ts`：最小 Hono app，`GET /api/live`
-2. 新建 `wrangler.toml`：DB, KV, EMAIL bindings
-3. `wrangler dev` + `wrangler deploy --dry-run` 通过
-4. 新建 `src/client/`：Vite + React 19 骨架
-5. 验证 SPA + `/api/live` 可访问
+**C004** 新建 `wrangler.toml`：所有 bindings 配置
+```toml
+name = "dove"
+main = "src/server/index.ts"
+compatibility_date = "2026-04-01"
+
+[assets]
+directory = "./dist/client"
+not_found_handling = "single-page-application"
+
+[[routes]]
+pattern = "dove.hexly.ai"
+custom_domain = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dove-db"
+database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "<C001 输出的 prod id>"
+
+[send_email]
+name = "EMAIL"
+
+[env.test]
+[[env.test.routes]]
+pattern = "dove-test.hexly.ai"
+custom_domain = true
+
+[[env.test.d1_databases]]
+binding = "DB"
+database_name = "dove-db-test"
+database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
+
+[[env.test.kv_namespaces]]
+binding = "KV"
+id = "<C001 输出的 test id>"
+```
+
+**C005** 新建 `src/server/index.ts`：最小 Hono app
+```typescript
+import { Hono } from 'hono';
+import { APP_VERSION } from './lib/version';
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.get('/api/live', async (c) => {
+  const result = await c.env.DB.prepare('SELECT 1').first();
+  return c.json({ status: 'ok', version: APP_VERSION, database: { connected: !!result } });
+});
+
+export default app;
+```
+
+**C006** 新建 `src/server/env.ts`：Env 类型定义
+```typescript
+export interface Env {
+  DB: D1Database;
+  KV: KVNamespace;
+  EMAIL: SendEmail;
+  AUTH_SECRET: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  RESEND_API_KEY: string;
+  ALLOWED_EMAILS: string;
+}
+```
+
+**C007** 新建 `src/server/lib/version.ts`：版本常量（从现有复制）
+
+**C008** 验证 `wrangler dev` 启动成功
+
+**C009** 新建 `vite.config.ts`：客户端构建配置
+
+**C010** 新建 `src/client/main.tsx`：React 19 + React Router 最小骨架
+
+**C011** 新建 `src/client/routes/_layout.tsx`：AppShell 骨架
+
+**C012** 新建 `src/client/styles/globals.css`：Tailwind 配置
+
+**C013** 验证 `vite build` + `wrangler dev` 可访问 SPA
 
 ### Phase B — Data Layer（1 天）
 
-6. `src/server/lib/db/d1.ts`：薄包装 `c.env.DB`
-7. 迁移 `projects/recipients/templates/send-logs/webhook-logs/email-providers.ts`
-8. `schema.sql`：完整 schema（**保留 webhook_logs**）
+**C014** 新建 `src/server/lib/db/d1.ts`：D1 native binding 薄包装
+```typescript
+export async function query<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T[]> {
+  const stmt = db.prepare(sql);
+  const bound = params?.length ? stmt.bind(...params) : stmt;
+  const result = await bound.all<T>();
+  return result.results;
+}
+```
+
+**C015** 迁移 `src/server/lib/db/projects.ts`：项目 CRUD
+
+**C016** 迁移 `src/server/lib/db/recipients.ts`：收件人 CRUD
+
+**C017** 迁移 `src/server/lib/db/templates.ts`：模板 CRUD
+
+**C018** 迁移 `src/server/lib/db/send-logs.ts`：发送日志 CRUD
+
+**C019** 迁移 `src/server/lib/db/webhook-logs.ts`：Webhook 日志 CRUD
+
+**C020** 迁移 `src/server/lib/db/email-providers.ts`：Provider CRUD
+
+**C021** 新建 `src/server/schema.sql`：完整 schema（含 `webhook_logs` + `cf_email_idempotency`）
 
 ### Phase C — Auth（1 天）
 
-9. `src/server/middleware/auth-session.ts`：KV session
-10. `src/server/routes/auth.ts`：Google OAuth + KV
-11. `src/server/middleware/auth-bearer.ts`：Bearer token 校验
-12. 客户端 `/login` 路由
+**C022** 新建 `src/server/lib/session.ts`：KV session 工具
+```typescript
+export async function createSession(kv: KVNamespace, email: string): Promise<string>;
+export async function getSession(kv: KVNamespace, sessionId: string): Promise<SessionData | null>;
+export async function deleteSession(kv: KVNamespace, sessionId: string): Promise<void>;
+```
+
+**C023** 新建 `src/server/middleware/auth-session.ts`：Session 校验中间件
+
+**C024** 新建 `src/server/routes/auth.ts`：Google OAuth 路由
+- `GET /api/auth/google` → 跳转 Google
+- `GET /api/auth/google/callback` → 校验 + 写 KV session + set cookie
+- `POST /api/auth/signout` → 删 session
+
+**C025** 新建 `src/server/middleware/auth-bearer.ts`：Bearer token 校验
+
+**C026** 新建 `src/client/routes/login.tsx`：登录页
+
+**C027** 集成 auth 路由到主 app
 
 ### Phase D — API Routes（2–3 天）
 
-13. `routes/projects.ts`（CRUD + token 重置）
-14. `routes/recipients.ts`
-15. `routes/templates.ts`
-16. `routes/providers.ts`
-17. `routes/send-logs.ts`（**分页 API 保留**）
-18. `routes/webhook-logs.ts`（**分页 API 保留**）
-19. `routes/stats.ts`
-20. `routes/webhook.ts`（**核心**）：
-    - **完全复制现有逻辑**：幂等检查 → 配额检查 → 发送 → 更新 send_logs → 同步返回
-    - `send_logs.status` 使用 `'sending'`（不是 `'pending'`）
-    - CloudflareProvider 从 HTTP proxy 改为直接 `env.EMAIL.send()`，见 Cloudflare Provider Migration 章节
-    - Resend provider 不变
-21. `routes/live.ts`
+**C028** 新建 `src/server/routes/projects.ts`：项目 CRUD
+- `GET /api/projects`
+- `POST /api/projects`
+- `GET /api/projects/:id`
+- `PUT /api/projects/:id`
+- `DELETE /api/projects/:id`
+- `POST /api/projects/:id/token`
+
+**C029** 新建 `src/server/routes/recipients.ts`：收件人 CRUD
+
+**C030** 新建 `src/server/routes/templates.ts`：模板 CRUD + preview
+
+**C031** 新建 `src/server/routes/providers.ts`：Provider CRUD + health + test-send
+
+**C032** 新建 `src/server/routes/send-logs.ts`：发送日志分页查询
+
+**C033** 新建 `src/server/routes/webhook-logs.ts`：Webhook 日志分页查询
+
+**C034** 新建 `src/server/routes/stats.ts`：Dashboard 统计
+
+**C035** 迁移 `src/server/lib/email/render.ts`：模板渲染
+
+**C036** 迁移 `src/server/lib/email/quota.ts`：配额检查
+
+**C037** 迁移 `src/server/lib/email/provider.ts`：Provider 接口 + 工厂
+- `parseProviderConfig()` 兼容旧 cloudflare config
+- `createProvider()` 签名加 `env` 参数
+
+**C038** 迁移 `src/server/lib/email/providers/resend.ts`：Resend provider（不变）
+
+**C039** 重写 `src/server/lib/email/providers/cloudflare.ts`：直接使用 `env.EMAIL`
+- 合并 `worker-email/` 的 Layer 2 幂等逻辑
+- 使用 `cf_email_idempotency` 表
+
+**C040** 新建 `src/server/routes/webhook.ts`：核心 webhook 路由
+- `HEAD /api/webhook/:projectId` — health check
+- `GET /api/webhook/:projectId/templates` — 获取模板列表
+- `POST /api/webhook/:projectId/send` — 发送邮件（**完全复制现有 12 步逻辑**）
+
+**C041** 新建 `src/server/routes/live.ts`：健康检查
+
+**C042** 集成所有路由到主 app
+
+**C043** 迁移 `src/server/lib/id.ts`：nanoid 生成器
+
+**C044** 迁移 `src/server/lib/pagination.ts`：分页工具
+
+**C045** 迁移 `src/server/lib/sanitize.ts`：响应清理
 
 ### Phase E — UI Migration（2–3 天）
 
-22. 搬运 `src/components/**`
-23. React Router 配置
-24. 页面逐个迁移
-25. **webhook-logs 页面保留分页 + 明细展开**
+**C046** 搬运 `src/components/ui/*`：shadcn/ui 组件
+
+**C047** 搬运 `src/components/layout/*`：AppShell / Sidebar / Breadcrumbs
+
+**C048** 搬运 `src/components/charts/*`：Dashboard 图表
+
+**C049** 搬运 `src/components/template-editor.tsx`：模板编辑器
+
+**C050** 搬运 `src/components/skeletons.tsx`：加载骨架
+
+**C051** 新建 `src/client/lib/api.ts`：fetch 封装
+
+**C052** 新建 `src/client/routes/index.tsx`：Dashboard 页面
+
+**C053** 新建 `src/client/routes/projects/index.tsx`：项目列表
+
+**C054** 新建 `src/client/routes/projects/[id].tsx`：项目详情
+
+**C055** 新建 `src/client/routes/projects/new.tsx`：新建项目
+
+**C056** 新建 `src/client/routes/templates/index.tsx`：模板列表
+
+**C057** 新建 `src/client/routes/templates/[id].tsx`：模板编辑
+
+**C058** 新建 `src/client/routes/providers/index.tsx`：Provider 列表
+
+**C059** 新建 `src/client/routes/providers/[id].tsx`：Provider 详情
+
+**C060** 新建 `src/client/routes/send-logs.tsx`：发送日志页面
+
+**C061** 新建 `src/client/routes/webhook-logs.tsx`：Webhook 日志页面（保留分页）
+
+**C062** 更新 React Router 配置，集成所有路由
 
 ### Phase F — Quality（1–2 天）
 
-26. L1 单测
-27. L2 API E2E（Miniflare）
-28. L3 Playwright
-29. G1 + G2 hooks
+**C063** 配置 L1 单测：Miniflare mock D1/KV
 
-### Phase G — Cutover（半天）
+**C064** 迁移现有单测到新目录结构
 
-30. 创建生产 KV namespace
-31. `wrangler deploy`
-32. 执行 `schema.sql`
-33. DNS 切换
-34. Google Console 添加 callback URL
-35. Railway 保留 7 天观测期
+**C065** 配置 L2 API E2E：Miniflare in-process
+
+**C066** 迁移现有 E2E 测试
+
+**C067** 配置 L3 Playwright：`wrangler dev --env test` on port 27032
+
+**C068** 迁移现有 Playwright 测试
+
+**C069** 更新 `scripts/check-coverage.ts`
+
+**C070** 更新 `scripts/run-e2e.ts`
+
+**C071** 更新 Husky hooks：pre-commit = G1 + L1，pre-push = L2 ‖ G2
+
+**C072** 验证所有测试通过
+
+### Phase G — Cutover
+
+**C073** 设置 secrets
+```bash
+wrangler secret put AUTH_SECRET
+wrangler secret put GOOGLE_CLIENT_ID
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put RESEND_API_KEY
+wrangler secret put ALLOWED_EMAILS
+
+wrangler secret put AUTH_SECRET --env test
+wrangler secret put GOOGLE_CLIENT_ID --env test
+wrangler secret put GOOGLE_CLIENT_SECRET --env test
+wrangler secret put RESEND_API_KEY --env test
+wrangler secret put ALLOWED_EMAILS --env test
+```
+
+**C074** 部署 test 环境
+```bash
+wrangler deploy --env test
+```
+
+**C075** 验证 test 环境
+```bash
+curl https://dove-test.hexly.ai/api/live
+```
+
+**C076** 在 test 环境运行 L3 E2E
+
+**C077** 部署 production
+```bash
+wrangler deploy
+```
+
+**C078** Smoke test production
+```bash
+curl https://dove.hexly.ai/api/live
+```
+
+**C079** 登录测试（Google OAuth）
+
+**C080** 发送测试邮件（Resend provider）
+
+**C081** 发送测试邮件（Cloudflare provider，如果配置了）
+
+**C082** 合并 `cf-rewrite` 到 `main`
+
+### Phase H — Cleanup（7 天观测期后）
+
+**C083** 删除旧 D1 proxy Worker
+```bash
+# 在 worker/ 目录
+wrangler delete
+```
+
+**C084** 删除旧邮件 Worker
+```bash
+# 在 worker-email/ 目录
+wrangler delete
+```
+
+**C085** 删除仓库中的旧目录
+- `worker/`
+- `worker-email/`
+
+**C086** 删除 Railway 相关文件
+- `Dockerfile`
+- `railway.json`
+
+**C087** 删除 Next.js 相关文件
+- `next.config.*`
+- `next-env.d.ts`
+- `src/app/` 目录
+- `src/auth.ts`
+- `src/proxy.ts`
+
+**C088** 删除 D1 proxy 客户端
+- `src/lib/db/d1-client.ts` 的 HTTP 层
+
+**C089** 删除旧测试脚本
+- `scripts/deploy-test-worker.ts`
+- `scripts/verify-test-db.ts`
+
+**C090** 更新 CLAUDE.md：移除 Railway 相关说明
+
+**C091** 下线 Railway 服务
+
+**C092** 更新 docs/02-quality-upgrade.md：标记相关段落为 superseded by 03
 
 ---
 
