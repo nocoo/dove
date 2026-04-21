@@ -1,81 +1,118 @@
 # Dove
 
-Self-hosted email relay service. Personal projects send emails via webhook; Dove manages templates, recipients, quotas, and logs, forwarding to Resend API.
+Self-hosted email relay service. Personal projects send emails via webhook; Dove manages templates, recipients, quotas, and logs, forwarding via configurable email providers (Resend, Cloudflare Email Routing).
 
 ## Tech Stack
 
 | Component | Choice |
 |---|---|
-| Runtime | Bun |
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript (strict mode) |
+| Runtime | Cloudflare Workers |
+| API Framework | Hono |
+| Language | TypeScript (strict mode, `exactOptionalPropertyTypes`) |
+| Database | Cloudflare D1 (native binding) |
+| Session Store | Cloudflare KV |
+| Auth | Google OAuth (manual flow) + KV sessions + email whitelist |
+| Frontend | React 19 SPA (Vite + React Router) |
 | UI | Tailwind CSS v4 + shadcn/ui (basalt design system) |
 | Charts | Recharts |
 | Validation | Zod v4 |
-| Auth | NextAuth v5 + Google OAuth (whitelist) |
-| Database | Cloudflare D1 via Worker proxy |
-| Email | Resend API |
-| Deployment | Railway (app) + Cloudflare (worker), port 7032 |
+| Email | Resend API / Cloudflare Email Routing |
+| Dev Runtime | Bun |
+| Deployment | `wrangler deploy` (single command) |
 
 ## Project Structure
 
 ```
 src/
-  app/
-    api/
-      auth/              # NextAuth v5 handler (Google OAuth)
-      projects/          # CRUD + token regeneration
-      recipients/        # CRUD (per-project whitelist)
-      templates/         # CRUD + preview
-      send-logs/         # Paginated log viewer
-      webhook-logs/      # Paginated log viewer
-      stats/             # Dashboard totals + chart data
-      webhook/           # Bearer token endpoints (health, send, templates)
-      db/init/           # D1 schema init (session auth + non-production only)
-      live/              # Health check (D1 ping + version)
-    page.tsx             # Dashboard (stats, quota gauges, charts)
-    layout.tsx           # Root layout
-    login/               # Google OAuth login page
-    projects/            # Project list + detail pages
-    templates/           # Template list + editor pages
-    send-logs/           # Send log viewer page
-    webhook-logs/        # Webhook log viewer page
-  auth.ts                # NextAuth v5 config (Google OAuth, email whitelist)
-  proxy.ts               # Auth proxy (Next.js 16)
-  components/
-    layout/              # AppShell, sidebar, breadcrumbs, theme toggle
-    charts/              # Dashboard charts
-    ui/                  # shadcn/ui primitives
-    template-editor.tsx  # Markdown editor + preview
-  hooks/
-    use-is-mobile.ts
+  server/
+    index.ts               # Hono app entry (all route mounts + middleware)
+    env.ts                  # Env type definitions (D1, KV, secrets)
+    middleware/
+      auth-session.ts       # Cookie-based session auth (KV lookup)
+      auth-bearer.ts        # Bearer token auth (webhook endpoints)
+    routes/
+      auth.ts               # Google OAuth flow + session management
+      projects.ts           # Project CRUD
+      recipients.ts         # Recipient CRUD (per-project whitelist)
+      templates.ts          # Template CRUD + preview
+      providers.ts          # Email provider CRUD
+      send-logs.ts          # Paginated send log viewer
+      webhook-logs.ts       # Paginated webhook log viewer
+      stats.ts              # Dashboard totals + chart data
+      webhook.ts            # Bearer token endpoints (health, send, templates)
+      db-init.ts            # D1 schema init (localhost only)
+    lib/
+      db/
+        d1.ts               # D1 native binding helpers (query, queryOne, execute)
+        projects.ts          # Project DB operations
+        recipients.ts        # Recipient DB operations
+        templates.ts         # Template DB operations
+        send-logs.ts         # Send log DB operations
+        webhook-logs.ts      # Webhook log DB operations
+        email-providers.ts   # Email provider DB operations
+      email/
+        provider.ts          # Provider factory + health check
+        providers/
+          resend.ts          # Resend API provider
+          cloudflare.ts      # Cloudflare Email Routing provider
+        quota.ts             # Daily/monthly quota checking (D1 native)
+        render.ts            # Markdown → HTML + variable substitution
+      session.ts             # KV session CRUD
+      sanitize.ts            # Strip secrets from API responses
+      pagination.ts          # Cursor pagination helpers
+      id.ts                  # nanoid generators
+      version.ts             # Version from package.json
+    __tests__/               # Server unit tests (bun:test)
+  client/
+    main.tsx                 # React Router SPA entry
+    lib/
+      api.ts                 # Typed fetch wrapper (apiGet, apiPost, apiPut, apiDelete)
+      auth.ts                # Auth helpers (fetchUser, signOut)
+    components/
+      auth-provider.tsx      # React auth context (replaces next-auth useSession)
+      layout/
+        app-shell.tsx        # Main layout shell
+        sidebar.tsx          # Navigation sidebar
+        breadcrumbs.tsx      # Breadcrumb navigation
+        sidebar-context.ts   # Sidebar state
+    routes/
+      index.tsx              # Dashboard
+      projects/              # Project list, new, detail
+      templates/             # Template list, new, detail
+      providers/             # Provider list, new, detail
+      send-logs.tsx          # Send log viewer
+      webhook-logs.tsx       # Webhook log viewer
   lib/
-    db/
-      d1-client.ts       # D1 proxy client (HTTPS → Worker)
-      schema.ts           # CREATE TABLE + migrations
-      projects.ts         # Project CRUD
-      recipients.ts       # Recipient CRUD
-      templates.ts        # Template CRUD
-      send-logs.ts        # Send log queries
-      webhook-logs.ts     # Webhook log queries
+    types/
+      project.ts             # Project type (shared between server & client)
+      email-provider.ts      # EmailProviderRecord + EmailProviderType
+      template.ts            # TemplateVariable type
     email/
-      resend.ts           # Resend API client
-      render.ts           # Markdown → HTML + variable substitution
-      quota.ts            # Daily/monthly quota checking
-    id.ts                 # nanoid generators (21-char ID, 48-char webhook token)
-    hosts.ts              # x-forwarded-host allowlist + buildBaseUrl()
-    sanitize.ts           # Strip webhook_token from responses
-    utils.ts              # cn() tailwind merge
-worker/                  # Cloudflare Worker (D1 proxy)
-  src/index.ts           # Worker entry point
-  wrangler.toml          # D1 binding + env config
-  package.json
-  tsconfig.json
+      provider.ts            # Provider interface + factory
+      provider-schema.ts     # Provider config Zod schemas
+      providers/
+        resend.ts            # Resend provider implementation
+        cloudflare.ts        # Cloudflare provider implementation
+      render.ts              # Template rendering pipeline
+      resend.ts              # Legacy Resend client
+    id.ts                    # nanoid generators (21-char ID, 48-char webhook token)
+    hosts.ts                 # Host allowlist + buildBaseUrl()
+    sanitize.ts              # Strip webhook_token / mask api_key
+    pagination.ts            # Pagination utilities
+    version.ts               # Version reader
+    utils.ts                 # cn() tailwind merge
+  components/
+    layout/                  # Shared layout components
+    charts/                  # Dashboard charts (Recharts)
+    ui/                      # shadcn/ui primitives
+  hooks/
+    use-mobile.ts            # Mobile detection hook
+  __tests__/                 # Shared lib unit tests (bun:test)
 scripts/
-  check-coverage.ts      # 90% gate
-  run-e2e.ts             # L2 server lifecycle
-  gate-security.ts       # G2: osv-scanner + gitleaks
-  release.ts             # SemVer + CHANGELOG + GitHub release
+  check-coverage.ts          # 90% coverage gate
+  run-e2e.ts                 # L2 server lifecycle
+  gate-security.ts           # G2: osv-scanner + gitleaks
+  release.ts                 # SemVer + CHANGELOG + GitHub release
 ```
 
 ## Quality System (3 Test Layers + 2 Gates)
@@ -133,3 +170,4 @@ bun run release -- --dry-run # preview without side effects
 ## Retrospective
 
 - **2026-03-30 Port migration miss**: Global port rename (7046→7032) missed `.env.test` because it's in `.gitignore`. Lesson: when doing project-wide config changes (ports, URLs, keys), always grep untracked/ignored files too (`git ls-files --others --ignored --exclude-standard | xargs grep`).
+- **2026-04-21 Shared type extraction during cleanup**: Deleting old `src/lib/db/` broke `sanitize.ts`, `render.ts`, `provider.ts` which imported types from there. Lesson: when deleting modules, trace all type-only imports first — shared types need extraction before deletion.
