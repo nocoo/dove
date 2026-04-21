@@ -1,18 +1,11 @@
 import type { ReactNode } from "react";
+import { AppShell } from "../components/layout/app-shell";
 
 interface LayoutProps {
   children: ReactNode;
+  breadcrumbs?: { label: string; href?: string }[];
 }
 
-/**
- * Root layout — AppShell skeleton.
- *
- * Will be replaced with full sidebar/header in Phase E.
- */
-export function Layout({ children }: LayoutProps) {
-  return (
-    <div className="min-h-screen bg-background">
-      <main className="flex-1">{children}</main>
-    </div>
-  );
+export function Layout({ children, breadcrumbs }: LayoutProps) {
+  return <AppShell breadcrumbs={breadcrumbs}>{children}</AppShell>;
 }

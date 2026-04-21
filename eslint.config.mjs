@@ -16,6 +16,12 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
+  {
+    files: ["src/client/**", "src/server/**"],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",
