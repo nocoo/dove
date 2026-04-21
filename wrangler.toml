@@ -17,16 +17,18 @@ not_found_handling = "single-page-application"
 pattern = "dove.hexly.ai"
 custom_domain = true
 
-# D1 Database
+# D1 Database (remote in dev for prod data access)
 [[d1_databases]]
 binding = "DB"
 database_name = "dove-db"
 database_id = "2a8b6614-2c00-4891-863e-df80d22a2421"
+remote = true
 
-# KV Namespace (sessions)
+# KV Namespace (sessions — remote in dev for real auth)
 [[kv_namespaces]]
 binding = "KV"
 id = "c621cd9894154497a8ffa82a0cd32beb"
+remote = true
 
 # Email
 [[send_email]]
