@@ -82,11 +82,6 @@ auth.post("/signout", async (c) => {
 });
 
 auth.get("/me", async (c) => {
-  const token = getCookie(c, SESSION_COOKIE_NAME);
-  if (!token) {
-    return c.json({ user: null });
-  }
-
   const host = c.req.header("host") ?? new URL(c.req.url).host;
   const isLocal =
     host.startsWith("localhost") ||
@@ -97,6 +92,11 @@ auth.get("/me", async (c) => {
     return c.json({
       user: { email: "dev@localhost", name: "Dev User", image: null },
     });
+  }
+
+  const token = getCookie(c, SESSION_COOKIE_NAME);
+  if (!token) {
+    return c.json({ user: null });
   }
 
   const session = await getSession(c.env.KV, token);
