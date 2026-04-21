@@ -928,22 +928,22 @@ export async function execute(db: D1Database, sql: string, params?: unknown[]): 
 
 ### Phase C — Auth
 
-**C014** `src/server/lib/session.ts`：KV session 工具
+**C014** ✅ `src/server/lib/session.ts`：KV session 工具
 ```typescript
 export async function createSession(kv: KVNamespace, email: string): Promise<string>;
 export async function getSession(kv: KVNamespace, sessionId: string): Promise<SessionData | null>;
 export async function deleteSession(kv: KVNamespace, sessionId: string): Promise<void>;
 ```
 
-**C015** `src/server/middleware/auth-session.ts`：Session 校验中间件
+**C015** ✅ `src/server/middleware/auth-session.ts`：Session 校验中间件
 
-**C016** `src/server/routes/auth.ts`：Google OAuth 路由
+**C016** ✅ `src/server/routes/auth.ts`：Google OAuth 路由
 - `GET /api/auth/google` → 跳转 Google
 - `GET /api/auth/google/callback` → 校验 + 写 KV session + set cookie
 - `POST /api/auth/signout` → 删 session
 - `GET /api/auth/me` → 当前用户信息
 
-**C017** `src/server/middleware/auth-bearer.ts`：Bearer token 校验（webhook 用）
+**C017** ✅ `src/server/middleware/auth-bearer.ts`：Bearer token 校验（webhook 用）
 
 **C018** `src/client/routes/login.tsx`：登录页
 
@@ -957,7 +957,7 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 
 **C021** `src/server/lib/sanitize.ts`：响应清理
 
-**C022** `src/server/routes/projects.ts`：项目 CRUD API
+**C022** ✅ `src/server/routes/projects.ts`：项目 CRUD API
 - `GET /api/projects`
 - `POST /api/projects`
 - `GET /api/projects/:id`
@@ -965,21 +965,21 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 - `DELETE /api/projects/:id`
 - `POST /api/projects/:id/token`
 
-**C023** `src/server/routes/recipients.ts`：收件人 CRUD API
+**C023** ✅ `src/server/routes/recipients.ts`：收件人 CRUD API
 
-**C024** `src/server/routes/templates.ts`：模板 CRUD + preview API
+**C024** ✅ `src/server/routes/templates.ts`：模板 CRUD + preview API
 
-**C025** `src/server/routes/providers.ts`：Provider CRUD + health + test-send API
+**C025** ✅ `src/server/routes/providers.ts`：Provider CRUD + health API
 
-**C026** `src/server/routes/send-logs.ts`：发送日志分页查询 API
+**C026** ✅ `src/server/routes/send-logs.ts`：发送日志分页查询 API
 
-**C027** `src/server/routes/webhook-logs.ts`：Webhook 日志分页查询 API
+**C027** ✅ `src/server/routes/webhook-logs.ts`：Webhook 日志分页查询 API
 
-**C028** `src/server/routes/stats.ts`：Dashboard 统计 API
+**C028** ✅ `src/server/routes/stats.ts`：Dashboard 统计 API
 - `GET /api/stats` — 总计统计（projects, templates, sent today/month）
 - `GET /api/stats/charts` — 30 天发送趋势图数据
 
-**C029** `src/server/routes/live.ts`：健康检查 API
+**C029** ✅ `src/server/routes/live.ts`：健康检查 API（已在 index.ts 中实现）
 
 **C030** `src/server/lib/email/render.ts`：模板渲染
 
