@@ -438,38 +438,87 @@ export function ProjectDetailPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {token ? (
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Webhook URL</Label>
             <div className="flex items-center gap-2">
               <div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
-                {tokenVisible ? token : "••••••••••••••••••••••••••••••••••••••••••••••••"}
+                {`${window.location.origin}/api/webhook/${projectId ?? ""}/send`}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setTokenVisible(!tokenVisible)}
-              >
-                {tokenVisible ? (
-                  <EyeOff className="h-3.5 w-3.5" strokeWidth={1.5} />
-                ) : (
-                  <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => {
-                  void navigator.clipboard.writeText(token);
-                  toast.success("Token copied to clipboard");
+                  void navigator.clipboard
+                    .writeText(`${window.location.origin}/api/webhook/${projectId ?? ""}/send`)
+                    .then(() => toast.success("Webhook URL copied"))
+                    .catch(() => toast.error("Failed to copy URL"));
                 }}
               >
                 <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
               </Button>
             </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Token is hidden for security. Regenerate to get a new one.
-            </p>
-          )}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Project ID</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
+                {projectId}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!projectId) return;
+                  void navigator.clipboard
+                    .writeText(projectId)
+                    .then(() => toast.success("Project ID copied"))
+                    .catch(() => toast.error("Failed to copy ID"));
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-muted-foreground">Token</Label>
+            {token ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
+                  {tokenVisible ? token : "••••••••••••••••••••••••••••••••••••••••••••••••"}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTokenVisible(!tokenVisible)}
+                >
+                  {tokenVisible ? (
+                    <EyeOff className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    void navigator.clipboard
+                      .writeText(token)
+                      .then(() => toast.success("Token copied to clipboard"))
+                      .catch(() => toast.error("Failed to copy token"));
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Token is hidden for security. Regenerate to get a new one.
+              </p>
+            )}
+          </div>
+
           <Button
             variant="outline"
             size="sm"
