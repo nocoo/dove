@@ -1,11 +1,11 @@
 /**
  * E2E API test helpers — real HTTP client for L2 tests.
  *
- * All requests go through the running dev server on port 17032.
+ * All requests go through the running dev server on port 17034.
  * No mocks, no in-process route imports.
  */
 
-const BASE = `http://localhost:${process.env.PORT ?? 17032}`;
+const BASE = `http://localhost:${process.env.PORT ?? 17034}`;
 
 // ---------------------------------------------------------------------------
 // HTTP helpers

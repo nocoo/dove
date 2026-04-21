@@ -16,7 +16,7 @@ Dove is a self-hosted email relay service. Personal projects send emails via web
 | Validation | Zod v4 | Request body validation |
 | Email | Resend API | `POST https://api.resend.com/emails` |
 | IDs | nanoid | 21-char IDs, 48-char webhook tokens |
-| Deployment | Railway (app) + Cloudflare (worker) | App on Railway port 7032; Worker on CF edge |
+| Deployment | Railway (app) + Cloudflare (worker) | App on Railway port 7034; Worker on CF edge |
 
 ## System Architecture
 
@@ -654,7 +654,7 @@ This is the **only** opportunity to copy the token. Subsequent `GET /api/project
 | `ALLOWED_HOSTS` | No | x-forwarded-host allowlist |
 | `USE_SECURE_COOKIES` | No | Force secure cookies |
 | `E2E_SKIP_AUTH` | No | Skip auth in E2E tests |
-| `PORT` | No | Override default port (7032) |
+| `PORT` | No | Override default port (7034) |
 
 **Dove Worker (Cloudflare)**:
 
@@ -680,9 +680,9 @@ This is the **only** opportunity to copy the token. Subsequent `GET /api/project
 
 | Purpose | Port |
 |---|---|
-| Dev | 7032 |
-| L2 E2E | 17032 |
-| L3 BDD | 27032 |
+| Dev | 7034 |
+| L2 E2E | 17034 |
+| L3 BDD | 27034 |
 
 ## Atomic Commits Plan
 

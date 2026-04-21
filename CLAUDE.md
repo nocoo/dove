@@ -138,14 +138,14 @@ scripts/
 
 | Purpose | Port |
 |---|---|
-| Dev server | 7032 |
-| L2 API E2E | 17032 |
-| L3 BDD E2E | 27032 |
+| Dev server | 7034 |
+| L2 API E2E | 17034 |
+| L3 BDD E2E | 27034 |
 
 ## Common Commands
 
 ```bash
-bun dev                # Dev server (7032)
+bun dev                # Dev server (7034)
 bun run build          # Production build
 bun test               # Unit tests
 bun run test:coverage  # Unit tests + 90% coverage gate
@@ -153,8 +153,8 @@ bun run typecheck      # TypeScript type check
 bun run lint           # ESLint
 bun run lint:staged    # ESLint on staged files only
 bun run gate:security  # Security scan (osv-scanner + gitleaks)
-bun run test:e2e:api   # L2 API E2E (port 17032)
-bun run test:e2e:bdd   # L3 Playwright BDD E2E (port 27032)
+bun run test:e2e:api   # L2 API E2E (port 17034)
+bun run test:e2e:bdd   # L3 Playwright BDD E2E (port 27034)
 ```
 
 ## Release

@@ -17,8 +17,8 @@ afterEach(() => {
 });
 
 describe("ALLOWED_HOSTS", () => {
-  test("includes localhost:7032 by default", () => {
-    expect(ALLOWED_HOSTS.has("localhost:7032")).toBe(true);
+  test("includes localhost:7034 by default", () => {
+    expect(ALLOWED_HOSTS.has("localhost:7034")).toBe(true);
   });
 
   test("rejects unknown hosts", () => {
@@ -29,35 +29,35 @@ describe("ALLOWED_HOSTS", () => {
     process.env.ALLOWED_HOSTS = "custom.example.com,other.example.com";
     expect(ALLOWED_HOSTS.has("custom.example.com")).toBe(true);
     expect(ALLOWED_HOSTS.has("other.example.com")).toBe(true);
-    expect(ALLOWED_HOSTS.has("localhost:7032")).toBe(false);
+    expect(ALLOWED_HOSTS.has("localhost:7034")).toBe(false);
   });
 });
 
 describe("buildBaseUrl", () => {
   test("uses x-forwarded-host when trusted", () => {
-    const request = new Request("http://localhost:7032/test", {
+    const request = new Request("http://localhost:7034/test", {
       headers: {
-        "x-forwarded-host": "localhost:7032",
+        "x-forwarded-host": "localhost:7034",
         "x-forwarded-proto": "https",
       },
     });
     const url = buildBaseUrl(request);
-    expect(url).toBe("https://localhost:7032");
+    expect(url).toBe("https://localhost:7034");
   });
 
   test("falls back to request URL when x-forwarded-host is untrusted", () => {
-    const request = new Request("http://localhost:7032/test", {
+    const request = new Request("http://localhost:7034/test", {
       headers: {
         "x-forwarded-host": "evil.com",
       },
     });
     const url = buildBaseUrl(request);
-    expect(url).toBe("http://localhost:7032");
+    expect(url).toBe("http://localhost:7034");
   });
 
   test("falls back to request URL when no x-forwarded-host", () => {
-    const request = new Request("http://localhost:7032/test");
+    const request = new Request("http://localhost:7034/test");
     const url = buildBaseUrl(request);
-    expect(url).toBe("http://localhost:7032");
+    expect(url).toBe("http://localhost:7034");
   });
 });

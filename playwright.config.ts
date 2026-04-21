@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 /**
  * Playwright configuration for L3 BDD E2E tests.
  *
- * Uses port 27032 (isolated from dev=7032 and L2=17032).
+ * Uses port 27034 (isolated from dev=7034 and L2=17034).
  * Auth is bypassed via E2E_SKIP_AUTH=true.
  *
  * Env injection: The webServer command uses ${VAR:?msg} syntax
@@ -19,7 +19,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : 2,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:27032",
+    baseURL: "http://localhost:27034",
     trace: "on-first-retry",
     headless: true,
   },
@@ -31,9 +31,9 @@ export default defineConfig({
       "RESEND_DRY_RUN=true",
       "RESEND_API_KEY=re_test_placeholder_not_used",
       "RESEND_FROM_DOMAIN=test.example.com",
-      "npx next dev --port 27032",
+      "npx next dev --port 27034",
     ].join(" "),
-    port: 27032,
+    port: 27034,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },
