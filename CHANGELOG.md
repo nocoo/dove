@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.4.2
+
+### Added
+- Add copy buttons for webhook URL and project ID
+
+### Fixed
+- Confirm recipient removal before destructive action
+- Mount Toaster so toast calls are visible
+
 ## v0.4.1
 
 ### Fixed
