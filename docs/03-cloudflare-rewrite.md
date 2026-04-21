@@ -529,7 +529,7 @@ export class CloudflareProvider implements EmailProvider {
 | **Resend** | L2 reachable | skip（避免消耗 API quota） | `reachable: null` |
 | **Cloudflare** | L1 config | `parseProviderConfig()` | `configValid` |
 | **Cloudflare** | L2 reachable | `env.EMAIL.send()` 发送 probe 邮件到 verified 地址 | `reachable: boolean` |
-| **Both** | L3 runtime | 最近 N 次发送的 success rate（从 `send_logs` 查询） | `lastSendStatus` |
+| **Both** | L3 runtime | 最近 N 次发送的 success rate（从 `send_logs` 查询） | `lastSendHealth` |
 
 **Cloudflare L2 探测实现**：
 
@@ -1103,23 +1103,40 @@ export async function signOut(): Promise<void>;
 > L2/L3 全部在 localhost 上运行 `wrangler dev` + 本地 miniflare D1，auth 通过 localhost 检测绕过。
 > 这与 bat 项目的模型一致：`[env.test]` 用于 isolated deploy 验证，本地测试不触碰远程资源。
 
-**C068** 设置 secrets（production）
+**C068** 设置 secrets（production + test）
 ```bash
+# Production
 wrangler secret put AUTH_SECRET
 wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
 wrangler secret put RESEND_API_KEY
 wrangler secret put ALLOWED_EMAILS
+
+# Test (remote smoke test 需要完整 OAuth + 邮件发送能力)
+wrangler secret put AUTH_SECRET --env test
+wrangler secret put GOOGLE_CLIENT_ID --env test
+wrangler secret put GOOGLE_CLIENT_SECRET --env test
+wrangler secret put RESEND_API_KEY --env test
+wrangler secret put ALLOWED_EMAILS --env test
 ```
 
-**C069** 部署 production
+**C069** 部署 test 环境 + smoke test
 ```bash
 bun run build
+wrangler d1 migrations apply dove-db-test --remote --env test
+wrangler deploy --env test
+```
+- `curl https://dove-test.hexly.ai/api/live`
+- 登录测试（Google OAuth）— 需要 Google Console 预先添加 `dove-test.hexly.ai` callback URL
+- 发送测试邮件
+
+**C070** 部署 production
+```bash
 wrangler d1 migrations apply dove-db --remote
 wrangler deploy
 ```
 
-**C070** Smoke test production
+**C071** Smoke test production
 - `curl https://dove.hexly.ai/api/live`
 - 登录测试（Google OAuth）
 - 发送测试邮件
@@ -1128,7 +1145,7 @@ wrangler deploy
 
 ### Phase H — Cleanup（部署成功后）
 
-**C071** 删除旧代码
+**C072** 删除旧代码
 - `worker/`（D1 proxy Worker）
 - `worker-email/`（邮件 Worker）
 - `src/app/`（Next.js pages）
@@ -1138,16 +1155,16 @@ wrangler deploy
 - `Dockerfile`、`railway.json`
 - `next.config.*`、`next-env.d.ts`
 
-**C072** 删除旧测试脚本
+**C073** 删除旧测试脚本
 - `scripts/deploy-test-worker.ts`
 - `scripts/verify-test-db.ts`
 - `.env.test`（不再需要）
 
-**C073** 更新 `CLAUDE.md`
+**C074** 更新 `CLAUDE.md`
 - 移除 Railway 相关说明
 - 更新 Tech Stack 为 Cloudflare Workers
 
-**C074** 删除旧 Workers
+**C075** 删除旧 Workers
 ```bash
 # dove.worker.hexly.ai (D1 proxy)
 cd worker && wrangler delete
@@ -1156,7 +1173,7 @@ cd worker && wrangler delete
 cd worker-email && wrangler delete
 ```
 
-**C075** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
+**C076** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
 
 ---
 
