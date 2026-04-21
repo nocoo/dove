@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Loader2, Trash2, Send } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "../../components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,7 +44,6 @@ interface SanitizedProvider {
 export function ProviderDetailPage() {
   const { id: providerId } = useParams<"id">();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -61,8 +59,6 @@ export function ProviderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testRecipient, setTestRecipient] = useState("");
 
   const fetchRecord = useCallback(async () => {
     if (!providerId) return;
@@ -88,41 +84,6 @@ export function ProviderDetailPage() {
   useEffect(() => {
     void fetchRecord();
   }, [fetchRecord]);
-
-  useEffect(() => {
-    if (!testRecipient && user?.email) {
-      setTestRecipient(user.email);
-    }
-  }, [user, testRecipient]);
-
-  async function handleTestSend() {
-    if (!providerId) return;
-    try {
-      setTesting(true);
-      const to = testRecipient.trim();
-      const res = await fetch(
-        `/api/providers/${providerId}/test-send`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(to ? { to } : {}),
-        },
-      );
-      if (!res.ok) {
-        const data = (await res.json()) as {
-          error?: string;
-          details?: string;
-        };
-        throw new Error(data.details ?? data.error ?? "Send failed");
-      }
-      const data = (await res.json()) as { to: string; id: string };
-      toast.success(`Test sent to ${data.to}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Send failed");
-    } finally {
-      setTesting(false);
-    }
-  }
 
   const dirty = useMemo(() => {
     if (!record) return false;
@@ -360,42 +321,6 @@ export function ProviderDetailPage() {
                 </span>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Send Test Email</CardTitle>
-            <CardDescription>
-              Dispatch a canned test through this provider. Defaults to
-              your admin email. Respects EMAIL_DRY_RUN locally.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="test_to">Recipient</Label>
-              <Input
-                id="test_to"
-                type="email"
-                value={testRecipient}
-                onChange={(e) => setTestRecipient(e.target.value)}
-                placeholder="admin@example.com"
-                disabled={testing}
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => void handleTestSend()}
-              disabled={testing}
-              className="w-fit"
-            >
-              {testing ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
-              )}
-              Send Test
-            </Button>
           </CardContent>
         </Card>
 
