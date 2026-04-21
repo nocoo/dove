@@ -1,0 +1,9 @@
+import { nanoid } from "nanoid";
+
+export function generateId(): string {
+  return nanoid();
+}
+
+export function generateWebhookToken(): string {
+  return nanoid(48);
+}
