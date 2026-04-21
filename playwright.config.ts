@@ -4,12 +4,11 @@ import { defineConfig } from "@playwright/test";
  * Playwright configuration for L3 BDD E2E tests.
  *
  * Uses port 27034 (isolated from dev=7034 and L2=17034).
- * Auth is bypassed via E2E_SKIP_AUTH=true.
+ * Auth is bypassed via localhost detection (no CF Access on localhost).
  *
- * Env injection: The webServer command uses ${VAR:?msg} syntax
- * to fail-closed if test Worker credentials are missing.
- * Set D1_WORKER_URL_TEST and D1_WORKER_API_KEY_TEST in your
- * shell environment or CI config.
+ * D1 isolation: wrangler --env test uses dove-db-test (local SQLite in dev,
+ * separate database_id from production). Email sending is disabled via
+ * EMAIL_DRY_RUN + RESEND_DRY_RUN env vars.
  */
 export default defineConfig({
   testDir: "./e2e/bdd",
@@ -25,10 +24,9 @@ export default defineConfig({
   },
   webServer: {
     command: [
-      "D1_WORKER_URL=${D1_WORKER_URL_TEST:?not set}",
-      "D1_WORKER_API_KEY=${D1_WORKER_API_KEY_TEST:?not set}",
-      "E2E_SKIP_AUTH=true",
-      "npx wrangler dev --port 27034",
+      "EMAIL_DRY_RUN=true",
+      "RESEND_DRY_RUN=true",
+      "npx wrangler dev --env test --port 27034",
     ].join(" "),
     port: 27034,
     reuseExistingServer: !process.env.CI,
