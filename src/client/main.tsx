@@ -5,6 +5,17 @@ import "./styles/globals.css";
 import { AuthProvider } from "./components/auth-provider";
 import { Layout } from "./routes/_layout";
 import { Dashboard } from "./routes/index";
+import { ProjectsPage } from "./routes/projects/index";
+import { ProjectDetailPage } from "./routes/projects/$id";
+import { NewProjectPage } from "./routes/projects/new";
+import { TemplatesPage } from "./routes/templates/index";
+import { TemplateDetailPage } from "./routes/templates/$id";
+import { NewTemplatePage } from "./routes/templates/new";
+import { ProvidersPage } from "./routes/providers/index";
+import { ProviderDetailPage } from "./routes/providers/$id";
+import { NewProviderPage } from "./routes/providers/new";
+import { SendLogsPage } from "./routes/send-logs";
+import { WebhookLogsPage } from "./routes/webhook-logs";
 
 function App() {
   return (
@@ -13,6 +24,17 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/projects/new" element={<NewProjectPage />} />
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+            <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/templates/new" element={<NewTemplatePage />} />
+            <Route path="/templates/:id" element={<TemplateDetailPage />} />
+            <Route path="/providers" element={<ProvidersPage />} />
+            <Route path="/providers/new" element={<NewProviderPage />} />
+            <Route path="/providers/:id" element={<ProviderDetailPage />} />
+            <Route path="/send-logs" element={<SendLogsPage />} />
+            <Route path="/webhook-logs" element={<WebhookLogsPage />} />
           </Routes>
         </Layout>
       </AuthProvider>
