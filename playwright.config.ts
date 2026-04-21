@@ -27,6 +27,7 @@ export default defineConfig({
     command: [
       "EMAIL_DRY_RUN=true",
       "RESEND_DRY_RUN=true",
+      "DEV_MODE=true",
       "npx wrangler dev --env test --port 27034",
     ].join(" "),
     port: 27034,
