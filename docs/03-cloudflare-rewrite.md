@@ -341,12 +341,20 @@ Webhook API 的 Bearer token 校验。仅在 `/api/webhook/:projectId/*` 路由�
    ├── Missing → 401 Unauthorized
    └── Present ↓
 
-2. D1 lookup: SELECT * FROM projects WHERE webhook_token = ?
-   ├── No match → 403 Forbidden
+2. Extract :projectId from URL path param
+
+3. D1 lookup: SELECT * FROM projects WHERE id = :projectId
+   ├── Not found → 404 Not Found
    └── Found ↓
 
-3. Set context: c.set("project", project)
+4. Compare project.webhook_token === Bearer token
+   ├── Mismatch → 403 Forbidden
+   └── Match ↓
+
+5. Set context: c.set("project", project)
 ```
+
+**关键安全约束：token 必须绑定 projectId**。中间件按 URL 中的 `:projectId` 查找项目，再比对 token。这防止了 project A 的 token 被重放到 `/api/webhook/B/*` 的攻击向量。现有实现（`src/app/api/webhook/[projectId]/route.ts:20-22`）就是这个模式：`getProject(projectId)` + 比对 `project.webhook_token !== token`。重写必须保持相同语义，不能退化为"按 token 查项目"。
 
 **安全隔离**：Session cookie 和 Bearer token 互不跨用。Dashboard 用户看到的 webhook_token 已脱敏（`sanitize.ts`），防止 CSRF 攻击通过 cookie 触发 webhook 端点。
 
@@ -398,11 +406,16 @@ Webhook API 的 Bearer token 校验。仅在 `/api/webhook/:projectId/*` 路由�
    ▼
 2. Worker receives request
    ├── authSession: /api/webhook/* → skip
-   ├── authBearer: extract Bearer token → match project → set context
+   ├── authBearer:
+   │    ├── extract Bearer token from header
+   │    ├── extract :projectId from URL
+   │    ├── D1: SELECT * FROM projects WHERE id = :projectId
+   │    ├── compare project.webhook_token === token → 403 if mismatch
+   │    └── set c.set("project", project)
    └── Route handler: 12-step send pipeline (see Architecture § 关键数据流)
 ```
 
-无 cookie、无 session、无 OAuth。外部项目只用 Bearer token 认证。
+无 cookie、无 session、无 OAuth。外部项目只用 Bearer token 认证。Token 绑定 URL 中的 projectId，不能跨项目使用。
 
 ---
 
@@ -411,7 +424,8 @@ Webhook API 的 Bearer token 校验。仅在 `/api/webhook/:projectId/*` 路由�
 | Boundary | Enforcement | Fail mode |
 |----------|-------------|-----------|
 | Browser → dashboard API | KV session cookie + email whitelist | 401 (no session) / 403 (not whitelisted) |
-| External → webhook API | Bearer token (per-project `webhook_token`) | 401 (no token) / 403 (wrong token) |
+| External → webhook API | Bearer token bound to URL `:projectId` | 401 (no token) / 403 (wrong token) / 404 (project not found) |
+| Cross-project token replay | authBearer looks up by projectId, then compares token | 403 (token belongs to different project) |
 | Cookie on webhook routes | authSession skips `/api/webhook/*` | Cookie ignored — no CSRF vector |
 | Missing `ALLOWED_EMAILS` | Fail-closed check in authSession | 500 (not silent pass-through) |
 | `webhook_token` visibility | `sanitize.ts` strips from API responses | Token never exposed to browser |
@@ -505,12 +519,64 @@ export class CloudflareProvider implements EmailProvider {
 
 ### Health Check 语义变更
 
-现有实现通过 `GET {worker_url}/health` 探测 Cloudflare provider 的可达性。重写后 `worker_url` 不再存在，health 语义需要重新定义：
+现有实现通过 `GET {worker_url}/health` 探测 Cloudflare provider 的可达性。重写后 `worker_url` 不再存在，但 **不能退化为 `healthy = configValid`**——CF Email Routing 有多种运行时失败模式（`E_SENDER_NOT_VERIFIED`、`E_SENDER_DOMAIN_NOT_AVAILABLE`、每日限额、未验证收件人限制），纯 config 校验无法捕获。
 
-| Provider | 现有健康检查 | 重写后健康检查 |
-|---|---|---|
-| **Resend** | `configValid` only（不做实时探测，避免消耗 API quota） | 不变 |
-| **Cloudflare** | `configValid` + `GET {worker_url}/health` 三态（true/false/null） | `configValid` only（binding 始终可用，无法也无需探测） |
+**重写后健康检查策略：三层探测**
+
+| Provider | 层级 | 探测方式 | 结果 |
+|---|---|---|---|
+| **Resend** | L1 config | `parseProviderConfig()` | `configValid` |
+| **Resend** | L2 reachable | skip（避免消耗 API quota） | `reachable: null` |
+| **Cloudflare** | L1 config | `parseProviderConfig()` | `configValid` |
+| **Cloudflare** | L2 reachable | `env.EMAIL.send()` 发送 probe 邮件到 verified 地址 | `reachable: boolean` |
+| **Both** | L3 runtime | 最近 N 次发送的 success rate（从 `send_logs` 查询） | `lastSendStatus` |
+
+**Cloudflare L2 探测实现**：
+
+```typescript
+// 发送一封最小化的探测邮件到 provider 配置的 domain 下的固定地址
+// 例如：health-probe@{domain} → 验证 domain 可用 + sender 已认证
+async function probeCloudflareHealth(
+  emailBinding: SendEmail,
+  domain: string,
+): Promise<{ reachable: boolean; reachableError: string | null }> {
+  try {
+    const message = createMimeMessage({
+      from: `health-probe@${domain}`,
+      to: `health-probe@${domain}`,  // 发给自己，最小副作用
+      subject: "Dove health probe",
+      html: "This is an automated health check.",
+    });
+    await emailBinding.send(message);
+    return { reachable: true, reachableError: null };
+  } catch (e) {
+    return {
+      reachable: false,
+      reachableError: e instanceof Error ? e.message : "CF Email probe failed",
+    };
+  }
+}
+```
+
+> **注意**：L2 探测会产生实际邮件发送。如果 probe 成本不可接受（rate limit / 收件箱噪音），可降级为仅 L1 + L3。L3 可通过查询 `send_logs` 最近 24h 内该 provider 的 sent/failed 比例实现零成本健康推断。
+
+**替代方案：L3 only（零成本）**
+
+如果 L2 probe 邮件成本过高，可采用纯被动探测：
+
+```typescript
+// 查最近 24h 该 provider 的发送结果
+const recent = await query<{ status: string; cnt: number }>(db,
+  `SELECT status, COUNT(*) as cnt FROM send_logs
+   WHERE provider_id = ? AND created_at > datetime('now', '-24 hours')
+   GROUP BY status`, [providerId]);
+
+const sent = recent.find(r => r.status === 'sent')?.cnt ?? 0;
+const failed = recent.find(r => r.status === 'failed')?.cnt ?? 0;
+const total = sent + failed;
+
+// 无发送记录 → unknown；全部失败 → unhealthy；>50% 失败 → degraded
+```
 
 **API 响应变更**：
 
@@ -520,23 +586,32 @@ export class CloudflareProvider implements EmailProvider {
   healthy: boolean,
   configValid: boolean,
   configError: string | null,
-  reachable: boolean | null,      // cloudflare: true/false, resend: null
+  reachable: boolean | null,
   reachableError: string | null,
 }
 
-// 重写后响应（兼容）
+// 重写后响应（兼容 + 增强）
 {
-  healthy: boolean,               // = configValid（binding 无法探测）
+  healthy: boolean,               // configValid AND (reachable !== false) AND (lastSendHealth !== 'unhealthy')
   configValid: boolean,
   configError: string | null,
-  reachable: null,                // 始终 null（cloudflare 不再有外部 URL）
-  reachableError: null,
+  reachable: boolean | null,      // cloudflare: L2 probe result; resend: null
+  reachableError: string | null,
+  lastSendHealth: string | null,  // 新增：'healthy' | 'degraded' | 'unhealthy' | null (no data)
+  lastSendStats: {                // 新增：最近 24h 发送统计
+    sent: number,
+    failed: number,
+    period: string,
+  } | null,
 }
 ```
 
 **UI 影响**：Provider 列表页的健康状态徽章逻辑需要适配：
-- 现有：`reachable === false` 显示红色
-- 重写后：`configValid === false` 显示红色，否则显示绿色
+- `configValid === false` → 红色（配置错误）
+- `reachable === false` → 红色（CF Email 不可达）
+- `lastSendHealth === 'unhealthy'` → 红色（发送持续失败）
+- `lastSendHealth === 'degraded'` → 黄色（部分失败）
+- 其余 → 绿色
 
 **测试影响**：`api-providers.test.ts` 中 Cloudflare health 相关的 mock 和断言需要更新。
 
@@ -588,9 +663,9 @@ export async function createProvider(
 - [ ] `createProvider()` — 签名加 `env` 参数
 - [ ] `POST /api/providers` — cloudflare 类型不再校验 `worker_url`/`api_key`
 - [ ] `PUT /api/providers/:id` — 同上
-- [ ] `GET /api/providers/:id/health` — cloudflare 类型 `reachable` 始终返回 `null`
+- [ ] `GET /api/providers/:id/health` — Cloudflare 类型使用 L2 probe 或 L3 send_logs 推断（不退化为 `configValid` only）
 - [ ] Provider 创建/编辑 UI 表单 — cloudflare 类型隐藏 `worker_url`/`api_key` 字段
-- [ ] Provider 列表 UI — 健康徽章逻辑适配（不再依赖 `reachable`）
+- [ ] Provider 列表 UI — 健康徽章逻辑适配（支持 `reachable` + `lastSendHealth` 三态）
 - [ ] `cf_email_idempotency` 表 — 合并进主 `schema.sql`
 - [ ] `api-providers.test.ts` — 更新 Cloudflare health 相关测试
 
@@ -999,16 +1074,18 @@ export async function signOut(): Promise<void>;
 
 **C061** 配置 L2 API E2E
 - `scripts/run-e2e.ts` 重写：
-  - 启动 `wrangler dev --env test --port 17032`（替代 `next dev`）
+  - 启动 `wrangler dev --port 17034`（本地 miniflare D1，**不用 `--env test`**）
   - 调用 `POST /api/db/init` 初始化 schema（替代 `verify-test-db.ts`）
   - 运行 `bun test e2e/api/`
   - 停止 wrangler dev
-- 移除 `.env.test` 依赖（环境通过 `--env test` 指定）
+- Auth bypass：middleware 检测 `localhost` → 跳过 session 验证
+- 测试 helpers 通过 dashboard API 创建 project/recipient/template（与现有 `e2e/api/helpers.ts` 模式一致，localhost bypass 使 session 不需要）
+- 移除 `.env.test` 和 `E2E_SKIP_AUTH` 环境变量依赖
 
 **C062** 迁移现有 E2E 测试
 
 **C063** 配置 L3 Playwright
-- `wrangler dev --env test --port 27032`
+- `wrangler dev --port 27034`（本地 miniflare D1，**不用 `--env test`**）
 
 **C064** 迁移现有 Playwright 测试
 
@@ -1022,34 +1099,27 @@ export async function signOut(): Promise<void>;
 
 ### Phase G — Deploy
 
-**C068** 设置 secrets
+> **`[env.test]` 的角色**：远程 smoke test 环境（手动验证），不参与自动化 E2E。
+> L2/L3 全部在 localhost 上运行 `wrangler dev` + 本地 miniflare D1，auth 通过 localhost 检测绕过。
+> 这与 bat 项目的模型一致：`[env.test]` 用于 isolated deploy 验证，本地测试不触碰远程资源。
+
+**C068** 设置 secrets（production）
 ```bash
 wrangler secret put AUTH_SECRET
 wrangler secret put GOOGLE_CLIENT_ID
 wrangler secret put GOOGLE_CLIENT_SECRET
 wrangler secret put RESEND_API_KEY
 wrangler secret put ALLOWED_EMAILS
-
-wrangler secret put AUTH_SECRET --env test
-wrangler secret put GOOGLE_CLIENT_ID --env test
-wrangler secret put GOOGLE_CLIENT_SECRET --env test
-wrangler secret put RESEND_API_KEY --env test
-wrangler secret put ALLOWED_EMAILS --env test
 ```
 
-**C069** 部署 test 环境
+**C069** 部署 production
 ```bash
-wrangler deploy --env test
-```
-
-**C070** 验证 test 环境 + 运行 L3 E2E
-
-**C071** 部署 production
-```bash
+bun run build
+wrangler d1 migrations apply dove-db --remote
 wrangler deploy
 ```
 
-**C072** Smoke test production
+**C070** Smoke test production
 - `curl https://dove.hexly.ai/api/live`
 - 登录测试（Google OAuth）
 - 发送测试邮件
@@ -1058,7 +1128,7 @@ wrangler deploy
 
 ### Phase H — Cleanup（部署成功后）
 
-**C073** 删除旧代码
+**C071** 删除旧代码
 - `worker/`（D1 proxy Worker）
 - `worker-email/`（邮件 Worker）
 - `src/app/`（Next.js pages）
@@ -1068,16 +1138,16 @@ wrangler deploy
 - `Dockerfile`、`railway.json`
 - `next.config.*`、`next-env.d.ts`
 
-**C074** 删除旧测试脚本
+**C072** 删除旧测试脚本
 - `scripts/deploy-test-worker.ts`
 - `scripts/verify-test-db.ts`
 - `.env.test`（不再需要）
 
-**C075** 更新 `CLAUDE.md`
+**C073** 更新 `CLAUDE.md`
 - 移除 Railway 相关说明
 - 更新 Tech Stack 为 Cloudflare Workers
 
-**C076** 删除旧 Workers
+**C074** 删除旧 Workers
 ```bash
 # dove.worker.hexly.ai (D1 proxy)
 cd worker && wrangler delete
@@ -1086,7 +1156,7 @@ cd worker && wrangler delete
 cd worker-email && wrangler delete
 ```
 
-**C077** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
+**C075** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
 
 ---
 
@@ -1102,10 +1172,24 @@ cd worker-email && wrangler delete
 
 ## Test Isolation
 
-回到 Cloudflare 原生模型：
+### 两个环境，两个用途
+
+| 环境 | 用途 | D1 | Auth |
+|------|------|-----|------|
+| `wrangler dev`（localhost） | L2/L3 自动化测试 | miniflare 本地 D1（`.wrangler/state/`） | localhost 检测 → bypass |
+| `wrangler deploy --env test`（remote） | 部署后手动 smoke test | `dove-db-test`（远程） | 完整 OAuth + KV session |
+
+**关键区分**：L2/L3 自动化测试**只用 localhost**，不触碰远程资源。`[env.test]` 仅用于部署后手动验证（登录、发送邮件等）。这避免了"测试需要远程 secrets"和"测试结果依赖网络"两个问题。
+
+现有实现使用 `E2E_SKIP_AUTH=true` 环境变量绕过 NextAuth（`src/proxy.ts:7`）。重写后改为 hostname 检测：middleware 看到 `localhost`/`127.0.0.1` 直接 skip。这与 bat 项目 entry-control 的 localhost bypass 模式一致，消除了环境变量的安全隐患。
 
 ```toml
+# wrangler.toml [env.test] — 远程 smoke test 用
 [env.test]
+[[env.test.routes]]
+pattern = "dove-test.hexly.ai"
+custom_domain = true
+
 [[env.test.d1_databases]]
 binding = "DB"
 database_name = "dove-db-test"
