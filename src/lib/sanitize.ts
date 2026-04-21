@@ -5,8 +5,8 @@
  * additions from being accidentally exposed.
  */
 
-import type { Project } from "@/lib/db/projects";
-import type { EmailProviderRecord } from "@/lib/db/email-providers";
+import type { Project } from "@/lib/types/project";
+import type { EmailProviderRecord } from "@/lib/types/email-provider";
 
 /** Sanitized project type — webhook_token removed. */
 export type SanitizedProject = Omit<Project, "webhook_token">;

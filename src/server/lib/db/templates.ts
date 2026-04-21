@@ -8,12 +8,8 @@
 import { query, queryOne, execute } from "./d1";
 import { generateId } from "@/lib/id";
 
-export interface TemplateVariable {
-  name: string;
-  type: "string" | "number" | "boolean";
-  required: boolean;
-  default?: string | undefined;
-}
+export type { TemplateVariable } from "@/lib/types/template";
+import type { TemplateVariable } from "@/lib/types/template";
 
 export interface Template {
   id: string;

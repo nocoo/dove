@@ -5,23 +5,8 @@
 import { query, queryOne, execute } from "./d1";
 import { generateId, generateWebhookToken } from "@/lib/id";
 
-export interface Project {
-  id: string;
-  name: string;
-  description: string | null;
-  email_prefix: string;
-  from_name: string;
-  webhook_token: string;
-  quota_daily: number;
-  quota_monthly: number;
-  /**
-   * FK to email_providers.id. NULL means "legacy mode" —
-   * fall back to RESEND_API_KEY / RESEND_FROM_DOMAIN env vars.
-   */
-  provider_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type { Project } from "@/lib/types/project";
+import type { Project } from "@/lib/types/project";
 
 /**
  * List all projects, ordered by creation date descending.

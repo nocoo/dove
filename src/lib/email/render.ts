@@ -6,7 +6,7 @@
  */
 
 import { marked } from "marked";
-import type { TemplateVariable } from "@/lib/db/templates";
+import type { TemplateVariable } from "@/lib/types/template";
 
 /** HTML escape a string to prevent XSS via template variables. */
 export function escapeHtml(str: string): string {

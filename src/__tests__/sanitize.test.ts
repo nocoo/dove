@@ -1,7 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { sanitizeProject, sanitizeProvider } from "@/lib/sanitize";
-import { makeProject } from "./helpers";
-import type { EmailProviderRecord } from "@/lib/db/email-providers";
+import type { Project } from "@/lib/types/project";
+import type { EmailProviderRecord } from "@/lib/types/email-provider";
+
+function makeProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: "proj_test1",
+    name: "Test Project",
+    description: "A test project",
+    email_prefix: "noreply",
+    from_name: "Test",
+    webhook_token: "tok_secret",
+    quota_daily: 100,
+    quota_monthly: 1000,
+    provider_id: null,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
 
 function makeProvider(
   overrides: Partial<EmailProviderRecord> = {},

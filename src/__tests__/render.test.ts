@@ -6,7 +6,7 @@ import {
   markdownToHtml,
   renderTemplate,
 } from "@/lib/email/render";
-import type { TemplateVariable } from "@/lib/db/templates";
+import type { TemplateVariable } from "@/lib/types/template";
 
 describe("escapeHtml", () => {
   test("escapes angle brackets", () => {

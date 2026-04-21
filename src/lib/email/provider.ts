@@ -14,7 +14,7 @@
  *     retries after an ambiguous failure.
  */
 
-import type { EmailProviderRecord } from "@/lib/db/email-providers";
+import type { EmailProviderRecord } from "@/lib/types/email-provider";
 
 export type ProviderType = "resend" | "cloudflare";
 

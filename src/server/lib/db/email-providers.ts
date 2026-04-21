@@ -9,18 +9,8 @@
 import { query, queryOne, execute } from "./d1";
 import { generateId } from "@/lib/id";
 
-export type EmailProviderType = "resend" | "cloudflare";
-
-export interface EmailProviderRecord {
-  id: string;
-  name: string;
-  type: EmailProviderType;
-  domain: string;
-  /** JSON string; shape depends on type (api_key, worker_url, etc.) */
-  config: string;
-  created_at: string;
-  updated_at: string;
-}
+export type { EmailProviderType, EmailProviderRecord } from "@/lib/types/email-provider";
+import type { EmailProviderType, EmailProviderRecord } from "@/lib/types/email-provider";
 
 /**
  * List all providers, ordered by creation date descending.

@@ -58,3 +58,4 @@ e2e/bdd/.tmp/
 # tool directories
 .claude/
 .superset/
+dist/
