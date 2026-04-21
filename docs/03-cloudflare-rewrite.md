@@ -73,7 +73,7 @@
 | **邮件发送** | Resend HTTP + CF Email Routing | 双 provider 架构保留 |
 | **模板渲染** | marked | 不变 |
 | **ID 生成** | nanoid | 不变 |
-| **部署** | `wrangler deploy` | 单 worker；`[env.test]` 给 L2/L3 |
+| **部署** | `wrangler deploy` | 单 worker；`[env.test]` 给远程 smoke test |
 | **域名** | `dove.hexly.ai` | custom domain route |
 
 > **不选 OpenNext for Cloudflare**：走 Hono + Vite SPA 路线，更薄的栈。
@@ -771,7 +771,7 @@ localhost:7034 (wrangler dev, serving built static from dist/client/)
 
 - 先 `bun run build` 构建 SPA，再 `wrangler dev`
 - 测试与生产完全一致的静态资产服务路径
-- L3 Playwright 测试使用此模式
+- 适合手动验收和 pre-deploy 检查
 
 ### Auth During Local Development
 
@@ -838,7 +838,7 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 | Worker | 环境 | 域名 | KV Namespace |
 |---|---|---|---|
 | `dove` | 生产 | `dove.hexly.ai` | `dove` |
-| `dove` + `[env.test]` | 测试（E2E） | `dove-test.hexly.ai` | `dove-test` |
+| `dove` + `[env.test]` | 远程 smoke test（手动） | `dove-test.hexly.ai` | `dove-test` |
 
 重写完成后删除：
 - `dove.worker.hexly.ai`（D1 proxy Worker）
@@ -1047,7 +1047,7 @@ export async function signOut(): Promise<void>;
 **C051** `src/client/routes/templates/$id.tsx`：模板编辑
 
 **C052** `src/client/routes/providers/index.tsx`：Provider 列表
-- **关键**：健康徽章逻辑适配（不再依赖 `reachable`）
+- **关键**：健康徽章逻辑适配（同时使用 `reachable` + `lastSendHealth` 三态显示）
 
 **C053** `src/client/routes/providers/new.tsx`：新建 Provider
 - **关键**：cloudflare 类型隐藏 `worker_url`/`api_key` 字段
