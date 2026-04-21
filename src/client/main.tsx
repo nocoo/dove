@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router";
 import "./styles/globals.css";
 import { AuthProvider } from "./components/auth-provider";
 import { Layout } from "./routes/_layout";
+import { LoginPage } from "./routes/login";
 import { Dashboard } from "./routes/index";
 import { ProjectsPage } from "./routes/projects/index";
 import { ProjectDetailPage } from "./routes/projects/$id";
@@ -20,24 +21,32 @@ import { WebhookLogsPage } from "./routes/webhook-logs";
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/projects/new" element={<NewProjectPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-            <Route path="/templates" element={<TemplatesPage />} />
-            <Route path="/templates/new" element={<NewTemplatePage />} />
-            <Route path="/templates/:id" element={<TemplateDetailPage />} />
-            <Route path="/providers" element={<ProvidersPage />} />
-            <Route path="/providers/new" element={<NewProviderPage />} />
-            <Route path="/providers/:id" element={<ProviderDetailPage />} />
-            <Route path="/send-logs" element={<SendLogsPage />} />
-            <Route path="/webhook-logs" element={<WebhookLogsPage />} />
-          </Routes>
-        </Layout>
-      </AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="*"
+          element={
+            <AuthProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/projects/new" element={<NewProjectPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                  <Route path="/templates" element={<TemplatesPage />} />
+                  <Route path="/templates/new" element={<NewTemplatePage />} />
+                  <Route path="/templates/:id" element={<TemplateDetailPage />} />
+                  <Route path="/providers" element={<ProvidersPage />} />
+                  <Route path="/providers/new" element={<NewProviderPage />} />
+                  <Route path="/providers/:id" element={<ProviderDetailPage />} />
+                  <Route path="/send-logs" element={<SendLogsPage />} />
+                  <Route path="/webhook-logs" element={<WebhookLogsPage />} />
+                </Routes>
+              </Layout>
+            </AuthProvider>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
