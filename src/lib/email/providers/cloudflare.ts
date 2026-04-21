@@ -1,8 +1,8 @@
 import type { EmailProvider, SendParams, SendResult } from "../provider";
 
-declare const EmailMessage: {
+interface EmailMessageConstructor {
   new (from: string, to: string, raw: ReadableStream): { from: string; to: string };
-};
+}
 
 export class CloudflareProvider implements EmailProvider {
   readonly type = "cloudflare" as const;
@@ -116,7 +116,11 @@ function createMimeMessage(params: SendParams): { from: string; to: string } {
     `--${boundary}--`,
   ].join("\r\n");
 
-  return new EmailMessage(fromAddr, params.to, new Blob([rawEmail]).stream());
+  const EM = (globalThis as Record<string, unknown>).EmailMessage as EmailMessageConstructor | undefined;
+  if (!EM) {
+    throw new Error("Cloudflare EmailMessage API not available (email sending not supported in local dev)");
+  }
+  return new EM(fromAddr, params.to, new Blob([rawEmail]).stream());
 }
 
 /** RFC 2047 encode a header value if it contains non-ASCII characters. */
