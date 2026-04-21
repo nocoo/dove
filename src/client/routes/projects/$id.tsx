@@ -115,6 +115,7 @@ export function ProjectDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingRecipientId, setDeletingRecipientId] = useState<string | null>(null);
+  const [recipientToDelete, setRecipientToDelete] = useState<Recipient | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!projectId) return;
@@ -280,6 +281,7 @@ export function ProjectDetailPage() {
       toast.error("Failed to delete recipient");
     } finally {
       setDeletingRecipientId(null);
+      setRecipientToDelete(null);
     }
   }
 
@@ -563,7 +565,7 @@ export function ProjectDetailPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => void handleDeleteRecipient(r.id)}
+                    onClick={() => setRecipientToDelete(r)}
                     disabled={deletingRecipientId === r.id}
                     className="text-muted-foreground hover:text-destructive"
                   >
@@ -674,6 +676,43 @@ export function ProjectDetailPage() {
           </Dialog>
         </CardContent>
       </Card>
+
+      {/* Recipient delete confirmation */}
+      <Dialog
+        open={recipientToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setRecipientToDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Recipient?</DialogTitle>
+            <DialogDescription>
+              This will remove <strong>{recipientToDelete?.name}</strong> ({recipientToDelete?.email})
+              from this project's whitelist. Future sends to this address will be rejected.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecipientToDelete(null)}
+              disabled={deletingRecipientId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (recipientToDelete) void handleDeleteRecipient(recipientToDelete.id);
+              }}
+              disabled={deletingRecipientId !== null}
+            >
+              {deletingRecipientId !== null && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
