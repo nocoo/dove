@@ -1,5 +1,11 @@
 # Quality System Upgrade: From Current to Tier S
 
+> **⚠️ Partially Superseded** — The Cloudflare-native rewrite (`docs/03-cloudflare-rewrite.md`)
+> replaced the Next.js architecture this document targets. L1/G1/G2 sections remain valid.
+> L2/L3 test infrastructure and D1 test isolation are being rebuilt under the new Worker-based
+> architecture (see 03 §C059–C064). Treat this document as historical context for quality
+> methodology; refer to 03 for current implementation plans.
+
 ## Overview
 
 Dove currently sits at **Tier B+** in the 6-dimension quality system. L1 + G1 are solid, but L2 is architecturally mocked (not true HTTP E2E), L3 is unimplemented, D1 test isolation is configured but unused, and G2 has a soft-skip loophole.
