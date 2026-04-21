@@ -312,3 +312,35 @@ export async function countMonthlySends(
   );
   return result?.count ?? 0;
 }
+
+export interface ProviderSendStats {
+  total: number;
+  sent: number;
+  failed: number;
+}
+
+export async function getProviderSendStats(
+  db: D1Database,
+  providerId: string,
+  limit = 20,
+): Promise<ProviderSendStats> {
+  const rows = await query<{ status: string; count: number }>(
+    db,
+    `SELECT status, COUNT(*) as count FROM send_logs
+     WHERE provider_id = ? AND id IN (
+       SELECT id FROM send_logs WHERE provider_id = ? ORDER BY created_at DESC LIMIT ?
+     )
+     GROUP BY status`,
+    [providerId, providerId, limit],
+  );
+
+  let sent = 0;
+  let failed = 0;
+  let total = 0;
+  for (const row of rows) {
+    total += row.count;
+    if (row.status === "sent") sent = row.count;
+    if (row.status === "failed") failed = row.count;
+  }
+  return { total, sent, failed };
+}

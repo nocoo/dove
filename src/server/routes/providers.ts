@@ -12,6 +12,7 @@ import {
 import { sanitizeProvider } from "../lib/sanitize";
 import { parseConfigForType, DomainSchema } from "@/lib/email/provider-schema";
 import { parseProviderConfig } from "../lib/email/provider";
+import { getProviderSendStats } from "../lib/db/send-logs";
 
 const providers = new Hono<{ Bindings: Env }>();
 
@@ -139,7 +140,21 @@ providers.get("/:id/health", async (c) => {
 
   const reachable: boolean | null = null;
   const reachableError: string | null = null;
-  const healthy = configValid;
+
+  const stats = await getProviderSendStats(c.env.DB, row.id);
+  const lastSendHealth = stats.total > 0
+    ? {
+        total: stats.total,
+        sent: stats.sent,
+        failed: stats.failed,
+        successRate: stats.sent / stats.total,
+      }
+    : null;
+
+  const l3Degraded = lastSendHealth !== null
+    && lastSendHealth.total >= 5
+    && lastSendHealth.successRate < 0.5;
+  const healthy = configValid && !l3Degraded;
 
   return c.json({
     id: row.id,
@@ -150,6 +165,7 @@ providers.get("/:id/health", async (c) => {
     configError,
     reachable,
     reachableError,
+    lastSendHealth,
     checkedAt: new Date().toISOString(),
   });
 });
