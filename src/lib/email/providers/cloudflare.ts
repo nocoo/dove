@@ -71,10 +71,14 @@ export class CloudflareProvider implements EmailProvider {
     if (existing.status === "pending") throw new Error("Concurrent send for same idempotency key");
 
     // status === 'failed': reclaim the slot for retry
-    await db
+    const reclaim = await db
       .prepare("UPDATE cf_email_idempotency SET status = 'pending', created_at = ?, completed_at = NULL WHERE id = ? AND status = 'failed'")
       .bind(new Date().toISOString(), key)
       .run();
+
+    if (reclaim.meta.changes === 0) {
+      throw new Error("Concurrent send for same idempotency key");
+    }
   }
 }
 
@@ -97,7 +101,7 @@ function createMimeMessage(params: SendParams): { from: string; to: string } {
 
   const boundary = "----cf" + crypto.randomUUID().replace(/-/g, "");
   const rawEmail = [
-    `From: ${fromName ? `${fromName} <${fromAddr}>` : fromAddr}`,
+    `From: ${fromName ? `${encodeRfc2047(fromName)} <${fromAddr}>` : fromAddr}`,
     `To: ${params.to}`,
     `Subject: ${encodeRfc2047(params.subject)}`,
     `MIME-Version: 1.0`,
