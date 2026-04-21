@@ -50,6 +50,7 @@ jobs:
           EMAIL_DRY_RUN=true
           RESEND_DRY_RUN=true
           DEV_MODE=true
+          RESEND_API_KEY=re_ci_placeholder_not_real
           EOF
 
       - name: "L2: API E2E tests"
