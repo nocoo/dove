@@ -46,15 +46,28 @@ const validSession: SessionData = {
 
 describe("auth routes", () => {
   describe("GET /api/auth/me", () => {
-    test("returns null user when no cookie", async () => {
+    test("returns null user when no cookie on non-localhost", async () => {
+      const kv = new MockKV();
+      const app = createApp(kv);
+      const res = await app.fetch(
+        new Request("https://dove.hexly.ai/api/auth/me", {
+          headers: { host: "dove.hexly.ai" },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { user: null };
+      expect(body.user).toBeNull();
+    });
+
+    test("returns dev user on localhost without cookie", async () => {
       const kv = new MockKV();
       const app = createApp(kv);
       const res = await app.fetch(
         new Request("http://localhost:7034/api/auth/me"),
       );
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { user: null };
-      expect(body.user).toBeNull();
+      const body = (await res.json()) as { user: { email: string } };
+      expect(body.user.email).toBe("dev@localhost");
     });
 
     test("returns dev user on localhost with any cookie", async () => {
