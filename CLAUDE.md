@@ -69,13 +69,14 @@ src/
       api.ts                 # Typed fetch wrapper (apiGet, apiPost, apiPut, apiDelete)
       auth.ts                # Auth helpers (fetchUser, signOut)
     components/
-      auth-provider.tsx      # React auth context (replaces next-auth useSession)
+      auth-provider.tsx      # React auth context + unauthenticated redirect
       layout/
         app-shell.tsx        # Main layout shell
         sidebar.tsx          # Navigation sidebar
         breadcrumbs.tsx      # Breadcrumb navigation
         sidebar-context.ts   # Sidebar state
     routes/
+      login.tsx              # Google sign-in page (no auth required)
       index.tsx              # Dashboard
       projects/              # Project list, new, detail
       templates/             # Template list, new, detail
