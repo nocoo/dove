@@ -47,7 +47,6 @@ export interface SanitizedProvider {
 /**
  * Mask sensitive fields in an email_providers record.
  *   api_key   → "••••••" + last 4 chars
- *   worker_url → kept as-is (URLs are not credentials)
  * Any other string fields are preserved without masking. Unknown
  * non-string fields are dropped to prevent accidental leaks.
  */

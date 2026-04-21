@@ -24,16 +24,13 @@ export function NewProviderPage() {
   const [type, setType] = useState<ProviderType>("resend");
   const [domain, setDomain] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [workerUrl, setWorkerUrl] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const config: Record<string, string> = { api_key: apiKey.trim() };
-    if (type === "cloudflare") {
-      config["worker_url"] = workerUrl.trim();
-    }
+    const config: Record<string, string> =
+      type === "resend" ? { api_key: apiKey.trim() } : {};
 
     try {
       setSaving(true);
@@ -69,8 +66,7 @@ export function NewProviderPage() {
   const canSubmit =
     name.trim() &&
     domain.trim() &&
-    apiKey.trim() &&
-    (type === "resend" || workerUrl.trim()) &&
+    (type === "cloudflare" || apiKey.trim()) &&
     !saving;
 
   return (
@@ -134,34 +130,24 @@ export function NewProviderPage() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="api_key">API Key</Label>
-          <Input
-            id="api_key"
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={
-              type === "resend" ? "re_xxxxxxxxxxxx" : "Bearer token"
-            }
-            disabled={saving}
-          />
-        </div>
-
-        {type === "cloudflare" && (
+        {type === "resend" && (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="worker_url">Worker URL</Label>
+            <Label htmlFor="api_key">API Key</Label>
             <Input
-              id="worker_url"
-              value={workerUrl}
-              onChange={(e) => setWorkerUrl(e.target.value)}
-              placeholder="https://dove-email.worker.example.com"
+              id="api_key"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="re_xxxxxxxxxxxx"
               disabled={saving}
             />
-            <p className="text-xs text-muted-foreground">
-              Base URL of the dedicated CF Email Worker (no trailing slash).
-            </p>
           </div>
+        )}
+
+        {type === "cloudflare" && (
+          <p className="text-sm text-muted-foreground">
+            Cloudflare Email Routing uses the Worker email binding — no API key needed.
+          </p>
         )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}

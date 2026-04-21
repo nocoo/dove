@@ -29,8 +29,6 @@ const UpdateProviderSchema = z.object({
   config: z.record(z.string(), z.string()).optional(),
 });
 
-const REACHABILITY_TIMEOUT_MS = 5000;
-
 providers.get("/", async (c) => {
   const rows = await listEmailProviders(c.env.DB);
   return c.json(rows.map(sanitizeProvider));
@@ -132,36 +130,16 @@ providers.get("/:id/health", async (c) => {
 
   let configValid = true;
   let configError: string | null = null;
-  let parsed: ReturnType<typeof parseProviderConfig> | null = null;
   try {
-    parsed = parseProviderConfig(row);
+    parseProviderConfig(row);
   } catch (e) {
     configValid = false;
     configError = e instanceof Error ? e.message : String(e);
   }
 
-  let reachable: boolean | null = null;
-  let reachableError: string | null = null;
-
-  if (configValid && parsed && parsed.type === "cloudflare") {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REACHABILITY_TIMEOUT_MS);
-    try {
-      const res = await fetch(`${parsed.worker_url}/health`, {
-        method: "GET",
-        signal: controller.signal,
-      });
-      reachable = res.ok;
-      if (!res.ok) reachableError = `Worker /health returned ${res.status}`;
-    } catch (e) {
-      reachable = false;
-      reachableError = e instanceof Error ? e.message : "Failed to reach worker";
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  const healthy = configValid && (reachable === null || reachable === true);
+  const reachable: boolean | null = null;
+  const reachableError: string | null = null;
+  const healthy = configValid;
 
   return c.json({
     id: row.id,

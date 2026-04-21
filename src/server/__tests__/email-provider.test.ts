@@ -33,7 +33,7 @@ describe("server provider", () => {
       const config = parseProviderConfig(
         makeProvider({
           type: "cloudflare",
-          config: JSON.stringify({ worker_url: "https://w.example.com", api_key: "cf_key" }),
+          config: JSON.stringify({}),
         }),
       );
       expect(config.type).toBe("cloudflare");
@@ -60,11 +60,10 @@ describe("server provider", () => {
     });
 
     test("creates cloudflare provider", async () => {
+      const mockBinding = { send: async () => {} } as unknown as SendEmail;
       const provider = await createProvider({
         type: "cloudflare",
-        worker_url: "https://w.example.com",
-        api_key: "cf_key",
-      });
+      }, mockBinding);
       expect(provider.type).toBe("cloudflare");
     });
   });

@@ -19,31 +19,13 @@ describe("parseConfigForType(resend)", () => {
 });
 
 describe("parseConfigForType(cloudflare)", () => {
-  test("accepts valid api_key + worker_url", () => {
-    const r = parseConfigForType("cloudflare", {
-      api_key: "cf_abc",
-      worker_url: "https://w.example.com",
-    });
+  test("accepts empty config", () => {
+    const r = parseConfigForType("cloudflare", {});
     expect(r.success).toBe(true);
   });
 
-  test("rejects missing worker_url", () => {
-    const r = parseConfigForType("cloudflare", { api_key: "cf_abc" });
-    expect(r.success).toBe(false);
-  });
-
-  test("rejects worker_url that is not a URL", () => {
-    const r = parseConfigForType("cloudflare", {
-      api_key: "cf_abc",
-      worker_url: "not a url",
-    });
-    expect(r.success).toBe(false);
-  });
-
-  test("rejects missing api_key", () => {
-    const r = parseConfigForType("cloudflare", {
-      worker_url: "https://w.example.com",
-    });
-    expect(r.success).toBe(false);
+  test("accepts config with extra fields (stripped)", () => {
+    const r = parseConfigForType("cloudflare", { extra: "ignored" });
+    expect(r.success).toBe(true);
   });
 });

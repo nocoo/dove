@@ -249,7 +249,7 @@ webhook.post("/:projectId/send", async (c) => {
           return logAndRespond(500, errorJson("provider_not_found", "Configured email provider not found"), "provider_not_found");
         }
         providerRecord = record;
-        provider = await createProvider(parseProviderConfig(record));
+        provider = await createProvider(parseProviderConfig(record), c.env.EMAIL);
         providerType = record.type;
       } else {
         provider = await createLegacyProvider(c.env);

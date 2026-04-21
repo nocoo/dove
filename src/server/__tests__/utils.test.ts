@@ -105,11 +105,11 @@ describe("sanitize", () => {
       name: "CF",
       type: "cloudflare",
       domain: "example.com",
-      config: JSON.stringify({ worker_url: "https://w.example.com" }),
+      config: JSON.stringify({}),
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     };
     const sanitized = sanitizeProvider(provider);
-    expect(sanitized.config.worker_url).toBe("https://w.example.com");
+    expect(Object.keys(sanitized.config)).toHaveLength(0);
   });
 });

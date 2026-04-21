@@ -131,7 +131,7 @@ describe("EmailProviders CRUD (native D1)", () => {
         name: "CF Provider",
         type: "cloudflare",
         domain: "mail.example.com",
-        config: JSON.stringify({ worker_url: "https://email.workers.dev" }),
+        config: JSON.stringify({}),
       });
 
       expect(result.type).toBe("cloudflare");

@@ -62,7 +62,7 @@ export interface EmailProvider {
  */
 export type ProviderConfig =
   | { type: "resend"; api_key: string }
-  | { type: "cloudflare"; worker_url: string; api_key: string };
+  | { type: "cloudflare" };
 
 /**
  * Parse email_providers.config JSON and shape-check it.
@@ -88,15 +88,7 @@ export function parseProviderConfig(record: EmailProviderRecord): ProviderConfig
     return { type: "resend", api_key: apiKey };
   }
   if (record.type === "cloudflare") {
-    const workerUrl = obj["worker_url"];
-    const apiKey = obj["api_key"];
-    if (typeof workerUrl !== "string" || !workerUrl) {
-      throw new Error(`Cloudflare provider ${record.id} missing worker_url`);
-    }
-    if (typeof apiKey !== "string" || !apiKey) {
-      throw new Error(`Cloudflare provider ${record.id} missing api_key`);
-    }
-    return { type: "cloudflare", worker_url: workerUrl, api_key: apiKey };
+    return { type: "cloudflare" };
   }
   throw new Error(`Unknown provider type: ${record.type as string}`);
 }
@@ -106,6 +98,7 @@ export function parseProviderConfig(record: EmailProviderRecord): ProviderConfig
  */
 export async function createProvider(
   config: ProviderConfig,
+  emailBinding?: SendEmail,
 ): Promise<EmailProvider> {
   switch (config.type) {
     case "resend": {
@@ -113,8 +106,9 @@ export async function createProvider(
       return new ResendProvider(config.api_key);
     }
     case "cloudflare": {
+      if (!emailBinding) throw new Error("EMAIL binding required for Cloudflare provider");
       const { CloudflareProvider } = await import("./providers/cloudflare");
-      return new CloudflareProvider(config.worker_url, config.api_key);
+      return new CloudflareProvider(emailBinding);
     }
     default:
       throw new Error(

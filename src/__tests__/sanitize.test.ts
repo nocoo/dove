@@ -72,18 +72,14 @@ describe("sanitizeProvider", () => {
     expect(p.config["api_key"]).not.toContain("re_live");
   });
 
-  test("preserves worker_url unmasked", () => {
+  test("handles empty cloudflare config", () => {
     const p = sanitizeProvider(
       makeProvider({
         type: "cloudflare",
-        config: JSON.stringify({
-          api_key: "cf_1234",
-          worker_url: "https://worker.example.com",
-        }),
+        config: JSON.stringify({}),
       }),
     );
-    expect(p.config["worker_url"]).toBe("https://worker.example.com");
-    expect(p.config["api_key"]).toBe("••••••1234");
+    expect(Object.keys(p.config)).toHaveLength(0);
   });
 
   test("masks short api_key entirely", () => {

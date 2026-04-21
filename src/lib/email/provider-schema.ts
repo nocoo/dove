@@ -12,10 +12,7 @@ export const ResendConfigSchema = z.object({
   api_key: z.string().min(1),
 });
 
-export const CloudflareConfigSchema = z.object({
-  api_key: z.string().min(1),
-  worker_url: z.string().url(),
-});
+export const CloudflareConfigSchema = z.object({});
 
 /**
  * Validate a config object against its declared provider type.

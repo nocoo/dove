@@ -56,7 +56,6 @@ export function ProviderDetailPage() {
   const [domain, setDomain] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [apiKeyChanged, setApiKeyChanged] = useState(false);
-  const [workerUrl, setWorkerUrl] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +78,6 @@ export function ProviderDetailPage() {
       setDomain(data.domain);
       setApiKey("");
       setApiKeyChanged(false);
-      setWorkerUrl(data.config["worker_url"] ?? "");
     } catch {
       setLoadError("Failed to load provider");
     } finally {
@@ -132,16 +130,12 @@ export function ProviderDetailPage() {
     if (type !== record.type) return true;
     if (domain !== record.domain) return true;
     if (apiKeyChanged) return true;
-    if (type === "cloudflare") {
-      if (workerUrl !== (record.config["worker_url"] ?? "")) return true;
-    }
     return false;
-  }, [record, name, type, domain, apiKeyChanged, workerUrl]);
+  }, [record, name, type, domain, apiKeyChanged]);
 
   const canSubmit =
     !!name.trim() &&
     !!domain.trim() &&
-    (type === "resend" || !!workerUrl.trim()) &&
     dirty &&
     !saving;
 
@@ -150,29 +144,26 @@ export function ProviderDetailPage() {
     if (!record || !providerId) return;
     setError(null);
 
-    const workerUrlChanged =
-      type === "cloudflare" &&
-      workerUrl !== (record.config["worker_url"] ?? "");
     const typeChanged = type !== record.type;
-    const configTouched = apiKeyChanged || workerUrlChanged || typeChanged;
+    const configTouched = apiKeyChanged || typeChanged;
 
     const payload: Record<string, unknown> = {};
     if (name !== record.name) payload["name"] = name.trim();
     if (domain !== record.domain) payload["domain"] = domain.trim();
     if (typeChanged) payload["type"] = type;
 
-    if (configTouched) {
+    if (configTouched && type === "resend") {
       if (!apiKeyChanged) {
         setError(
           "Re-enter the API key to change the provider config.",
         );
         return;
       }
-      const cfg: Record<string, string> = { api_key: apiKey.trim() };
-      if (type === "cloudflare") {
-        cfg["worker_url"] = workerUrl.trim();
-      }
+      const cfg: Record<string, string> =
+        type === "resend" ? { api_key: apiKey.trim() } : {};
       payload["config"] = cfg;
+    } else if (configTouched && type === "cloudflare") {
+      payload["config"] = {};
     }
 
     try {
@@ -302,8 +293,7 @@ export function ProviderDetailPage() {
                 </Select>
                 {type !== record.type && (
                   <p className="text-xs text-amber-600 dark:text-amber-500">
-                    Type change: retype the API key (and supply a worker URL
-                    if switching to Cloudflare) before saving.
+                Type change: retype the API key before saving.
                   </p>
                 )}
               </div>
@@ -319,41 +309,36 @@ export function ProviderDetailPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="api_key">API Key</Label>
-                <Input
-                  id="api_key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value);
-                    setApiKeyChanged(true);
-                  }}
-                  disabled={saving}
-                  placeholder={
-                    apiKeyChanged
-                      ? ""
-                      : `Current: ${record.config["api_key"] ?? "(unset)"}`
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {apiKeyChanged
-                    ? "New key staged — will replace the stored secret on save."
-                    : "Leave blank to keep the current secret. Type a new key to replace it."}
-                </p>
-              </div>
+              {type === "resend" && (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="api_key">API Key</Label>
+                  <Input
+                    id="api_key"
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      setApiKeyChanged(true);
+                    }}
+                    disabled={saving}
+                    placeholder={
+                      apiKeyChanged
+                        ? ""
+                        : `Current: ${record.config["api_key"] ?? "(unset)"}`
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {apiKeyChanged
+                      ? "New key staged — will replace the stored secret on save."
+                      : "Leave blank to keep the current secret. Type a new key to replace it."}
+                  </p>
+                </div>
+              )}
 
               {type === "cloudflare" && (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="worker_url">Worker URL</Label>
-                  <Input
-                    id="worker_url"
-                    value={workerUrl}
-                    onChange={(e) => setWorkerUrl(e.target.value)}
-                    placeholder="https://dove-email.worker.example.com"
-                    disabled={saving}
-                  />
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Cloudflare Email Routing uses the Worker email binding — no API key needed.
+                </p>
               )}
 
               {error && <p className="text-sm text-destructive">{error}</p>}
