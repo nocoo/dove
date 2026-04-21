@@ -17,6 +17,7 @@ import { sendLogs } from "./routes/send-logs";
 import { webhookLogs } from "./routes/webhook-logs";
 import { stats } from "./routes/stats";
 import { webhook } from "./routes/webhook";
+import { dbInit } from "./routes/db-init";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -59,5 +60,6 @@ app.route("/api/send-logs", sendLogs);
 app.route("/api/webhook-logs", webhookLogs);
 app.route("/api/stats", stats);
 app.route("/api/webhook", webhook);
+app.route("/api/db/init", dbInit);
 
 export default app;
