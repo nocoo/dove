@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router";
 import "./styles/globals.css";
 import { AuthProvider } from "./components/auth-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { Layout } from "./routes/_layout";
 import { Dashboard } from "./routes/index";
 import { ProjectsPage } from "./routes/projects/index";
@@ -37,6 +38,7 @@ function App() {
             <Route path="/webhook-logs" element={<WebhookLogsPage />} />
           </Routes>
         </Layout>
+        <Toaster />
       </AuthProvider>
     </BrowserRouter>
   );
