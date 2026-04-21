@@ -146,11 +146,35 @@ async function waitForServer(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 4b: Warm up D1 connection
+// Step 4b: Initialize D1 schema (idempotent)
+// ---------------------------------------------------------------------------
+
+async function initSchema(): Promise<void> {
+  console.log("Step 4b: Initializing D1 schema...");
+  const start = Date.now();
+  try {
+    const res = await fetch(`http://localhost:${E2E_PORT}/api/db/init`, {
+      method: "POST",
+      signal: AbortSignal.timeout(30_000),
+    });
+    const body = await res.json() as { ok?: boolean; statements?: number };
+    if (res.ok && body.ok) {
+      console.log(`  Schema initialized (${Date.now() - start}ms, ${body.statements} statements)`);
+    } else {
+      console.error(`  WARN: Schema init returned ${res.status}: ${JSON.stringify(body)}`);
+    }
+  } catch (err) {
+    console.error(`  FATAL: Schema init failed (${Date.now() - start}ms): ${err}`);
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 4c: Warm up D1 connection
 // ---------------------------------------------------------------------------
 
 async function warmupD1(): Promise<void> {
-  console.log("Step 4b: Warming up D1 connection...");
+  console.log("Step 4c: Warming up D1 connection...");
   const start = Date.now();
   try {
     const res = await fetch(`http://localhost:${E2E_PORT}/api/projects`, {
@@ -211,7 +235,10 @@ async function main(): Promise<void> {
     // Step 4: Wait for ready
     await waitForServer();
 
-    // Step 4b: Warm up D1
+    // Step 4b: Initialize D1 schema (idempotent, required for local D1)
+    await initSchema();
+
+    // Step 4c: Warm up D1
     await warmupD1();
 
     // Step 5: Run tests
