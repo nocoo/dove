@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Loader2, Plus, Trash2, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, Eye, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +75,10 @@ export function TemplateDetailPage() {
   // Delete state
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Test send state
+  const [testTo, setTestTo] = useState("");
+  const [sending, setSending] = useState(false);
 
   const fetchTemplate = useCallback(async () => {
     if (!templateId) return;
@@ -218,6 +222,30 @@ export function TemplateDetailPage() {
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
+    }
+  }
+
+  async function handleTestSend() {
+    if (!templateId || !testTo.trim()) return;
+    try {
+      setSending(true);
+      if (dirty) {
+        await handleSave();
+      }
+      const res = await fetch(`/api/templates/${templateId}/test-send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: testTo.trim(), variables: previewVars }),
+      });
+      const data = await res.json() as { status?: string; provider_type?: string; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to send test email");
+      }
+      toast.success(`Test email sent via ${data.provider_type}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send test email");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -473,6 +501,32 @@ export function TemplateDetailPage() {
                 </p>
               </div>
             )}
+
+            <div className="border-t border-border pt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Send Test Email</p>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="email"
+                  placeholder="recipient@example.com"
+                  value={testTo}
+                  onChange={(e) => setTestTo(e.target.value)}
+                  className="text-sm h-8"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleTestSend()}
+                  disabled={sending || !testTo.trim()}
+                >
+                  {sending ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+                  )}
+                  Send
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

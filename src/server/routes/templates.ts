@@ -10,7 +10,18 @@ import {
   deleteTemplate,
   parseVariables,
 } from "../lib/db/templates";
+import { getProject } from "../lib/db/projects";
+import { getEmailProvider } from "../lib/db/email-providers";
+import {
+  createProvider,
+  createLegacyProvider,
+  parseProviderConfig,
+  getProviderDomain,
+  type EmailProvider,
+} from "../lib/email/provider";
 import { renderTemplate } from "@/lib/email/render";
+import { IdempotentSendResult } from "@/lib/email/providers/cloudflare";
+import { generateId } from "@/lib/id";
 
 const templates = new Hono<{ Bindings: Env }>();
 
@@ -122,6 +133,77 @@ templates.post("/:id/preview", async (c) => {
       return c.json({ error: error.message }, 422);
     }
     throw error;
+  }
+});
+
+const TestSendSchema = z.object({
+  to: z.email(),
+  variables: z.record(z.string(), z.string()).optional(),
+});
+
+templates.post("/:id/test-send", async (c) => {
+  const template = await getTemplate(c.env.DB, c.req.param("id"));
+  if (!template) return c.json({ error: "Template not found" }, 404);
+
+  const body = await c.req.json();
+  const parsed = TestSendSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", details: parsed.error.flatten() }, 400);
+  }
+
+  const project = await getProject(c.env.DB, template.project_id);
+  if (!project) {
+    return c.json({ error: "Project not found for this template" }, 500);
+  }
+
+  let provider: EmailProvider;
+  let providerRecord: Awaited<ReturnType<typeof getEmailProvider>> | null = null;
+  let providerType: string;
+
+  try {
+    if (project.provider_id) {
+      const record = await getEmailProvider(c.env.DB, project.provider_id);
+      if (!record) return c.json({ error: "Configured email provider not found" }, 500);
+      providerRecord = record;
+      provider = await createProvider(parseProviderConfig(record), c.env.EMAIL, c.env.DB);
+      providerType = record.type;
+    } else {
+      provider = await createLegacyProvider(c.env);
+      providerType = "legacy";
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Provider init failed";
+    return c.json({ error: message }, 500);
+  }
+
+  let domain: string;
+  try {
+    domain = getProviderDomain(providerRecord, c.env);
+  } catch {
+    return c.json({ error: "Email sender domain not configured" }, 500);
+  }
+
+  try {
+    const schema = parseVariables(template);
+    const variables = parsed.data.variables ?? {};
+    const rendered = await renderTemplate(template.subject, template.body_markdown, schema, variables);
+
+    const from = `${project.from_name} <${project.email_prefix}@${domain}>`;
+    await provider.send({
+      from,
+      to: parsed.data.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      idempotencyKey: generateId(),
+    });
+
+    return c.json({ status: "sent", provider_type: providerType });
+  } catch (error) {
+    if (error instanceof IdempotentSendResult) {
+      return c.json({ status: "sent", provider_type: providerType });
+    }
+    const message = error instanceof Error ? error.message : "Send failed";
+    return c.json({ error: message }, 500);
   }
 });
 
