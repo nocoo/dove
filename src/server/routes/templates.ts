@@ -1,0 +1,128 @@
+import { Hono } from "hono";
+import { z } from "zod/v4";
+import type { Env } from "../env";
+import {
+  listTemplates,
+  listAllTemplates,
+  getTemplate,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  parseVariables,
+} from "../lib/db/templates";
+import { renderTemplate } from "@/lib/email/render";
+
+const templates = new Hono<{ Bindings: Env }>();
+
+const VariableSchema = z.object({
+  name: z.string().min(1),
+  type: z.enum(["string", "number", "boolean"]),
+  required: z.boolean(),
+  default: z.string().optional(),
+});
+
+const CreateTemplateSchema = z.object({
+  project_id: z.string().min(1),
+  name: z.string().min(1).max(128),
+  slug: z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase alphanumeric with hyphens/underscores"),
+  subject: z.string().min(1).max(500),
+  body_markdown: z.string().min(1),
+  variables: z.array(VariableSchema).optional(),
+});
+
+const UpdateTemplateSchema = z.object({
+  name: z.string().min(1).max(128).optional(),
+  slug: z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase alphanumeric with hyphens/underscores").optional(),
+  subject: z.string().min(1).max(500).optional(),
+  body_markdown: z.string().min(1).optional(),
+  variables: z.array(VariableSchema).optional(),
+});
+
+const PreviewSchema = z.object({
+  variables: z.record(z.string(), z.string()).optional(),
+});
+
+templates.get("/", async (c) => {
+  const projectId = c.req.query("projectId");
+  const list = projectId
+    ? await listTemplates(c.env.DB, projectId)
+    : await listAllTemplates(c.env.DB);
+  return c.json(list);
+});
+
+templates.post("/", async (c) => {
+  const body = await c.req.json();
+  const parsed = CreateTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", details: parsed.error.flatten() }, 400);
+  }
+  try {
+    const template = await createTemplate(c.env.DB, parsed.data);
+    return c.json(template, 201);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint")) {
+      return c.json({ error: "A template with this slug already exists in this project" }, 409);
+    }
+    throw error;
+  }
+});
+
+templates.get("/:id", async (c) => {
+  const template = await getTemplate(c.env.DB, c.req.param("id"));
+  if (!template) return c.json({ error: "Template not found" }, 404);
+  return c.json(template);
+});
+
+templates.put("/:id", async (c) => {
+  const body = await c.req.json();
+  const parsed = UpdateTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", details: parsed.error.flatten() }, 400);
+  }
+  try {
+    const updated = await updateTemplate(c.env.DB, c.req.param("id"), parsed.data);
+    if (!updated) return c.json({ error: "Template not found" }, 404);
+    return c.json(updated);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint")) {
+      return c.json({ error: "A template with this slug already exists in this project" }, 409);
+    }
+    throw error;
+  }
+});
+
+templates.delete("/:id", async (c) => {
+  const deleted = await deleteTemplate(c.env.DB, c.req.param("id"));
+  if (!deleted) return c.json({ error: "Template not found" }, 404);
+  return c.body(null, 204);
+});
+
+templates.post("/:id/preview", async (c) => {
+  const template = await getTemplate(c.env.DB, c.req.param("id"));
+  if (!template) return c.json({ error: "Template not found" }, 404);
+
+  const body = await c.req.json();
+  const parsed = PreviewSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: "Invalid input", details: parsed.error.flatten() }, 400);
+  }
+
+  try {
+    const schema = parseVariables(template);
+    const variables = parsed.data.variables ?? {};
+    const result = await renderTemplate(
+      template.subject,
+      template.body_markdown,
+      schema,
+      variables,
+    );
+    return c.json(result);
+  } catch (error) {
+    if (error instanceof Error) {
+      return c.json({ error: error.message }, 422);
+    }
+    throw error;
+  }
+});
+
+export { templates };
