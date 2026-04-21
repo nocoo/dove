@@ -22,42 +22,11 @@ export class CloudflareProvider implements EmailProvider {
     const key = params.idempotencyKey;
 
     if (this.db && key) {
-      const existing = await this.db
-        .prepare("SELECT status FROM cf_email_idempotency WHERE id = ?")
-        .bind(key)
-        .first<{ status: string }>();
-
-      if (existing?.status === "sent") return { id: key };
-      if (existing?.status === "pending") throw new Error("Concurrent send for same idempotency key");
-
-      await this.db
-        .prepare("INSERT INTO cf_email_idempotency (id, status, created_at) VALUES (?, 'pending', ?)")
-        .bind(key, new Date().toISOString())
-        .run();
+      await this.acquireIdempotencySlot(key);
     }
 
-    const fromAddr = extractAddress(params.from);
-    const fromName = extractName(params.from);
-
-    const boundary = "----cf" + crypto.randomUUID().replace(/-/g, "");
-    const rawEmail = [
-      `From: ${fromName ? `${fromName} <${fromAddr}>` : fromAddr}`,
-      `To: ${params.to}`,
-      `Subject: ${params.subject}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: multipart/alternative; boundary="${boundary}"`,
-      ``,
-      `--${boundary}`,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: quoted-printable`,
-      ``,
-      params.html,
-      ``,
-      `--${boundary}--`,
-    ].join("\r\n");
-
     try {
-      const msg = new EmailMessage(fromAddr, params.to, new Blob([rawEmail]).stream());
+      const msg = createMimeMessage(params);
       await this.emailBinding.send(msg);
     } catch (error) {
       if (this.db && key) {
@@ -78,6 +47,80 @@ export class CloudflareProvider implements EmailProvider {
 
     return { id: key };
   }
+
+  private async acquireIdempotencySlot(key: string): Promise<void> {
+    const db = this.db as D1Database;
+
+    // Atomic check-and-insert: INSERT OR IGNORE dedupes on PK.
+    // If a row already exists, changes = 0 and we fall through to SELECT.
+    const result = await db
+      .prepare("INSERT OR IGNORE INTO cf_email_idempotency (id, status, created_at) VALUES (?, 'pending', ?)")
+      .bind(key, new Date().toISOString())
+      .run();
+
+    if (result.meta.changes > 0) return; // fresh slot acquired
+
+    const existing = await db
+      .prepare("SELECT status FROM cf_email_idempotency WHERE id = ?")
+      .bind(key)
+      .first<{ status: string }>();
+
+    if (!existing) return; // race: row disappeared, treat as fresh
+
+    if (existing.status === "sent") throw new IdempotentSendResult(key);
+    if (existing.status === "pending") throw new Error("Concurrent send for same idempotency key");
+
+    // status === 'failed': reclaim the slot for retry
+    await db
+      .prepare("UPDATE cf_email_idempotency SET status = 'pending', created_at = ?, completed_at = NULL WHERE id = ? AND status = 'failed'")
+      .bind(new Date().toISOString(), key)
+      .run();
+  }
+}
+
+/**
+ * Thrown when Layer 2 idempotency detects a duplicate send that already
+ * succeeded. The caller should treat this as a successful no-op.
+ */
+export class IdempotentSendResult extends Error {
+  readonly idempotencyKey: string;
+  constructor(key: string) {
+    super("Idempotent duplicate: already sent");
+    this.name = "IdempotentSendResult";
+    this.idempotencyKey = key;
+  }
+}
+
+function createMimeMessage(params: SendParams): { from: string; to: string } {
+  const fromAddr = extractAddress(params.from);
+  const fromName = extractName(params.from);
+
+  const boundary = "----cf" + crypto.randomUUID().replace(/-/g, "");
+  const rawEmail = [
+    `From: ${fromName ? `${fromName} <${fromAddr}>` : fromAddr}`,
+    `To: ${params.to}`,
+    `Subject: ${encodeRfc2047(params.subject)}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    ``,
+    `--${boundary}`,
+    `Content-Type: text/html; charset=UTF-8`,
+    `Content-Transfer-Encoding: 8bit`,
+    ``,
+    params.html,
+    ``,
+    `--${boundary}--`,
+  ].join("\r\n");
+
+  return new EmailMessage(fromAddr, params.to, new Blob([rawEmail]).stream());
+}
+
+/** RFC 2047 encode a header value if it contains non-ASCII characters. */
+function encodeRfc2047(value: string): string {
+  if (/^[\x20-\x7E]*$/.test(value)) return value;
+  const encoded = new TextEncoder().encode(value);
+  const b64 = btoa(String.fromCharCode(...encoded));
+  return `=?UTF-8?B?${b64}?=`;
 }
 
 export function extractName(from: string): string {

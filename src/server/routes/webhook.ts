@@ -24,6 +24,7 @@ import {
   getProviderDomain,
   type EmailProvider,
 } from "../lib/email/provider";
+import { IdempotentSendResult } from "@/lib/email/providers/cloudflare";
 
 const webhook = new Hono<{ Bindings: Env }>();
 
@@ -304,6 +305,19 @@ webhook.post("/:projectId/send", async (c) => {
         status: "sent",
       });
     } catch (error) {
+      if (error instanceof IdempotentSendResult) {
+        await markSendLogSent(db, sendLog.id, {
+          providerMessageId: error.idempotencyKey,
+          providerType,
+        });
+        return logAndRespond(200, {
+          id: sendLog.id,
+          resend_id: null,
+          provider_message_id: error.idempotencyKey,
+          provider_type: providerType,
+          status: "sent",
+        });
+      }
       const message = error instanceof Error ? error.message : "Provider send failed";
       await markSendLogFailed(db, sendLog.id, message);
       const errCode = providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed";
