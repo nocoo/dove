@@ -61,9 +61,10 @@ describe("server provider", () => {
 
     test("creates cloudflare provider", async () => {
       const mockBinding = { send: async () => {} } as unknown as SendEmail;
+      const mockDb = {} as D1Database;
       const provider = await createProvider({
         type: "cloudflare",
-      }, mockBinding);
+      }, mockBinding, mockDb);
       expect(provider.type).toBe("cloudflare");
     });
   });

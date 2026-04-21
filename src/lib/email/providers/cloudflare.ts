@@ -7,7 +7,10 @@ declare const EmailMessage: {
 export class CloudflareProvider implements EmailProvider {
   readonly type = "cloudflare" as const;
 
-  constructor(private readonly emailBinding: SendEmail) {}
+  constructor(
+    private readonly emailBinding: SendEmail,
+    private readonly db?: D1Database,
+  ) {}
 
   supportsDryRun(): boolean {
     return false;
@@ -16,6 +19,23 @@ export class CloudflareProvider implements EmailProvider {
   setDryRun(): void {}
 
   async send(params: SendParams): Promise<SendResult> {
+    const key = params.idempotencyKey;
+
+    if (this.db && key) {
+      const existing = await this.db
+        .prepare("SELECT status FROM cf_email_idempotency WHERE id = ?")
+        .bind(key)
+        .first<{ status: string }>();
+
+      if (existing?.status === "sent") return { id: key };
+      if (existing?.status === "pending") throw new Error("Concurrent send for same idempotency key");
+
+      await this.db
+        .prepare("INSERT INTO cf_email_idempotency (id, status, created_at) VALUES (?, 'pending', ?)")
+        .bind(key, new Date().toISOString())
+        .run();
+    }
+
     const fromAddr = extractAddress(params.from);
     const fromName = extractName(params.from);
 
@@ -36,10 +56,27 @@ export class CloudflareProvider implements EmailProvider {
       `--${boundary}--`,
     ].join("\r\n");
 
-    const msg = new EmailMessage(fromAddr, params.to, new Blob([rawEmail]).stream());
-    await this.emailBinding.send(msg);
+    try {
+      const msg = new EmailMessage(fromAddr, params.to, new Blob([rawEmail]).stream());
+      await this.emailBinding.send(msg);
+    } catch (error) {
+      if (this.db && key) {
+        await this.db
+          .prepare("UPDATE cf_email_idempotency SET status = 'failed' WHERE id = ?")
+          .bind(key)
+          .run();
+      }
+      throw error;
+    }
 
-    return { id: crypto.randomUUID() };
+    if (this.db && key) {
+      await this.db
+        .prepare("UPDATE cf_email_idempotency SET status = 'sent', completed_at = ? WHERE id = ?")
+        .bind(new Date().toISOString(), key)
+        .run();
+    }
+
+    return { id: key };
   }
 }
 

@@ -99,6 +99,7 @@ export function parseProviderConfig(record: EmailProviderRecord): ProviderConfig
 export async function createProvider(
   config: ProviderConfig,
   emailBinding?: SendEmail,
+  db?: D1Database,
 ): Promise<EmailProvider> {
   switch (config.type) {
     case "resend": {
@@ -108,7 +109,7 @@ export async function createProvider(
     case "cloudflare": {
       if (!emailBinding) throw new Error("EMAIL binding required for Cloudflare provider");
       const { CloudflareProvider } = await import("./providers/cloudflare");
-      return new CloudflareProvider(emailBinding);
+      return new CloudflareProvider(emailBinding, db);
     }
     default:
       throw new Error(
