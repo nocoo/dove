@@ -21,5 +21,6 @@ export interface Env {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   RESEND_API_KEY: string;
+  RESEND_FROM_DOMAIN?: string;
   ALLOWED_EMAILS: string; // comma-separated whitelist
 }

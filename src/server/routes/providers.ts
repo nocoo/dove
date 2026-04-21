@@ -11,7 +11,7 @@ import {
 } from "../lib/db/email-providers";
 import { sanitizeProvider } from "../lib/sanitize";
 import { parseConfigForType, DomainSchema } from "@/lib/email/provider-schema";
-import { parseProviderConfig } from "@/lib/email/provider";
+import { parseProviderConfig } from "../lib/email/provider";
 
 const providers = new Hono<{ Bindings: Env }>();
 
