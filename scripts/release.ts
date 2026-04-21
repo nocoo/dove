@@ -46,6 +46,7 @@ interface VersionTarget {
 
 const VERSION_TARGETS: VersionTarget[] = [
   { path: "package.json", pattern: "json-version" },
+  { path: "src/server/lib/version.ts", pattern: "const-version" },
 ];
 
 const BUMP_TYPES = ["patch", "minor", "major"] as const;
