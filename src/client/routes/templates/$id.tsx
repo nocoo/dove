@@ -174,10 +174,16 @@ export function TemplateDetailPage() {
         await handleSave();
       }
 
+      const mergedPreviewVars: Record<string, string> = {};
+      for (const v of variables) {
+        if (v.name) {
+          mergedPreviewVars[v.name] = previewVars[v.name] ?? v.default ?? "";
+        }
+      }
       const res = await fetch(`/api/templates/${templateId}/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ variables: previewVars }),
+        body: JSON.stringify({ variables: mergedPreviewVars }),
       });
 
       if (!res.ok) {
@@ -232,10 +238,16 @@ export function TemplateDetailPage() {
       if (dirty) {
         await handleSave();
       }
+      const mergedVars: Record<string, string> = {};
+      for (const v of variables) {
+        if (v.name) {
+          mergedVars[v.name] = previewVars[v.name] ?? v.default ?? "";
+        }
+      }
       const res = await fetch(`/api/templates/${templateId}/test-send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: testTo.trim(), variables: previewVars }),
+        body: JSON.stringify({ to: testTo.trim(), variables: mergedVars }),
       });
       const data = await res.json() as { status?: string; provider_type?: string; error?: string };
       if (!res.ok) {
