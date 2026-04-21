@@ -251,9 +251,14 @@ export function TemplateDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to: testTo.trim(), variables: mergedVars }),
       });
-      const data = await res.json() as { status?: string; provider_type?: string; error?: string };
+      let data: { status?: string; provider_type?: string; error?: string };
+      try {
+        data = await res.json() as typeof data;
+      } catch {
+        throw new Error(`Server returned ${res.status}`);
+      }
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to send test email");
+        throw new Error(data.error ?? `Server returned ${res.status}`);
       }
       setSendResult({ ok: true, message: `Sent via ${data.provider_type}` });
     } catch (err) {
