@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   root: "src/client",
   define: {
-    "process.env.NEXT_PUBLIC_APP_VERSION": JSON.stringify(pkg.version),
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   build: {
     outDir: "../../dist/client",
