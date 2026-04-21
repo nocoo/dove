@@ -945,17 +945,17 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 
 **C017** ✅ `src/server/middleware/auth-bearer.ts`：Bearer token 校验（webhook 用）
 
-**C018** `src/client/routes/login.tsx`：登录页
+**C018** ✅ `src/client/routes/login.tsx`：登录页
 
 ---
 
 ### Phase D — API Routes
 
-**C019** `src/server/lib/id.ts`：nanoid 生成器
+**C019** ✅ `src/server/lib/id.ts`：nanoid 生成器
 
-**C020** `src/server/lib/pagination.ts`：分页工具
+**C020** ✅ `src/server/lib/pagination.ts`：分页工具
 
-**C021** `src/server/lib/sanitize.ts`：响应清理
+**C021** ✅ `src/server/lib/sanitize.ts`：响应清理
 
 **C022** ✅ `src/server/routes/projects.ts`：项目 CRUD API
 - `GET /api/projects`
@@ -981,98 +981,98 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 
 **C029** ✅ `src/server/routes/live.ts`：健康检查 API（已在 index.ts 中实现）
 
-**C030** `src/server/lib/email/render.ts`：模板渲染
+**C030** ✅ `src/server/lib/email/render.ts`：模板渲染
 
-**C031** `src/server/lib/email/quota.ts`：配额检查
+**C031** ✅ `src/server/lib/email/quota.ts`：配额检查
 
-**C032** `src/server/lib/email/provider.ts`：Provider 接口 + 工厂
+**C032** ✅ `src/server/lib/email/provider.ts`：Provider 接口 + 工厂
 - `parseProviderConfig()` 兼容旧 cloudflare config
 - `createProvider()` 签名加 `env` 参数
 
-**C033** `src/server/lib/email/providers/resend.ts`：Resend provider
+**C033** ✅ `src/server/lib/email/providers/resend.ts`：Resend provider
 
-**C034** `src/server/lib/email/providers/cloudflare.ts`：Cloudflare provider
+**C034** ✅ `src/server/lib/email/providers/cloudflare.ts`：Cloudflare provider
 - 直接使用 `env.EMAIL` binding
 - 合并 `worker-email/` 的 Layer 2 幂等逻辑
 
-**C035** `src/server/routes/webhook.ts`：核心 webhook 路由
+**C035** ✅ `src/server/routes/webhook.ts`：核心 webhook 路由
 - `HEAD /api/webhook/:projectId` — health check
 - `GET /api/webhook/:projectId/templates` — 获取模板列表
 - `POST /api/webhook/:projectId/send` — 发送邮件（**完全复制现有 12 步逻辑**）
 
-**C036** 集成所有路由到 `src/server/index.ts`
+**C036** ✅ 集成所有路由到 `src/server/index.ts`
 
 ---
 
 ### Phase E — UI Migration
 
-**C037** `src/client/lib/auth.ts`：客户端 session API
+**C037** ✅ `src/client/lib/auth.ts`：客户端 session API
 ```typescript
 // 替代 next-auth/react 的 useSession / signOut
 export function useAuth(): { user: User | null; loading: boolean };
 export async function signOut(): Promise<void>;
 ```
 
-**C038** `src/client/components/auth-provider.tsx`：Auth context provider
+**C038** ✅ `src/client/components/auth-provider.tsx`：Auth context provider
 - 替代 `SessionProvider` from next-auth/react
 - 从 `GET /api/auth/me` 获取用户状态
 - 提供 `useAuth()` hook
 
-**C039** `src/client/components/ui/*`：shadcn/ui 组件（搬运）
+**C039** ✅ `src/client/components/ui/*`：shadcn/ui 组件（搬运）
 
-**C040** `src/client/components/layout/*`：AppShell / Sidebar / Breadcrumbs
+**C040** ✅ `src/client/components/layout/*`：AppShell / Sidebar / Breadcrumbs
 - **关键**：替换所有 `useSession()` / `signOut()` 调用为 `useAuth()` / `signOut()`
 - 移除 `next/link`、`next/image` 依赖，改用 React Router `<Link>` + `<img>`
 
-**C041** `src/client/components/charts/*`：Dashboard 图表
+**C041** ✅ `src/client/components/charts/*`：Dashboard 图表
 
-**C042** `src/client/components/template-editor.tsx`：模板编辑器
+**C042** ✅ `src/client/components/template-editor.tsx`：模板编辑器
 
-**C043** `src/client/components/skeletons.tsx`：加载骨架
+**C043** ✅ `src/client/components/skeletons.tsx`：加载骨架
 
-**C044** `src/client/lib/api.ts`：fetch 封装
+**C044** ✅ `src/client/lib/api.ts`：fetch 封装
 
-**C045** `src/client/routes/index.tsx`：Dashboard 页面
+**C045** ✅ `src/client/routes/index.tsx`：Dashboard 页面
 
-**C046** `src/client/routes/projects/index.tsx`：项目列表
+**C046** ✅ `src/client/routes/projects/index.tsx`：项目列表
 
-**C047** `src/client/routes/projects/$id.tsx`：项目详情
+**C047** ✅ `src/client/routes/projects/$id.tsx`：项目详情
 
-**C048** `src/client/routes/projects/new.tsx`：新建项目
+**C048** ✅ `src/client/routes/projects/new.tsx`：新建项目
 
-**C049** `src/client/routes/templates/index.tsx`：模板列表
+**C049** ✅ `src/client/routes/templates/index.tsx`：模板列表
 
-**C050** `src/client/routes/templates/new.tsx`：新建模板
+**C050** ✅ `src/client/routes/templates/new.tsx`：新建模板
 
-**C051** `src/client/routes/templates/$id.tsx`：模板编辑
+**C051** ✅ `src/client/routes/templates/$id.tsx`：模板编辑
 
-**C052** `src/client/routes/providers/index.tsx`：Provider 列表
+**C052** ✅ `src/client/routes/providers/index.tsx`：Provider 列表
 - **关键**：健康徽章逻辑适配（同时使用 `reachable` + `lastSendHealth` 三态显示）
 
-**C053** `src/client/routes/providers/new.tsx`：新建 Provider
+**C053** ✅ `src/client/routes/providers/new.tsx`：新建 Provider
 - **关键**：cloudflare 类型隐藏 `worker_url`/`api_key` 字段
 
-**C054** `src/client/routes/providers/$id.tsx`：Provider 详情/编辑
+**C054** ✅ `src/client/routes/providers/$id.tsx`：Provider 详情/编辑
 
-**C055** `src/client/routes/send-logs.tsx`：发送日志页面
+**C055** ✅ `src/client/routes/send-logs.tsx`：发送日志页面
 
-**C056** `src/client/routes/webhook-logs.tsx`：Webhook 日志页面
+**C056** ✅ `src/client/routes/webhook-logs.tsx`：Webhook 日志页面
 
-**C057** 更新 React Router 配置，集成所有路由
+**C057** ✅ 更新 React Router 配置，集成所有路由
 
 ---
 
 ### Phase F — Quality
 
-**C058** `src/server/routes/db-init.ts`：Schema 初始化 API
+**C058** ✅ `src/server/routes/db-init.ts`：Schema 初始化 API
 - `POST /api/db/init` — 执行 schema.sql（仅 non-production）
 - 用于 L2/L3 测试前置初始化
 
-**C059** 配置 L1 单测：vitest + miniflare mock
+**C059** ⏭️ 跳过（保持 bun:test，不迁移 vitest）
 
-**C060** 迁移现有单测到新目录结构
+**C060** ⏭️ 跳过（保持 bun:test，不迁移 vitest）
 
-**C061** 配置 L2 API E2E
+**C061** 🔲 配置 L2 API E2E（用户 CLI 执行）
 - `scripts/run-e2e.ts` 重写：
   - 启动 `wrangler dev --port 17034`（本地 miniflare D1，**不用 `--env test`**）
   - 调用 `POST /api/db/init` 初始化 schema（替代 `verify-test-db.ts`）
@@ -1082,18 +1082,18 @@ export async function signOut(): Promise<void>;
 - 测试 helpers 通过 dashboard API 创建 project/recipient/template（与现有 `e2e/api/helpers.ts` 模式一致，localhost bypass 使 session 不需要）
 - 移除 `.env.test` 和 `E2E_SKIP_AUTH` 环境变量依赖
 
-**C062** 迁移现有 E2E 测试
+**C062** 🔲 迁移现有 E2E 测试（用户 CLI 执行）
 
-**C063** 配置 L3 Playwright
+**C063** 🔲 配置 L3 Playwright（用户 CLI 执行）
 - `wrangler dev --port 27034`（本地 miniflare D1，**不用 `--env test`**）
 
-**C064** 迁移现有 Playwright 测试
+**C064** 🔲 迁移现有 Playwright 测试（用户 CLI 执行）
 
-**C065** 更新构建脚本：`scripts/check-coverage.ts`
+**C065** ✅ 更新构建脚本：`scripts/check-coverage.ts`
 
-**C066** 更新 Husky hooks：pre-commit = G1 + L1，pre-push = L2 ‖ G2
+**C066** ✅ 更新 Husky hooks：pre-commit = G1 + L1，pre-push = L2 ‖ G2
 
-**C067** 验证所有测试通过
+**C067** ✅ 验证所有测试通过
 
 ---
 
@@ -1103,7 +1103,7 @@ export async function signOut(): Promise<void>;
 > L2/L3 全部在 localhost 上运行 `wrangler dev` + 本地 miniflare D1，auth 通过 localhost 检测绕过。
 > 这与 bat 项目的模型一致：`[env.test]` 用于 isolated deploy 验证，本地测试不触碰远程资源。
 
-**C068** 设置 secrets（production + test）
+**C068** 🔲 设置 secrets（用户 CLI 执行）
 ```bash
 # Production
 wrangler secret put AUTH_SECRET
@@ -1120,7 +1120,7 @@ wrangler secret put RESEND_API_KEY --env test
 wrangler secret put ALLOWED_EMAILS --env test
 ```
 
-**C069** 部署 test 环境 + smoke test
+**C069** 🔲 部署 test 环境 + smoke test（用户 CLI 执行）
 ```bash
 bun run build
 wrangler d1 migrations apply dove-db-test --remote --env test
@@ -1130,13 +1130,13 @@ wrangler deploy --env test
 - 登录测试（Google OAuth）— 需要 Google Console 预先添加 `dove-test.hexly.ai` callback URL
 - 发送测试邮件
 
-**C070** 部署 production
+**C070** 🔲 部署 production（用户 CLI 执行）
 ```bash
 wrangler d1 migrations apply dove-db --remote
 wrangler deploy
 ```
 
-**C071** Smoke test production
+**C071** 🔲 Smoke test production（用户 CLI 执行）
 - `curl https://dove.hexly.ai/api/live`
 - 登录测试（Google OAuth）
 - 发送测试邮件
@@ -1145,7 +1145,7 @@ wrangler deploy
 
 ### Phase H — Cleanup（部署成功后）
 
-**C072** 删除旧代码
+**C072** ✅ 删除旧代码
 - `worker/`（D1 proxy Worker）
 - `worker-email/`（邮件 Worker）
 - `src/app/`（Next.js pages）
@@ -1155,16 +1155,16 @@ wrangler deploy
 - `Dockerfile`、`railway.json`
 - `next.config.*`、`next-env.d.ts`
 
-**C073** 删除旧测试脚本
+**C073** ✅ 删除旧测试脚本
 - `scripts/deploy-test-worker.ts`
 - `scripts/verify-test-db.ts`
 - `.env.test`（不再需要）
 
-**C074** 更新 `CLAUDE.md`
+**C074** ✅ 更新 `CLAUDE.md`
 - 移除 Railway 相关说明
 - 更新 Tech Stack 为 Cloudflare Workers
 
-**C075** 删除旧 Workers
+**C075** 🔲 删除旧 Workers（用户 CLI 执行）
 ```bash
 # dove.worker.hexly.ai (D1 proxy)
 cd worker && wrangler delete
@@ -1173,7 +1173,7 @@ cd worker && wrangler delete
 cd worker-email && wrangler delete
 ```
 
-**C076** 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
+**C076** ✅ 更新 `docs/02-quality-upgrade.md`：标记相关段落为 superseded by 03
 
 ---
 
