@@ -261,11 +261,9 @@ export function TemplateDetailPage() {
         throw new Error(data.error ?? `Server returned ${res.status}`);
       }
       setSendResult({ ok: true, message: `Sent via ${data.provider_type}` });
-      toast.success(`Test email sent via ${data.provider_type}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to send test email";
       setSendResult({ ok: false, message });
-      toast.error(message);
     } finally {
       setSending(false);
     }
