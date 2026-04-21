@@ -24,6 +24,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.use("/*", authSession);
 
 app.get("/api/live", async (c) => {
+  const startTime = Date.now();
   let dbConnected = false;
   let dbError: string | null = null;
 
@@ -37,11 +38,15 @@ app.get("/api/live", async (c) => {
   const status = dbConnected ? "ok" : "error";
   const statusCode = dbConnected ? 200 : 503;
 
+  c.header("cache-control", "no-store");
+
   return c.json(
     {
       status,
       version: APP_VERSION,
       component: "dove",
+      timestamp: new Date().toISOString(),
+      uptime: (Date.now() - startTime) / 1000,
       database: {
         connected: dbConnected,
         ...(dbError ? { error: dbError } : {}),

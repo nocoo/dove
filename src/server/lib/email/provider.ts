@@ -79,7 +79,11 @@ export async function createLegacyProvider(env: Env): Promise<EmailProvider> {
     throw new Error("RESEND_API_KEY not configured");
   }
   const { ResendProvider } = await import("./providers/resend");
-  return new ResendProvider(apiKey);
+  const provider = new ResendProvider(apiKey);
+  if (env.EMAIL_DRY_RUN === "true" || env.RESEND_DRY_RUN === "true") {
+    provider.setDryRun(true);
+  }
+  return provider;
 }
 
 export function getProviderDomain(

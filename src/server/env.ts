@@ -15,4 +15,8 @@ export interface Env {
 
   // Dev mode (set in .env.local, bypasses auth on local dev)
   DEV_MODE?: string;
+
+  // Dry-run toggles (E2E)
+  EMAIL_DRY_RUN?: string;
+  RESEND_DRY_RUN?: string;
 }

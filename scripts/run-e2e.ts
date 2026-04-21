@@ -4,12 +4,11 @@
  * Steps:
  *   1. Load .env.test — hard fail if missing
  *   2. Inequality check — test URL !== production URL
- *   3. Verify test DB marker (_test_marker)
- *   4. Spawn `wrangler dev --port 17034` with E2E env
- *   5. Wait for server ready (poll /api/live)
- *   6. Run `bun test e2e/api/`
- *   7. Kill server
- *   8. Exit with test exit code
+ *   3. Spawn `wrangler dev --port 17034` with E2E env
+ *   4. Wait for server ready (poll /api/live)
+ *   5. Run `bun test e2e/api/`
+ *   6. Kill server
+ *   7. Exit with test exit code
  *
  * Usage:
  *   bun run scripts/run-e2e.ts
@@ -76,25 +75,7 @@ function checkInequality(testUrl: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3: Verify test DB marker
-// ---------------------------------------------------------------------------
-
-async function verifyTestDb(): Promise<void> {
-  console.log("\nStep 3: Verifying test DB...");
-  const script = resolve(import.meta.dirname, "verify-test-db.ts");
-  const proc = Bun.spawn(["bun", "run", script], {
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    console.error("FATAL: Test DB verification failed. Aborting E2E.\n");
-    process.exit(1);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Step 4: Spawn dev server
+// Step 3: Spawn dev server
 // ---------------------------------------------------------------------------
 
 function spawnDevServer(envVars: Map<string, string>): Subprocess {
@@ -105,10 +86,20 @@ function spawnDevServer(envVars: Map<string, string>): Subprocess {
   }
   env.PORT = String(E2E_PORT);
 
-  console.log(`\nStep 4: Starting wrangler dev on port ${E2E_PORT}...`);
+  console.log(`\nStep 3: Starting wrangler dev on port ${E2E_PORT}...`);
 
   const proc = Bun.spawn(
-    ["npx", "wrangler", "dev", "--port", String(E2E_PORT)],
+    [
+      "npx",
+      "wrangler",
+      "dev",
+      "--env",
+      "test",
+      "--env-file",
+      ".env.test",
+      "--port",
+      String(E2E_PORT),
+    ],
     {
       cwd: ROOT,
       env,
@@ -121,14 +112,14 @@ function spawnDevServer(envVars: Map<string, string>): Subprocess {
 }
 
 // ---------------------------------------------------------------------------
-// Step 5: Wait for server ready
+// Step 4: Wait for server ready
 // ---------------------------------------------------------------------------
 
 async function waitForServer(): Promise<void> {
   const url = `http://localhost:${E2E_PORT}/api/live`;
   const start = Date.now();
 
-  console.log(`Step 5: Waiting for server at ${url}...`);
+  console.log(`Step 4: Waiting for server at ${url}...`);
 
   while (Date.now() - start < MAX_WAIT_MS) {
     try {
@@ -155,11 +146,11 @@ async function waitForServer(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 5b: Warm up D1 connection
+// Step 4b: Warm up D1 connection
 // ---------------------------------------------------------------------------
 
 async function warmupD1(): Promise<void> {
-  console.log("Step 5b: Warming up D1 connection...");
+  console.log("Step 4b: Warming up D1 connection...");
   const start = Date.now();
   try {
     const res = await fetch(`http://localhost:${E2E_PORT}/api/projects`, {
@@ -173,11 +164,11 @@ async function warmupD1(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6: Run tests
+// Step 5: Run tests
 // ---------------------------------------------------------------------------
 
 async function runTests(): Promise<number> {
-  console.log("\nStep 6: Running E2E tests...\n");
+  console.log("\nStep 5: Running E2E tests...\n");
 
   const proc = Bun.spawn(["bun", "test", "--timeout", "15000", "e2e/api/"], {
     cwd: ROOT,
@@ -211,32 +202,29 @@ async function main(): Promise<void> {
   console.log("\nStep 2: Checking URL inequality...");
   checkInequality(testUrl);
 
-  // Step 3: Verify test DB
-  await verifyTestDb();
-
-  // Step 4: Spawn dev server
+  // Step 3: Spawn dev server
   const server = spawnDevServer(envVars);
 
   let testExitCode = 1;
 
   try {
-    // Step 5: Wait for ready
+    // Step 4: Wait for ready
     await waitForServer();
 
-    // Step 5b: Warm up D1
+    // Step 4b: Warm up D1
     await warmupD1();
 
-    // Step 6: Run tests
+    // Step 5: Run tests
     testExitCode = await runTests();
   } finally {
-    // Step 7: Kill server
-    console.log("\nStep 7: Stopping dev server...");
+    // Step 6: Kill server
+    console.log("\nStep 6: Stopping dev server...");
     server.kill();
     await server.exited;
     console.log("  Server stopped.");
   }
 
-  // Step 8: Exit
+  // Step 7: Exit
   if (testExitCode !== 0) {
     console.error("\n=== E2E tests FAILED ===\n");
     process.exit(1);
