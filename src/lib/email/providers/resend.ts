@@ -25,7 +25,7 @@ export class ResendProvider implements EmailProvider {
 
   async send(params: SendParams): Promise<SendResult> {
     // Dry-run: validate params but skip the real API call.
-    if (this.dryRun || process.env.RESEND_DRY_RUN === "true") {
+    if (this.dryRun) {
       return { id: `dry_run_${crypto.randomUUID()}` };
     }
 
