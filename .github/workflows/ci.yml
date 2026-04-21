@@ -51,6 +51,7 @@ jobs:
           RESEND_DRY_RUN=true
           DEV_MODE=true
           RESEND_API_KEY=re_ci_placeholder_not_real
+          RESEND_FROM_DOMAIN=test.example.com
           EOF
 
       - name: "L2: API E2E tests"
@@ -79,6 +80,18 @@ jobs:
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
+
+      - name: Generate .env.test
+        run: |
+          cat > .env.test << 'EOF'
+          D1_WORKER_URL=http://localhost:27034
+          D1_WORKER_API_KEY=ci-placeholder
+          EMAIL_DRY_RUN=true
+          RESEND_DRY_RUN=true
+          DEV_MODE=true
+          RESEND_API_KEY=re_ci_placeholder_not_real
+          RESEND_FROM_DOMAIN=test.example.com
+          EOF
 
       - name: "L3: Playwright E2E tests"
         run: bun run test:e2e:bdd
