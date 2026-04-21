@@ -24,8 +24,8 @@ test.describe("Project CRUD", () => {
     // Should redirect to project detail
     await expect(page).toHaveURL(/\/projects\/[a-zA-Z0-9_-]+$/, { timeout: 15_000 });
 
-    // Verify project name is displayed
-    await expect(page.getByText(projectName)).toBeVisible();
+    // Verify project name is populated in the form (detail page shows it as input value, not text)
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue(projectName, { timeout: 15_000 });
 
     // Navigate back to projects list and verify it appears
     await page.getByRole("link", { name: "Projects" }).first().click();

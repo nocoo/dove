@@ -44,8 +44,8 @@ test.describe("Template CRUD", () => {
     // Should redirect to template detail
     await page.waitForURL(/\/templates\/[a-zA-Z0-9_-]+$/, { timeout: 15_000 });
 
-    // Verify template name is displayed (detail page loads data from D1)
-    await expect(page.getByText(templateName)).toBeVisible({ timeout: 20_000 });
+    // Verify template name is populated in the form (detail page shows it as input value, not text)
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue(templateName, { timeout: 20_000 });
 
     // Cleanup: delete the project (cascades to template)
     await page.request.delete(`/api/projects/${project.id}`);
