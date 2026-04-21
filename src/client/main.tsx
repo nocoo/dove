@@ -48,6 +48,7 @@ function App() {
           }
         />
       </Routes>
+      <Toaster />
     </BrowserRouter>
   );
 }
@@ -57,7 +58,6 @@ if (root) {
   createRoot(root).render(
     <StrictMode>
       <App />
-      <Toaster />
     </StrictMode>,
   );
 }
