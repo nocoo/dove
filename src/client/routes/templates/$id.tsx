@@ -79,6 +79,7 @@ export function TemplateDetailPage() {
   // Test send state
   const [testTo, setTestTo] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const fetchTemplate = useCallback(async () => {
     if (!templateId) return;
@@ -235,6 +236,7 @@ export function TemplateDetailPage() {
     if (!templateId || !testTo.trim()) return;
     try {
       setSending(true);
+      setSendResult(null);
       if (dirty) {
         await handleSave();
       }
@@ -253,9 +255,9 @@ export function TemplateDetailPage() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to send test email");
       }
-      toast.success(`Test email sent via ${data.provider_type}`);
+      setSendResult({ ok: true, message: `Sent via ${data.provider_type}` });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to send test email");
+      setSendResult({ ok: false, message: err instanceof Error ? err.message : "Failed to send test email" });
     } finally {
       setSending(false);
     }
@@ -538,6 +540,11 @@ export function TemplateDetailPage() {
                   Send
                 </Button>
               </div>
+              {sendResult && (
+                <p className={`text-xs mt-2 ${sendResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                  {sendResult.ok ? "✓ " : "✗ "}{sendResult.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
