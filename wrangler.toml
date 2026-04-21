@@ -2,6 +2,9 @@ name = "dove"
 main = "src/server/index.ts"
 compatibility_date = "2026-04-01"
 
+[dev]
+port = 7032
+
 # Static assets (Vite build output)
 [assets]
 directory = "./dist/client"

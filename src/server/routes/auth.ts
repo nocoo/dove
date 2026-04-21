@@ -84,6 +84,7 @@ auth.post("/signout", async (c) => {
 auth.get("/me", async (c) => {
   const host = c.req.header("host") ?? new URL(c.req.url).host;
   const isLocal =
+    c.env.DEV_MODE === "true" ||
     host.startsWith("localhost") ||
     host.startsWith("127.0.0.1") ||
     host.startsWith("[::1]");

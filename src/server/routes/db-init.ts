@@ -110,6 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_cf_email_idempotency_status ON cf_email_idempoten
 dbInit.post("/", async (c) => {
   const host = c.req.header("host") ?? new URL(c.req.url).host;
   const isLocal =
+    c.env.DEV_MODE === "true" ||
     host.startsWith("localhost") ||
     host.startsWith("127.0.0.1") ||
     host.startsWith("[::1]");

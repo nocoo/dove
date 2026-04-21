@@ -20,6 +20,11 @@ function isLocalhost(host: string): boolean {
   );
 }
 
+function isDevMode(env: Env, host: string): boolean {
+  if (env.DEV_MODE === "true") return true;
+  return isLocalhost(host);
+}
+
 const DEV_USER: SessionData = {
   email: "dev@localhost",
   name: "Dev User",
@@ -40,7 +45,7 @@ export const authSession = createMiddleware<SessionEnv>(async (c, next) => {
   }
 
   const host = c.req.header("host") ?? new URL(c.req.url).host;
-  if (isLocalhost(host)) {
+  if (isDevMode(c.env, host)) {
     c.set("user", DEV_USER);
     return next();
   }

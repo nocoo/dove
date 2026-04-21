@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "wrangler dev --port 7032",
+    "dev": "wrangler dev",
     "build": "vite build",
     "lint": "eslint --max-warnings=0",
     "test": "ENABLE_DOM_TESTS=1 bun test src/__tests__/ && bun test src/server/__tests__/ --exclude '**/isolated/**'",
