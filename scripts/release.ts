@@ -23,7 +23,6 @@
 import { spawn } from "child_process";
 import { resolve as pathResolve } from "path";
 import { readFileSync, writeFileSync } from "fs";
-import * as readline from "readline";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -362,24 +361,6 @@ function updateChangelog(newSection: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Interactive prompt
-// ---------------------------------------------------------------------------
-
-function confirm(message: string): Promise<boolean> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(`${message} [Y/n] `, (answer) => {
-      rl.close();
-      const a = answer.trim().toLowerCase();
-      resolve(a === "" || a === "y" || a === "yes");
-    });
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -596,14 +577,6 @@ async function main(): Promise<void> {
   if (isDryRun) {
     console.log("   [dry-run] Would perform the above actions");
     console.log(`\n✅ Dry run complete for v${newVersion}`);
-    process.exit(0);
-  }
-
-  const proceed = await confirm("   Proceed?");
-  if (!proceed) {
-    console.log(
-      "\n   Aborted. Commit is preserved locally — push manually when ready.",
-    );
     process.exit(0);
   }
 
