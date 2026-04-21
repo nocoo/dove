@@ -5,18 +5,17 @@
  *   1. Load .env.test — hard fail if missing
  *   2. Inequality check — test URL !== production URL
  *   3. Verify test DB marker (_test_marker)
- *   4. Clean .next/dev/lock (stale lock prevents parallel dev servers)
- *   5. Spawn `next dev --port 17034` with E2E env
- *   6. Wait for server ready (poll /api/live)
- *   7. Run `bun test e2e/api/`
- *   8. Kill server
- *   9. Exit with test exit code
+ *   4. Spawn `wrangler dev --port 17034` with E2E env
+ *   5. Wait for server ready (poll /api/live)
+ *   6. Run `bun test e2e/api/`
+ *   7. Kill server
+ *   8. Exit with test exit code
  *
  * Usage:
  *   bun run scripts/run-e2e.ts
  */
 
-import { readFileSync, existsSync, unlinkSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Subprocess } from "bun";
 
@@ -95,35 +94,21 @@ async function verifyTestDb(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 4: Clean .next/dev/lock
-// ---------------------------------------------------------------------------
-
-function cleanDevLock(): void {
-  const lockPath = resolve(ROOT, ".next/dev/lock");
-  if (existsSync(lockPath)) {
-    console.log("  Removing stale .next/dev/lock...");
-    unlinkSync(lockPath);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Step 5: Spawn dev server
+// Step 4: Spawn dev server
 // ---------------------------------------------------------------------------
 
 function spawnDevServer(envVars: Map<string, string>): Subprocess {
   const env: Record<string, string> = { ...process.env } as Record<string, string>;
 
-  // Inject test environment variables
   for (const [key, value] of envVars) {
     env[key] = value;
   }
-  env.NODE_ENV = "development";
   env.PORT = String(E2E_PORT);
 
-  console.log(`\nStep 5: Starting dev server on port ${E2E_PORT}...`);
+  console.log(`\nStep 4: Starting wrangler dev on port ${E2E_PORT}...`);
 
   const proc = Bun.spawn(
-    ["npx", "next", "dev", "--port", String(E2E_PORT)],
+    ["npx", "wrangler", "dev", "--port", String(E2E_PORT)],
     {
       cwd: ROOT,
       env,
@@ -136,21 +121,19 @@ function spawnDevServer(envVars: Map<string, string>): Subprocess {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6: Wait for server ready
+// Step 5: Wait for server ready
 // ---------------------------------------------------------------------------
 
 async function waitForServer(): Promise<void> {
   const url = `http://localhost:${E2E_PORT}/api/live`;
   const start = Date.now();
 
-  console.log(`Step 6: Waiting for server at ${url}...`);
+  console.log(`Step 5: Waiting for server at ${url}...`);
 
   while (Date.now() - start < MAX_WAIT_MS) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
       if (response.ok) {
-        // /api/live now follows the surety standard:
-        // { status, version, component, timestamp, uptime, database: { connected } }
         const body = (await response.json()) as {
           status: string;
           database?: { connected?: boolean };
@@ -162,7 +145,7 @@ async function waitForServer(): Promise<void> {
         console.log(`  Server responded but not ready: ${JSON.stringify(body)}`);
       }
     } catch {
-      // Server not up yet — expected during startup
+      // Server not up yet
     }
     await Bun.sleep(POLL_INTERVAL_MS);
   }
@@ -172,30 +155,29 @@ async function waitForServer(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 6b: Warm up D1 connection
+// Step 5b: Warm up D1 connection
 // ---------------------------------------------------------------------------
 
 async function warmupD1(): Promise<void> {
-  console.log("Step 6b: Warming up D1 connection...");
+  console.log("Step 5b: Warming up D1 connection...");
   const start = Date.now();
   try {
     const res = await fetch(`http://localhost:${E2E_PORT}/api/projects`, {
       signal: AbortSignal.timeout(15_000),
     });
-    await res.text(); // drain body
+    await res.text();
     console.log(`  D1 warm (${Date.now() - start}ms, status=${res.status})`);
   } catch (err) {
     console.log(`  WARN: D1 warmup call failed (${Date.now() - start}ms): ${err}`);
-    // Non-fatal — tests will retry on their own
   }
 }
 
 // ---------------------------------------------------------------------------
-// Step 7: Run tests
+// Step 6: Run tests
 // ---------------------------------------------------------------------------
 
 async function runTests(): Promise<number> {
-  console.log("\nStep 7: Running E2E tests...\n");
+  console.log("\nStep 6: Running E2E tests...\n");
 
   const proc = Bun.spawn(["bun", "test", "--timeout", "15000", "e2e/api/"], {
     cwd: ROOT,
@@ -232,33 +214,29 @@ async function main(): Promise<void> {
   // Step 3: Verify test DB
   await verifyTestDb();
 
-  // Step 4: Clean stale lock
-  console.log("\nStep 4: Cleaning .next/dev/lock...");
-  cleanDevLock();
-
-  // Step 5: Spawn dev server
+  // Step 4: Spawn dev server
   const server = spawnDevServer(envVars);
 
   let testExitCode = 1;
 
   try {
-    // Step 6: Wait for ready
+    // Step 5: Wait for ready
     await waitForServer();
 
-    // Step 6b: Warm up D1 (avoid cold-start timeouts in tests)
+    // Step 5b: Warm up D1
     await warmupD1();
 
-    // Step 7: Run tests
+    // Step 6: Run tests
     testExitCode = await runTests();
   } finally {
-    // Step 8: Kill server
-    console.log("\nStep 8: Stopping dev server...");
+    // Step 7: Kill server
+    console.log("\nStep 7: Stopping dev server...");
     server.kill();
     await server.exited;
     console.log("  Server stopped.");
   }
 
-  // Step 9: Exit
+  // Step 8: Exit
   if (testExitCode !== 0) {
     console.error("\n=== E2E tests FAILED ===\n");
     process.exit(1);
