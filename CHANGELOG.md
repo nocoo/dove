@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.3.0
+
+### Changed
+- Add src/server/lib/version.ts to release version targets
+- Fix L3 project/template create-view assertions
+- Fix CI E2E env: inject RESEND_FROM_DOMAIN + .env.test for L3
+- Add L2 API E2E and L3 browser E2E jobs
+- Fix E2E test infrastructure for CF Access auth migration
+- Switch auth from Google OAuth to Cloudflare Access JWT
+- Clean repo-level Next.js remnants
+- Rewrite README for Cloudflare Workers, archive old Next.js docs
+- Fix static asset paths for Vite directory layout
+- Fix components.json for Vite: rsc false, correct CSS path
+- Rename NEXT_PUBLIC_APP_VERSION to __APP_VERSION__
+- Replace next dev with wrangler dev in E2E infrastructure
+- Use sonner Toaster directly with explicit position and richColors
+- Move Toaster inside App component tree and restore toast calls
+- Guard res.json() parse failure in test send handler
+- Replace toast with inline feedback for test send results
+- Fix toast visibility and EmailMessage crash in dev
+- Mount Toaster component so toast notifications actually render
+- Fix test-send and preview to merge all declared variables with defaults
+- Add top-level error logging to test-send endpoint
+- Add test send endpoint and UI to template detail page
+- Inject app version into Vite build via define
+- Fix sidebar logo and connect dev to remote D1/KV
+- Fix dev port to 7034 matching Caddy config
+- Fix idempotency retry race, From RFC 2047, and DEV_MODE bypass
+- Fix failed-slot reclaim race and From header RFC 2047 encoding
+- Fix CloudflareProvider idempotency retry and MIME encoding
+- Fix webhook test suite isolation and Happy DOM interference
+- Add L3 passive send_logs health probe to provider health endpoint
+- Fix localhost /api/auth/me cookie-gating deadlock
+- Add Layer 2 idempotency to CloudflareProvider via D1
+- Update CLAUDE.md for login page and auth-provider changes
+- Fix webhook waitUntil, error passthrough, and hash ordering
+- Rewrite CloudflareProvider to use env.EMAIL binding
+- Add login page and auth guard redirect
+- Update plan doc with completion status for all C001-C076 steps
+- Mark quality-upgrade doc as partially superseded by 03
+- Update CLAUDE.md for Cloudflare Workers architecture
+- Add db-init route for local schema initialization
+- Integrate all client routes into React Router config
+- C045-C056: Port all Next.js pages to React Router SPA route components
+- C041-C044: Add client API fetch wrapper
+- C039-C040: Port layout components to React Router SPA
+- C037-C038: Add client auth module and AuthProvider context
+- Integrate all routes into server index with session middleware
+- Add webhook send route with 12-step pipeline
+- Add server-side Cloudflare provider (re-export from shared)
+- Add server-side Resend provider (re-export from shared)
+- Add server-side provider interface + factory
+- Add server-side quota check with D1 binding
+- Add server-side template render (re-export from shared)
+- Mark C022-C029 API routes as complete
+- Add Stats dashboard + charts API routes with Hono
+- Add Webhook-logs paginated query API route with Hono
+- Add Send-logs paginated query API route with Hono
+- Add Providers CRUD + health API routes with Hono
+- Add Templates CRUD + preview API routes with Hono
+- Add Recipients CRUD API routes with Hono
+- Add Projects CRUD API routes with Hono
+- C019-C021: Add server utility functions
+- Add bearer auth middleware
+- Add Google OAuth routes
+- Add session auth middleware
+- Add KV session utilities
+- Add test env secrets and fix field name inconsistency
+- Fix 3 remaining inconsistencies in 03-cloudflare-rewrite
+- Address 3 review findings in 03-cloudflare-rewrite
+- Enrich 03-cloudflare-rewrite with edge deployment details from bat
+- Add complete D1 schema.sql
+- Add EmailProviders CRUD with native D1 binding
+- Add WebhookLogs CRUD with native D1 binding
+- Add SendLogs CRUD with native D1 binding
+- Add Templates CRUD with native D1 binding
+- Add Recipients CRUD with native D1 binding
+- Add Projects CRUD with native D1 binding
+- Add D1 native binding wrapper
+- Fix send_email binding format in wrangler.toml
+- Configure React Router v7 with layout and dashboard
+- Vite + React 19 skeleton
+- Src/server/index.ts + lib/version.ts
+- Wrangler.toml + src/server/env.ts
+- Add missing /new routes for templates and providers
+- Fix 5 implementation gaps in rewrite plan
+- Simplify implementation plan for main branch rebuild
+- Add atomic commit steps C001-C092 and worker naming
+- Fix idempotency_payload_mismatch status code 409→422
+- Fix status field, request/response shape, and CloudflareProvider migration
+- Fix contract-breaking issues, preserve existing webhook semantics
+- Add 03-cloudflare-rewrite design document
+
+### Fixed
+- Add RESEND_API_KEY placeholder for L2 webhook send test
+- Add DEV_MODE=true for CI L2/L3 schema initialization
+- Add Playwright global setup to initialize D1 schema
+- Initialize D1 schema before L2 tests in run-e2e.ts
+- Add missing typescript-eslint dependency
+- Use wrangler --env test for L3 Playwright config
+
+### Removed
+- Remove "use client" directives from all components
+- Delete dead Next.js layout components
+- Remove non-functional Toaster, use inline feedback only for test send
+- Fix ResendProvider crash on Workers: remove process.env reference
+- Remove dead test-send UI card from provider detail page
+- Remove eslint-config-next from ESLint config
+- Fix package.json scripts and remove Next.js dependencies
+- C072-C073: Remove old Next.js, Railway, and Worker code
+
 ## v0.2.0
 
 ### Added
