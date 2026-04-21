@@ -1,11 +1,10 @@
 import { describe, test, expect } from "bun:test";
 import { Hono } from "hono";
 import type { Env } from "../env";
-import { authSession } from "../middleware/auth-session";
-import type { SessionData } from "../lib/session";
+import { authSession, type AccessUser } from "../middleware/auth-session";
 
 function createApp(env: Partial<Env> = {}) {
-  type AppEnv = { Bindings: Env; Variables: { user: SessionData } };
+  type AppEnv = { Bindings: Env; Variables: { user: AccessUser } };
   const app = new Hono<AppEnv>();
 
   app.use("/*", authSession);
@@ -20,37 +19,9 @@ function createApp(env: Partial<Env> = {}) {
   });
 
   return {
-    fetch: (req: Request) =>
-      app.fetch(req, env as Env),
+    fetch: (req: Request) => app.fetch(req, env as Env),
   };
 }
-
-class MockKV {
-  private store = new Map<string, string>();
-
-  async put(key: string, value: string): Promise<void> {
-    this.store.set(key, value);
-  }
-
-  async get(key: string): Promise<string | null> {
-    return this.store.get(key) ?? null;
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  seed(token: string, data: SessionData): void {
-    this.store.set(`dove_session:${token}`, JSON.stringify(data));
-  }
-}
-
-const validSession: SessionData = {
-  email: "allowed@example.com",
-  name: "Allowed User",
-  image: null,
-  createdAt: new Date().toISOString(),
-};
 
 describe("authSession middleware", () => {
   test("skips /api/live", async () => {
@@ -88,7 +59,7 @@ describe("authSession middleware", () => {
   });
 
   test("localhost bypasses auth and sets dev user", async () => {
-    const app = createApp({ ALLOWED_EMAILS: "admin@example.com" } as Partial<Env>);
+    const app = createApp();
     const res = await app.fetch(
       new Request("http://localhost:7034/api/projects"),
     );
@@ -97,8 +68,20 @@ describe("authSession middleware", () => {
     expect(body.email).toBe("dev@localhost");
   });
 
-  test("returns 500 if ALLOWED_EMAILS missing on non-localhost", async () => {
-    const app = createApp({} as Partial<Env>);
+  test("DEV_MODE=true bypasses auth on non-localhost", async () => {
+    const app = createApp({ DEV_MODE: "true" } as Partial<Env>);
+    const res = await app.fetch(
+      new Request("https://dove.hexly.ai/api/projects", {
+        headers: { host: "dove.hexly.ai" },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { email: string };
+    expect(body.email).toBe("dev@localhost");
+  });
+
+  test("returns 500 if CF_ACCESS_TEAM_DOMAIN missing on non-localhost", async () => {
+    const app = createApp({});
     const res = await app.fetch(
       new Request("https://dove.hexly.ai/api/projects", {
         headers: { host: "dove.hexly.ai" },
@@ -107,8 +90,23 @@ describe("authSession middleware", () => {
     expect(res.status).toBe(500);
   });
 
-  test("returns 401 if no session cookie", async () => {
-    const app = createApp({ ALLOWED_EMAILS: "allowed@example.com" } as Partial<Env>);
+  test("returns 500 if CF_ACCESS_AUD missing on non-localhost", async () => {
+    const app = createApp({
+      CF_ACCESS_TEAM_DOMAIN: "myteam.cloudflareaccess.com",
+    } as Partial<Env>);
+    const res = await app.fetch(
+      new Request("https://dove.hexly.ai/api/projects", {
+        headers: { host: "dove.hexly.ai" },
+      }),
+    );
+    expect(res.status).toBe(500);
+  });
+
+  test("returns 401 if no Cf-Access-Jwt-Assertion header", async () => {
+    const app = createApp({
+      CF_ACCESS_TEAM_DOMAIN: "myteam.cloudflareaccess.com",
+      CF_ACCESS_AUD: "test-aud",
+    } as Partial<Env>);
     const res = await app.fetch(
       new Request("https://dove.hexly.ai/api/projects", {
         headers: { host: "dove.hexly.ai" },
@@ -117,82 +115,19 @@ describe("authSession middleware", () => {
     expect(res.status).toBe(401);
   });
 
-  test("returns 401 if session token not found in KV", async () => {
-    const kv = new MockKV();
+  test("returns 401 for invalid JWT", async () => {
     const app = createApp({
-      ALLOWED_EMAILS: "allowed@example.com",
-      KV: kv as unknown as KVNamespace,
+      CF_ACCESS_TEAM_DOMAIN: "myteam.cloudflareaccess.com",
+      CF_ACCESS_AUD: "test-aud",
     } as Partial<Env>);
     const res = await app.fetch(
       new Request("https://dove.hexly.ai/api/projects", {
         headers: {
           host: "dove.hexly.ai",
-          cookie: "dove_session=invalid-token",
+          "Cf-Access-Jwt-Assertion": "invalid.jwt.token",
         },
       }),
     );
     expect(res.status).toBe(401);
-  });
-
-  test("returns 403 if email not in whitelist", async () => {
-    const kv = new MockKV();
-    kv.seed("valid-token", {
-      ...validSession,
-      email: "notallowed@example.com",
-    });
-    const app = createApp({
-      ALLOWED_EMAILS: "allowed@example.com",
-      KV: kv as unknown as KVNamespace,
-    } as Partial<Env>);
-    const res = await app.fetch(
-      new Request("https://dove.hexly.ai/api/projects", {
-        headers: {
-          host: "dove.hexly.ai",
-          cookie: "dove_session=valid-token",
-        },
-      }),
-    );
-    expect(res.status).toBe(403);
-  });
-
-  test("passes with valid session and whitelisted email", async () => {
-    const kv = new MockKV();
-    kv.seed("valid-token", validSession);
-    const app = createApp({
-      ALLOWED_EMAILS: "allowed@example.com",
-      KV: kv as unknown as KVNamespace,
-    } as Partial<Env>);
-    const res = await app.fetch(
-      new Request("https://dove.hexly.ai/api/projects", {
-        headers: {
-          host: "dove.hexly.ai",
-          cookie: "dove_session=valid-token",
-        },
-      }),
-    );
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { email: string };
-    expect(body.email).toBe("allowed@example.com");
-  });
-
-  test("email whitelist check is case-insensitive", async () => {
-    const kv = new MockKV();
-    kv.seed("valid-token", {
-      ...validSession,
-      email: "Allowed@Example.COM",
-    });
-    const app = createApp({
-      ALLOWED_EMAILS: "allowed@example.com",
-      KV: kv as unknown as KVNamespace,
-    } as Partial<Env>);
-    const res = await app.fetch(
-      new Request("https://dove.hexly.ai/api/projects", {
-        headers: {
-          host: "dove.hexly.ai",
-          cookie: "dove_session=valid-token",
-        },
-      }),
-    );
-    expect(res.status).toBe(200);
   });
 });

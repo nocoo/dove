@@ -19,10 +19,10 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@hono/oauth-providers": "^0.8.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "hono": "^4.12.14",
+    "jose": "^6.2.2",
     "lucide-react": "^1.7.0",
     "marked": "^15.0.0",
     "nanoid": "^5.1.7",

@@ -22,7 +22,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -139,7 +139,6 @@ export function Sidebar() {
 
   const userName = user?.name ?? "User";
   const userEmail = user?.email ?? "";
-  const userImage = user?.image;
   const userInitial = userName[0] ?? "?";
 
   return (
@@ -208,7 +207,6 @@ export function Sidebar() {
                   aria-label="User menu"
                 >
                   <Avatar className="h-9 w-9">
-                    {userImage && <AvatarImage src={userImage} alt={userName} />}
                     <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
                   </Avatar>
                 </button>
@@ -263,7 +261,6 @@ export function Sidebar() {
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors cursor-pointer">
                   <Avatar className="h-9 w-9 shrink-0">
-                    {userImage && <AvatarImage src={userImage} alt={userName} />}
                     <AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0 text-left">

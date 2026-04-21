@@ -1,16 +1,29 @@
 import { createMiddleware } from "hono/factory";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { Env } from "../env";
-import {
-  getSession,
-  SESSION_COOKIE_NAME,
-  type SessionData,
-} from "../lib/session";
-import { getCookie } from "hono/cookie";
 
-type SessionEnv = {
+export interface AccessUser {
+  email: string;
+  name: string;
+}
+
+type AccessEnv = {
   Bindings: Env;
-  Variables: { user: SessionData };
+  Variables: { user: AccessUser };
 };
+
+const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+function getJWKS(teamDomain: string) {
+  let jwks = jwksCache.get(teamDomain);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(
+      new URL(`https://${teamDomain}/cdn-cgi/access/certs`),
+    );
+    jwksCache.set(teamDomain, jwks);
+  }
+  return jwks;
+}
 
 function isLocalhost(host: string): boolean {
   return (
@@ -25,14 +38,12 @@ function isDevMode(env: Env, host: string): boolean {
   return isLocalhost(host);
 }
 
-const DEV_USER: SessionData = {
+const DEV_USER: AccessUser = {
   email: "dev@localhost",
   name: "Dev User",
-  image: null,
-  createdAt: new Date().toISOString(),
 };
 
-export const authSession = createMiddleware<SessionEnv>(async (c, next) => {
+export const authSession = createMiddleware<AccessEnv>(async (c, next) => {
   const path = new URL(c.req.url).pathname;
 
   if (
@@ -50,28 +61,35 @@ export const authSession = createMiddleware<SessionEnv>(async (c, next) => {
     return next();
   }
 
-  const allowedEmails = c.env.ALLOWED_EMAILS;
-  if (!allowedEmails) {
+  const teamDomain = c.env.CF_ACCESS_TEAM_DOMAIN;
+  const aud = c.env.CF_ACCESS_AUD;
+  if (!teamDomain || !aud) {
     return c.json({ error: "Server misconfiguration" }, 500);
   }
 
-  const token = getCookie(c, SESSION_COOKIE_NAME);
+  const token = c.req.header("Cf-Access-Jwt-Assertion");
   if (!token) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const session = await getSession(c.env.KV, token);
-  if (!session) {
+  try {
+    const { payload } = await jwtVerify(token, getJWKS(teamDomain), {
+      audience: aud,
+      issuer: `https://${teamDomain}`,
+    });
+
+    const email = payload.email as string | undefined;
+    if (!email) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    c.set("user", {
+      email,
+      name: (payload.name as string) ?? email,
+    });
+
+    return next();
+  } catch {
     return c.json({ error: "Unauthorized" }, 401);
   }
-
-  const whitelist = allowedEmails
-    .split(",")
-    .map((e) => e.trim().toLowerCase());
-  if (!whitelist.includes(session.email.toLowerCase())) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  c.set("user", session);
-  return next();
 });

@@ -29,11 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (loading) return null;
 
-  if (!user) {
-    window.location.href = "/login";
-    return null;
-  }
-
   return (
     <AuthContext.Provider value={{ user, loading }}>
       {children}

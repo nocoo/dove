@@ -1,7 +1,6 @@
 export interface User {
   email: string;
   name: string;
-  image: string | null;
 }
 
 export async function fetchUser(): Promise<User | null> {
@@ -11,7 +10,6 @@ export async function fetchUser(): Promise<User | null> {
   return data.user;
 }
 
-export async function signOut(): Promise<void> {
-  await fetch("/api/auth/signout", { method: "POST" });
-  window.location.href = "/login";
+export function signOut(): void {
+  window.location.href = "/api/auth/signout";
 }
