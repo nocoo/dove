@@ -43,10 +43,13 @@ async function computePayloadHash(payload: {
   to: string;
   variables?: Record<string, string> | undefined;
 }): Promise<string> {
+  const sortedVars = Object.fromEntries(
+    Object.entries(payload.variables ?? {}).sort(([a], [b]) => a.localeCompare(b)),
+  );
   const canonical = JSON.stringify({
     template: payload.template,
     to: payload.to,
-    variables: payload.variables ?? {},
+    variables: sortedVars,
   });
   const data = new TextEncoder().encode(canonical);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -105,7 +108,7 @@ webhook.post("/:projectId/send", async (c) => {
     errorMessage?: string,
   ) => {
     const duration = Date.now() - startTime;
-    void createWebhookLog(db, {
+    c.executionCtx.waitUntil(createWebhookLog(db, {
       project_id: projectId,
       method: "POST",
       path,
@@ -115,7 +118,7 @@ webhook.post("/:projectId/send", async (c) => {
       duration_ms: duration,
       ip: ip ?? undefined,
       user_agent: userAgent ?? undefined,
-    });
+    }));
     return c.json(body as Record<string, unknown>, statusCode as 200);
   };
 
@@ -304,7 +307,7 @@ webhook.post("/:projectId/send", async (c) => {
       const message = error instanceof Error ? error.message : "Provider send failed";
       await markSendLogFailed(db, sendLog.id, message);
       const errCode = providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed";
-      return logAndRespond(502, errorJson(errCode, "Failed to send email via provider"), errCode, message);
+      return logAndRespond(502, errorJson(errCode, message), errCode, message);
     }
   } catch (error) {
     console.error("Webhook send unexpected error:", error);
