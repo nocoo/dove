@@ -17,7 +17,7 @@ import { ProviderDetailPage } from "./routes/providers/$id";
 import { NewProviderPage } from "./routes/providers/new";
 import { SendLogsPage } from "./routes/send-logs";
 import { WebhookLogsPage } from "./routes/webhook-logs";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "sonner";
 
 function App() {
   return (
@@ -48,7 +48,7 @@ function App() {
           }
         />
       </Routes>
-      <Toaster />
+      <Toaster position="top-right" richColors />
     </BrowserRouter>
   );
 }
