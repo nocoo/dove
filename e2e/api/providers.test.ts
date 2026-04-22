@@ -16,10 +16,11 @@ interface ProviderRow {
 
 let providerId: string;
 
+let domainCounter = 0;
 const baseProvider = () => ({
   name: `E2E Provider ${Date.now()}`,
   type: "resend" as const,
-  domain: "example.com",
+  domain: `e2e-${Date.now()}-${++domainCounter}.example.com`,
   config: { api_key: "re_test_" + Date.now() },
 });
 
