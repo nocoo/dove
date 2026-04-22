@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.4.3
+
+### Changed
+- Make provider test domains unique to avoid UNIQUE constraint failure
+- Add _test_marker safety net for E2E DB isolation
+- Gate L3 page coverage and add page-coverage smoke spec
+- Gate L2 route coverage and backfill providers/auth/test-send
+- Move gitleaks to pre-commit, keep osv on pre-push
+- Raise threshold to 95% and parse stderr correctly
+- Build and deploy after tag push
+
 ## v0.4.2
 
 ### Added
