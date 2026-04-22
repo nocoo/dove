@@ -1,6 +1,12 @@
 # G1: Static analysis (typecheck + lint on staged files)
 # G2-secrets: gitleaks on staged changes (block secrets before they land in a commit)
+# Coverage maps (static): every server route has an L2 test, every client page has an L3 spec
 # L1: Unit tests + coverage gate
 # Sequential: cheap gates first to catch issues early
 
-bun run typecheck && bun run lint:staged && bun run gate:secrets && bun run test:coverage
+bun run typecheck \
+  && bun run lint:staged \
+  && bun run gate:secrets \
+  && bun run gate:routes \
+  && bun run gate:pages \
+  && bun run test:coverage

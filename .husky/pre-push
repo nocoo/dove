@@ -1,9 +1,7 @@
 # L2: API E2E (integration tests)
-# L2-routes: static gate ensuring every declared route has at least one E2E request
-# G2-deps: osv-scanner on lockfile (gitleaks already ran in pre-commit)
-# Routes gate runs first (cheap, fail-fast); E2E + osv in parallel after.
-
-bun run gate:routes || exit 1
+# G2-deps: osv-scanner on lockfile (gitleaks already ran in pre-commit;
+#          gate:routes / gate:pages also ran in pre-commit)
+# Run in parallel, fail if either fails
 
 bun run test:e2e:api &
 PID_L2=$!

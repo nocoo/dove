@@ -18,6 +18,7 @@
     "gate:secrets": "bun run scripts/gate-security.ts --secrets",
     "gate:deps": "bun run scripts/gate-security.ts --deps",
     "gate:routes": "bun run scripts/check-route-coverage.ts",
+    "gate:pages": "bun run scripts/check-page-coverage.ts",
     "release": "bun run scripts/release.ts",
     "prepare": "husky"
   },
