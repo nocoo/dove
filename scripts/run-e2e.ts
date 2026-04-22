@@ -58,12 +58,16 @@ function loadTestEnv(): Map<string, string> {
 // ---------------------------------------------------------------------------
 
 function checkInequality(testUrl: string): void {
-  // Hard requirement: the test Worker URL must contain the literal "test"
-  // somewhere in the host. This prevents a misconfigured .env.test from
-  // pointing at the production worker even if .env.local is absent.
-  const testHost = new URL(testUrl).host;
-  if (!/test/i.test(testHost)) {
-    console.error(`FATAL: D1_WORKER_URL host (${testHost}) must contain "test".`);
+  // Hard requirement: the test Worker URL must self-identify as a test
+  // instance. Accept either a local wrangler dev instance (localhost/127.*/[::1])
+  // started by this script with --env test, or a remote host whose name
+  // contains "test". This prevents a misconfigured .env.test from pointing at
+  // the production worker even if .env.local is absent.
+  const { hostname, host: testHost } = new URL(testUrl);
+  const isLocal =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+  if (!isLocal && !/test/i.test(testHost)) {
+    console.error(`FATAL: D1_WORKER_URL host (${testHost}) must contain "test" (or be localhost).`);
     console.error("  E2E refuses to run against a Worker that doesn't self-identify as a test instance.");
     process.exit(1);
   }
