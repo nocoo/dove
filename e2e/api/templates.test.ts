@@ -223,3 +223,25 @@ describe("POST /api/templates/[id]/preview", () => {
     expect(response.status).toBe(422);
   });
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/templates/:id/test-send (validation paths only — no real email)
+// ---------------------------------------------------------------------------
+
+describe("POST /api/templates/:id/test-send", () => {
+  test("returns 404 for nonexistent template", async () => {
+    const response = await post("/api/templates/nonexistent_id_12345/test-send", {
+      body: { to: "x@example.com" },
+    });
+    expect(response.status).toBe(404);
+  });
+
+  test("returns 400 for invalid email", async () => {
+    const template = await setupTestTemplate(projectId);
+    const response = await post(`/api/templates/${template.id}/test-send`, {
+      body: { to: "not-an-email" },
+    });
+    expect(response.status).toBe(400);
+  });
+});
+
