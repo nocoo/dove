@@ -54,10 +54,20 @@ function loadTestEnv(): Map<string, string> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 2: Inequality check
+// Step 2: Inequality + naming check
 // ---------------------------------------------------------------------------
 
 function checkInequality(testUrl: string): void {
+  // Hard requirement: the test Worker URL must contain the literal "test"
+  // somewhere in the host. This prevents a misconfigured .env.test from
+  // pointing at the production worker even if .env.local is absent.
+  const testHost = new URL(testUrl).host;
+  if (!/test/i.test(testHost)) {
+    console.error(`FATAL: D1_WORKER_URL host (${testHost}) must contain "test".`);
+    console.error("  E2E refuses to run against a Worker that doesn't self-identify as a test instance.");
+    process.exit(1);
+  }
+
   try {
     const prodVars = loadEnvFile(resolve(ROOT, ".env.local"));
     const prodUrl = prodVars.get("D1_WORKER_URL");
@@ -188,6 +198,30 @@ async function warmupD1(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Step 4d: Verify the bound D1 is the test database (_test_marker row).
+// ---------------------------------------------------------------------------
+
+async function verifyTestMarker(): Promise<void> {
+  console.log("Step 4d: Verifying _test_marker (refuse to run against prod D1)...");
+  try {
+    const res = await fetch(`http://localhost:${E2E_PORT}/api/db/init/marker`, {
+      signal: AbortSignal.timeout(10_000),
+    });
+    const body = (await res.json()) as { marker?: string | null };
+    if (body.marker !== "e2e-test-db") {
+      console.error(`FATAL: _test_marker missing or wrong (got ${JSON.stringify(body.marker)}).`);
+      console.error("  This D1 was NOT initialized as a test database.");
+      console.error("  If this is unexpected, your worker may be bound to the production D1.");
+      process.exit(1);
+    }
+    console.log("  _test_marker = e2e-test-db ✓");
+  } catch (err) {
+    console.error(`FATAL: _test_marker check failed: ${err}`);
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Step 5: Run tests
 // ---------------------------------------------------------------------------
 
@@ -240,6 +274,9 @@ async function main(): Promise<void> {
 
     // Step 4c: Warm up D1
     await warmupD1();
+
+    // Step 4d: Refuse to run if the bound D1 is not the test database
+    await verifyTestMarker();
 
     // Step 5: Run tests
     testExitCode = await runTests();

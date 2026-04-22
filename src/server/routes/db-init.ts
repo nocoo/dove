@@ -105,6 +105,12 @@ CREATE TABLE IF NOT EXISTS cf_email_idempotency (
   completed_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_cf_email_idempotency_status ON cf_email_idempotency(status);
+
+CREATE TABLE IF NOT EXISTS _test_marker (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
+INSERT OR IGNORE INTO _test_marker(id, created_at) VALUES ('e2e-test-db', datetime('now'));
 `;
 
 dbInit.post("/", async (c) => {
@@ -129,6 +135,24 @@ dbInit.post("/", async (c) => {
   }
 
   return c.json({ ok: true, statements: statements.length });
+});
+
+dbInit.get("/marker", async (c) => {
+  const host = c.req.header("host") ?? new URL(c.req.url).host;
+  const isLocal =
+    c.env.DEV_MODE === "true" ||
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1") ||
+    host.startsWith("[::1]");
+  if (!isLocal) {
+    return c.json({ error: "Only available in local development" }, 403);
+  }
+  try {
+    const row = await c.env.DB.prepare("SELECT id FROM _test_marker LIMIT 1").first<{ id: string }>();
+    return c.json({ marker: row?.id ?? null });
+  } catch (err) {
+    return c.json({ marker: null, error: err instanceof Error ? err.message : String(err) });
+  }
 });
 
 export { dbInit };
