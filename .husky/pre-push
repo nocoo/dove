@@ -1,11 +1,11 @@
 # L2: API E2E (integration tests)
-# G2: Security gate (osv-scanner + gitleaks)
+# G2-deps: osv-scanner on lockfile (gitleaks already ran in pre-commit)
 # Run in parallel, fail if either fails
 
 bun run test:e2e:api &
 PID_L2=$!
 
-bun run gate:security &
+bun run gate:deps &
 PID_G2=$!
 
 FAIL=0
