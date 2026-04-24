@@ -150,7 +150,7 @@ export function Sidebar() {
     >
       {collapsed ? (
         <div className="flex h-screen w-[68px] flex-col items-center">
-          <div className="flex h-14 w-full items-center justify-center">
+          <div className="flex h-14 w-full items-center justify-start pl-6 pr-3">
             <img src="/logo-24.png" alt="dove" width={24} height={24} />
           </div>
 
