@@ -1,11 +1,17 @@
-# Dove CD — triggered by `v*.*.*` tag push from scripts/release.ts.
-# Builds UI, deploys Worker to Cloudflare, verifies /api/live.
+# Dove CD
+# - Tag push (v*.*.*) → deploy-tagged: strict version match (release.ts flow)
+# - CI green on main   → deploy-main:    continuous deploy of latest main
+# - workflow_dispatch  → deploy-tagged: manual redeploy of a specific tag
 name: Release
 
 on:
   push:
     tags:
       - "v*.*.*"
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       tag:
@@ -14,8 +20,12 @@ on:
         type: string
 
 jobs:
-  deploy-worker:
-    name: Deploy Worker (production)
+  # ─────────────────────────────────────────────────────
+  # Tagged release: enforces tag == package.json version
+  # ─────────────────────────────────────────────────────
+  deploy-tagged:
+    name: Deploy Worker (tagged)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -81,6 +91,78 @@ jobs:
           {
             echo "### Dove Release ${{ steps.ver.outputs.tag }}"
             echo ""
+            echo "- Trigger: tagged (\`${{ github.event_name }}\`)"
             echo "- Worker: deployed to \`dove\` (production)"
+            echo "- Verify: https://dove.hexly.ai/api/live"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────
+  # Continuous deploy: main push, gated by CI success
+  # ─────────────────────────────────────────────────────
+  deploy-main:
+    name: Deploy Worker (main)
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: deploy-worker-production
+      cancel-in-progress: false
+    steps:
+      - name: Checkout main HEAD that CI validated
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Read package.json version
+        id: ver
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build UI (into dist/client)
+        run: bun run build
+
+      - name: Deploy Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+
+      - name: Verify /api/live responds 200
+        run: |
+          set -e
+          for i in 1 2 3 4 5 6; do
+            HTTP=$(curl -fsS -o /tmp/live.json -w "%{http_code}" https://dove.hexly.ai/api/live || echo "000")
+            ACTUAL=$(jq -r .version /tmp/live.json 2>/dev/null || echo "?")
+            echo "attempt $i: http=$HTTP version=$ACTUAL"
+            if [ "$HTTP" = "200" ]; then
+              echo "✅ Live endpoint healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "❌ /api/live not healthy after 30s"
+          exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Dove Continuous Deploy"
+            echo ""
+            echo "- Trigger: main push (CI gated)"
+            echo "- SHA: \`${{ steps.ver.outputs.sha }}\`"
+            echo "- Version: \`${{ steps.ver.outputs.version }}\`"
             echo "- Verify: https://dove.hexly.ai/api/live"
           } >> "$GITHUB_STEP_SUMMARY"
