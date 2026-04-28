@@ -29,14 +29,10 @@ remote = true
 name = "EMAIL"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Test environment
+# Test environment (local wrangler dev only, never deployed)
 # ─────────────────────────────────────────────────────────────────────────────
 
 [env.test]
-
-[[env.test.routes]]
-pattern = "dove-test.hexly.ai"
-custom_domain = true
 
 [[env.test.d1_databases]]
 binding = "DB"
