@@ -1,11 +1,11 @@
-import { describe, test, expect, mock, beforeEach } from "bun:test";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Hono } from "hono";
 import type { Env } from "../../env";
 import type { Project } from "../../lib/db/projects";
 import type { SendLog } from "../../lib/db/send-logs";
 import type { Template } from "../../lib/db/templates";
 
-// --- Mocks ---
+// --- Mock implementations ---
 
 const sampleProject: Project = {
   id: "proj_001",
@@ -61,25 +61,25 @@ const sampleSendLog: SendLog = {
   sent_at: null,
 };
 
-const mockGetProject = mock(() => Promise.resolve(sampleProject as Project | null));
-const mockGetRecipient = mock(() => Promise.resolve(null as typeof sampleRecipient | null));
-const mockGetRecipientByEmail = mock(() => Promise.resolve(sampleRecipient as typeof sampleRecipient | null));
-const mockGetTemplateBySlug = mock(() => Promise.resolve(sampleTemplate as Template | null));
-const mockListTemplates = mock(() => Promise.resolve([sampleTemplate]));
-const mockParseVariables = mock(() => [{ name: "name", type: "string" as const, required: true }]);
-const mockFindByIdempotencyKey = mock(() => Promise.resolve(null as SendLog | null));
-const mockCreateSendLog = mock(() => Promise.resolve(sampleSendLog));
-const mockResetSendLogForRetry = mock(() => Promise.resolve());
-const mockUpdateSendLogProvider = mock(() => Promise.resolve());
-const mockMarkSendLogSent = mock(() => Promise.resolve());
-const mockMarkSendLogFailed = mock(() => Promise.resolve());
-const mockCreateWebhookLog = mock(() => Promise.resolve());
-const mockGetEmailProvider = mock(() => Promise.resolve(null));
-const mockCheckQuota = mock(() => Promise.resolve({ allowed: true } as { allowed: boolean; error_code?: string }));
-const mockRenderTemplate = mock(() => Promise.resolve({ subject: "Hello World", html: "<p>Welcome!</p>" }));
+const mockGetProject = vi.fn(() => Promise.resolve(sampleProject as Project | null));
+const mockGetRecipient = vi.fn(() => Promise.resolve(null as typeof sampleRecipient | null));
+const mockGetRecipientByEmail = vi.fn(() => Promise.resolve(sampleRecipient as typeof sampleRecipient | null));
+const mockGetTemplateBySlug = vi.fn(() => Promise.resolve(sampleTemplate as Template | null));
+const mockListTemplates = vi.fn(() => Promise.resolve([sampleTemplate]));
+const mockParseVariables = vi.fn(() => [{ name: "name", type: "string" as const, required: true }]);
+const mockFindByIdempotencyKey = vi.fn(() => Promise.resolve(null as SendLog | null));
+const mockCreateSendLog = vi.fn(() => Promise.resolve(sampleSendLog));
+const mockResetSendLogForRetry = vi.fn(() => Promise.resolve());
+const mockUpdateSendLogProvider = vi.fn(() => Promise.resolve());
+const mockMarkSendLogSent = vi.fn(() => Promise.resolve());
+const mockMarkSendLogFailed = vi.fn(() => Promise.resolve());
+const mockCreateWebhookLog = vi.fn(() => Promise.resolve());
+const mockGetEmailProvider = vi.fn(() => Promise.resolve(null));
+const mockCheckQuota = vi.fn(() => Promise.resolve({ allowed: true } as { allowed: boolean; error_code?: string }));
+const mockRenderTemplate = vi.fn(() => Promise.resolve({ subject: "Hello World", html: "<p>Welcome!</p>" }));
 
-const mockProviderSend = mock(() => Promise.resolve({ id: "msg_001" }));
-const mockCreateProvider = mock(() =>
+const mockProviderSend = vi.fn(() => Promise.resolve({ id: "msg_001" }));
+const mockCreateProvider = vi.fn(() =>
   Promise.resolve({
     type: "resend" as const,
     send: mockProviderSend,
@@ -87,7 +87,7 @@ const mockCreateProvider = mock(() =>
     setDryRun: () => {},
   }),
 );
-const mockCreateLegacyProvider = mock(() =>
+const mockCreateLegacyProvider = vi.fn(() =>
   Promise.resolve({
     type: "resend" as const,
     send: mockProviderSend,
@@ -95,19 +95,21 @@ const mockCreateLegacyProvider = mock(() =>
     setDryRun: () => {},
   }),
 );
-const mockGetProviderDomain = mock(() => "example.com");
+const mockGetProviderDomain = vi.fn(() => "example.com");
 
-mock.module("../../lib/db/projects", () => ({ getProject: mockGetProject }));
-mock.module("../../lib/db/recipients", () => ({
+// --- vi.mock calls (hoisted to top) ---
+
+vi.mock("../../lib/db/projects", () => ({ getProject: mockGetProject }));
+vi.mock("../../lib/db/recipients", () => ({
   getRecipient: mockGetRecipient,
   getRecipientByEmail: mockGetRecipientByEmail,
 }));
-mock.module("../../lib/db/templates", () => ({
+vi.mock("../../lib/db/templates", () => ({
   getTemplateBySlug: mockGetTemplateBySlug,
   listTemplates: mockListTemplates,
   parseVariables: mockParseVariables,
 }));
-mock.module("../../lib/db/send-logs", () => ({
+vi.mock("../../lib/db/send-logs", () => ({
   findByIdempotencyKey: mockFindByIdempotencyKey,
   createSendLog: mockCreateSendLog,
   resetSendLogForRetry: mockResetSendLogForRetry,
@@ -115,18 +117,18 @@ mock.module("../../lib/db/send-logs", () => ({
   markSendLogSent: mockMarkSendLogSent,
   markSendLogFailed: mockMarkSendLogFailed,
 }));
-mock.module("../../lib/db/webhook-logs", () => ({
+vi.mock("../../lib/db/webhook-logs", () => ({
   createWebhookLog: mockCreateWebhookLog,
 }));
-mock.module("../../lib/db/email-providers", () => ({
+vi.mock("../../lib/db/email-providers", () => ({
   getEmailProvider: mockGetEmailProvider,
 }));
-mock.module("../../lib/email/quota", () => ({ checkQuota: mockCheckQuota }));
-mock.module("../../lib/email/render", () => ({ renderTemplate: mockRenderTemplate }));
-mock.module("../../lib/email/provider", () => ({
+vi.mock("../../lib/email/quota", () => ({ checkQuota: mockCheckQuota }));
+vi.mock("../../lib/email/render", () => ({ renderTemplate: mockRenderTemplate }));
+vi.mock("../../lib/email/provider", () => ({
   createProvider: mockCreateProvider,
   createLegacyProvider: mockCreateLegacyProvider,
-  parseProviderConfig: mock(() => ({ type: "resend", api_key: "re_test" })),
+  parseProviderConfig: vi.fn(() => ({ type: "resend", api_key: "re_test" })),
   getProviderDomain: mockGetProviderDomain,
 }));
 

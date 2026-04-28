@@ -1,10 +1,10 @@
 /**
  * Tests for D1 native binding wrapper.
  */
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import { query, queryOne, execute, batch } from "../lib/db/d1";
 
-// Create a mock D1Result for testing
+// Create a vi D1Result for testing
 function createMockResult(overrides: { changes?: number; last_row_id?: number } = {}): D1Result {
   return {
     success: true,
@@ -29,16 +29,16 @@ function createMockDb(options: {
   batchResults?: D1Result[];
 } = {}) {
   const mockStmt = {
-    all: mock(() => Promise.resolve({ results: options.allResults ?? [] })),
-    first: mock(() => Promise.resolve(options.firstResult ?? null)),
-    run: mock(() => Promise.resolve(createMockResult(options.runResult))),
+    all: vi.fn(() => Promise.resolve({ results: options.allResults ?? [] })),
+    first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
+    run: vi.fn(() => Promise.resolve(createMockResult(options.runResult))),
   };
 
-  const mockPrepare = mock(() => ({
-    bind: mock(() => mockStmt),
+  const mockPrepare = vi.fn(() => ({
+    bind: vi.fn(() => mockStmt),
   }));
 
-  const mockBatch = mock(() => Promise.resolve(
+  const mockBatch = vi.fn(() => Promise.resolve(
     options.batchResults ?? [createMockResult()]
   ));
 

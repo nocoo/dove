@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { sanitizeProject, sanitizeProvider } from "@/lib/sanitize";
 import type { Project } from "@/lib/types/project";
 import type { EmailProviderRecord } from "@/lib/types/email-provider";

@@ -1,7 +1,7 @@
 /**
  * Tests for server-side WebhookLog CRUD operations with native D1 binding.
  */
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import {
   listWebhookLogs,
   listAllWebhookLogs,
@@ -9,7 +9,7 @@ import {
   type WebhookLog,
 } from "../lib/db/webhook-logs";
 
-// Create a mock D1Result
+// Create a vi D1Result
 function createMockResult(): D1Result {
   return {
     success: true,
@@ -47,14 +47,14 @@ function makeWebhookLog(overrides: Partial<WebhookLog> = {}): WebhookLog {
 // Mock D1Database
 function createMockDb(options: { queryResults?: WebhookLog[] }) {
   const mockStmt = {
-    all: mock(() => Promise.resolve({ results: options.queryResults ?? [] })),
-    first: mock(() => Promise.resolve(null)),
-    run: mock(() => Promise.resolve(createMockResult())),
+    all: vi.fn(() => Promise.resolve({ results: options.queryResults ?? [] })),
+    first: vi.fn(() => Promise.resolve(null)),
+    run: vi.fn(() => Promise.resolve(createMockResult())),
   };
 
   return {
-    prepare: mock(() => ({
-      bind: mock(() => mockStmt),
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => mockStmt),
     })),
     _stmt: mockStmt,
   } as unknown as D1Database;

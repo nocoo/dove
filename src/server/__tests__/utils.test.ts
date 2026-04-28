@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 import { generateId, generateWebhookToken } from "../lib/id";
 import { parsePagination } from "../lib/pagination";
 import { sanitizeProject, sanitizeProvider } from "../lib/sanitize";

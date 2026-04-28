@@ -5,7 +5,7 @@
  * Real HTTP against running dev server on port 17034.
  * Tests verify response shape and status codes; exact counts depend on test DB state.
  */
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "vitest";
 import {
   get,
   parseJson,

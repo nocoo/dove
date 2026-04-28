@@ -9,7 +9,7 @@
  * quota → template → render → log) but uses RESEND_DRY_RUN=true from
  * .env.test so no real email is sent via the Resend API.
  */
-import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "vitest";
 import {
   get,
   post,

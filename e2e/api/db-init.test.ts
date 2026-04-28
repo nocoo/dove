@@ -5,7 +5,7 @@
  * Server runs in development mode, so this endpoint is allowed.
  * Schema uses IF NOT EXISTS, so it's idempotent.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { get, post, parseJson } from "./helpers";
 
 describe("POST /api/db/init", () => {

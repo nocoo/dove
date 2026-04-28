@@ -6,7 +6,7 @@
  * Dev mode is auto-detected by host=localhost, so /me returns the dev user
  * and /signout redirects to "/" (no CF Access team domain configured in tests).
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { get, parseJson } from "./helpers";
 
 describe("GET /api/auth/me", () => {

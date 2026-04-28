@@ -1,7 +1,7 @@
 /**
  * Tests for server-side Recipient CRUD operations with native D1 binding.
  */
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import {
   listRecipients,
   getRecipient,
@@ -13,7 +13,7 @@ import {
   type Recipient,
 } from "../lib/db/recipients";
 
-// Create a mock D1Result
+// Create a vi D1Result
 function createMockResult(): D1Result {
   return {
     success: true,
@@ -48,14 +48,14 @@ function createMockDb(options: {
   firstResult?: Recipient | null;
 }) {
   const mockStmt = {
-    all: mock(() => Promise.resolve({ results: options.queryResults ?? [] })),
-    first: mock(() => Promise.resolve(options.firstResult ?? null)),
-    run: mock(() => Promise.resolve(createMockResult())),
+    all: vi.fn(() => Promise.resolve({ results: options.queryResults ?? [] })),
+    first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
+    run: vi.fn(() => Promise.resolve(createMockResult())),
   };
 
   return {
-    prepare: mock(() => ({
-      bind: mock(() => mockStmt),
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => mockStmt),
     })),
     _stmt: mockStmt,
   } as unknown as D1Database;
@@ -190,16 +190,16 @@ describe("Recipients CRUD (native D1)", () => {
       const existing = makeRecipient();
       let callCount = 0;
       const mockStmt = {
-        all: mock(() => Promise.resolve({ results: [] })),
-        first: mock(() => {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
           callCount++;
           return Promise.resolve(callCount === 1 ? existing : null);
         }),
-        run: mock(() => Promise.resolve(createMockResult())),
+        run: vi.fn(() => Promise.resolve(createMockResult())),
       };
       const mockDb = {
-        prepare: mock(() => ({
-          bind: mock(() => mockStmt),
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
         })),
       } as unknown as D1Database;
 
@@ -216,16 +216,16 @@ describe("Recipients CRUD (native D1)", () => {
       const existing = makeRecipient();
       let callCount = 0;
       const mockStmt = {
-        all: mock(() => Promise.resolve({ results: [] })),
-        first: mock(() => {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
           callCount++;
           return Promise.resolve(callCount === 1 ? existing : null);
         }),
-        run: mock(() => Promise.resolve(createMockResult())),
+        run: vi.fn(() => Promise.resolve(createMockResult())),
       };
       const mockDb = {
-        prepare: mock(() => ({
-          bind: mock(() => mockStmt),
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
         })),
       } as unknown as D1Database;
 

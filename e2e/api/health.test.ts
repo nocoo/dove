@@ -3,7 +3,7 @@
  *
  * Real HTTP against running dev server on port 17034.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { get, parseJson } from "./helpers";
 
 interface LiveResponse {

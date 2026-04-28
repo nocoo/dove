@@ -1,4 +1,4 @@
-import { describe, test, expect, mock } from "bun:test";
+import { describe, test, expect, vi } from "vitest";
 import { checkQuota } from "../lib/email/quota";
 import type { Project } from "../lib/db/projects";
 
@@ -22,14 +22,14 @@ function makeProject(overrides: Partial<Project> = {}): Project {
 function createMockDB(dailyCount: number, monthlyCount: number) {
   let callIndex = 0;
   return {
-    prepare: mock(() => ({
-      bind: mock(() => ({
-        first: mock(() => {
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn(() => {
           callIndex++;
           return Promise.resolve({ count: callIndex === 1 ? dailyCount : monthlyCount });
         }),
-        all: mock(() => Promise.resolve({ results: [] })),
-        run: mock(() => Promise.resolve({ success: true })),
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        run: vi.fn(() => Promise.resolve({ success: true })),
       })),
     })),
   } as unknown as D1Database;

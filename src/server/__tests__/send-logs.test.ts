@@ -1,7 +1,7 @@
 /**
  * Tests for server-side SendLog CRUD operations with native D1 binding.
  */
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import {
   listSendLogs,
   listAllSendLogs,
@@ -17,7 +17,7 @@ import {
   type SendLog,
 } from "../lib/db/send-logs";
 
-// Create a mock D1Result
+// Create a vi D1Result
 function createMockResult(): D1Result {
   return {
     success: true,
@@ -63,14 +63,14 @@ function createMockDb(options: {
   firstResult?: SendLog | { count: number } | null;
 }) {
   const mockStmt = {
-    all: mock(() => Promise.resolve({ results: options.queryResults ?? [] })),
-    first: mock(() => Promise.resolve(options.firstResult ?? null)),
-    run: mock(() => Promise.resolve(createMockResult())),
+    all: vi.fn(() => Promise.resolve({ results: options.queryResults ?? [] })),
+    first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
+    run: vi.fn(() => Promise.resolve(createMockResult())),
   };
 
   return {
-    prepare: mock(() => ({
-      bind: mock(() => mockStmt),
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => mockStmt),
     })),
     _stmt: mockStmt,
   } as unknown as D1Database;

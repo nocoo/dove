@@ -1,4 +1,4 @@
-import { describe, test, expect, mock } from "bun:test";
+import { describe, test, expect, vi } from "vitest";
 import { Hono } from "hono";
 import type { Env } from "../env";
 import { projects } from "../routes/projects";
@@ -32,11 +32,11 @@ function createMockDB(opts: {
 } = {}) {
   const { allResults = [], firstResult = null } = opts;
   return {
-    prepare: mock(() => ({
-      bind: mock(() => ({
-        all: mock(() => Promise.resolve({ results: allResults })),
-        first: mock(() => Promise.resolve(firstResult)),
-        run: mock(() => Promise.resolve(createMockResult())),
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => ({
+        all: vi.fn(() => Promise.resolve({ results: allResults })),
+        first: vi.fn(() => Promise.resolve(firstResult)),
+        run: vi.fn(() => Promise.resolve(createMockResult())),
       })),
     })),
   } as unknown as D1Database;

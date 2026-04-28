@@ -6,9 +6,9 @@
     "dev": "wrangler dev",
     "build": "vite build",
     "lint": "eslint --max-warnings=0",
-    "test": "ENABLE_DOM_TESTS=1 bun test src/__tests__/ && bun test src/server/__tests__/ --exclude '**/isolated/**'",
-    "test:webhook": "bun test src/server/__tests__/isolated/",
-    "test:coverage": "ENABLE_DOM_TESTS=1 bun run scripts/check-coverage.ts",
+    "test": "vitest run",
+    "test:webhook": "vitest run src/server/__tests__/isolated/",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "bun run scripts/run-e2e.ts",
     "test:e2e:api": "bun run scripts/run-e2e.ts",
     "test:e2e:bdd": "npx playwright test",
@@ -52,6 +52,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
@@ -60,6 +61,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.59.0",
     "vite": "8.0.10",
+    "vitest": "^4.1.5",
     "wrangler": "^4.24.0"
   },
   "overrides": {

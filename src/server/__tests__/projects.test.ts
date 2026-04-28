@@ -1,7 +1,7 @@
 /**
  * Tests for server-side Project CRUD operations with native D1 binding.
  */
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 import {
   listProjects,
   getProject,
@@ -13,7 +13,7 @@ import {
   type Project,
 } from "../lib/db/projects";
 
-// Create a mock D1Result for testing
+// Create a vi D1Result for testing
 function createMockResult(overrides: { changes?: number } = {}): D1Result {
   return {
     success: true,
@@ -54,16 +54,16 @@ function createMockDb(options: {
   firstResult?: Project | null;
 }) {
   const mockStmt = {
-    all: mock(() => Promise.resolve({ results: options.queryResults ?? [] })),
-    first: mock(() => Promise.resolve(options.firstResult ?? null)),
-    run: mock(() => Promise.resolve(createMockResult({ changes: 1 }))),
+    all: vi.fn(() => Promise.resolve({ results: options.queryResults ?? [] })),
+    first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
+    run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
   };
 
   return {
-    prepare: mock(() => ({
-      bind: mock(() => mockStmt),
+    prepare: vi.fn(() => ({
+      bind: vi.fn(() => mockStmt),
     })),
-    batch: mock(() => Promise.resolve([createMockResult()])),
+    batch: vi.fn(() => Promise.resolve([createMockResult()])),
     _stmt: mockStmt,
   } as unknown as D1Database & { _stmt: typeof mockStmt };
 }
@@ -189,16 +189,16 @@ describe("Projects CRUD (native D1)", () => {
       // First call (getProject) returns existing, second call doesn't happen in mock
       let callCount = 0;
       const mockStmt = {
-        all: mock(() => Promise.resolve({ results: [] })),
-        first: mock(() => {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
           callCount++;
           return Promise.resolve(callCount === 1 ? existing : null);
         }),
-        run: mock(() => Promise.resolve(createMockResult({ changes: 1 }))),
+        run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
       };
       const mockDb = {
-        prepare: mock(() => ({
-          bind: mock(() => mockStmt),
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
         })),
       } as unknown as D1Database;
 
@@ -228,16 +228,16 @@ describe("Projects CRUD (native D1)", () => {
       const existing = makeProject({ provider_id: "some-provider" });
       let callCount = 0;
       const mockStmt = {
-        all: mock(() => Promise.resolve({ results: [] })),
-        first: mock(() => {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
           callCount++;
           return Promise.resolve(callCount === 1 ? existing : null);
         }),
-        run: mock(() => Promise.resolve(createMockResult({ changes: 1 }))),
+        run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
       };
       const mockDb = {
-        prepare: mock(() => ({
-          bind: mock(() => mockStmt),
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
         })),
       } as unknown as D1Database;
 
@@ -274,16 +274,16 @@ describe("Projects CRUD (native D1)", () => {
       const oldToken = existing.webhook_token;
       let callCount = 0;
       const mockStmt = {
-        all: mock(() => Promise.resolve({ results: [] })),
-        first: mock(() => {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
           callCount++;
           return Promise.resolve(callCount === 1 ? existing : null);
         }),
-        run: mock(() => Promise.resolve(createMockResult({ changes: 1 }))),
+        run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
       };
       const mockDb = {
-        prepare: mock(() => ({
-          bind: mock(() => mockStmt),
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
         })),
       } as unknown as D1Database;
 

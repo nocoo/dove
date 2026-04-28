@@ -3,7 +3,7 @@
  *
  * Real HTTP against running dev server on port 17034.
  */
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll } from "vitest";
 import {
   get,
   post,
