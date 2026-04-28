@@ -2,11 +2,44 @@
 # G2-secrets: gitleaks on staged changes (block secrets before they land in a commit)
 # Coverage maps (static): every server route has an L2 test, every client page has an L3 spec
 # L1: Unit tests + coverage gate
-# Sequential: cheap gates first to catch issues early
+# Parallel execution with deterministic log output
 
-bun run typecheck \
-  && bun run lint:staged \
-  && bun run gate:secrets \
-  && bun run gate:routes \
-  && bun run gate:pages \
-  && bun run test:coverage
+set -o pipefail
+
+TMPDIR_HOOK=$(mktemp -d -t dove-precommit-XXXXXX)
+trap 'rm -rf "$TMPDIR_HOOK"' EXIT
+
+run_bg() {
+  local name="$1"; shift
+  ( "$@" >"$TMPDIR_HOOK/$name.log" 2>&1; echo $? >"$TMPDIR_HOOK/$name.exit" ) &
+  eval "PID_$name=$!"
+}
+
+wait_stage() {
+  local name="$1" pid_var="PID_$1" pid status
+  pid=${!pid_var}
+  wait "$pid" 2>/dev/null || true
+  status=$(cat "$TMPDIR_HOOK/$name.exit" 2>/dev/null || echo 1)
+  echo "━━━ $name (exit=$status) ━━━"
+  cat "$TMPDIR_HOOK/$name.log"
+  if [ "$status" -ne 0 ]; then
+    echo "❌ pre-commit stage '$name' failed" >&2
+    exit "$status"
+  fi
+}
+
+# Launch all stages concurrently
+run_bg typecheck    bun run typecheck
+run_bg lint         bun run lint:staged
+run_bg secrets      bun run gate:secrets
+run_bg routes       bun run gate:routes
+run_bg pages        bun run gate:pages
+run_bg coverage     bun run test:coverage
+
+# Wait in order for deterministic output
+wait_stage typecheck
+wait_stage lint
+wait_stage secrets
+wait_stage routes
+wait_stage pages
+wait_stage coverage
