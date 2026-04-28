@@ -30,13 +30,6 @@ export default defineConfig({
         "src/components/",
         "src/hooks/",
         "src/routes/",
-        // Email providers are CF Worker-specific, tested via L2 E2E
-        "src/lib/email/provider.ts",
-        "src/lib/email/resend.ts",
-        "src/lib/email/providers/",
-        "src/server/lib/email/provider.ts",
-        // Server version is thin wrapper, tested via API
-        "src/server/lib/version.ts",
       ],
       thresholds: {
         lines: 95,
