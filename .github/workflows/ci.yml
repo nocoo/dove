@@ -9,95 +9,23 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────────────
-  # L1 + G1 + G2 — Core quality gate from base-ci
+  # L1 + G1 + G2 + L2 + L3 — All via base-ci
+  #
+  # ISOLATION: L2/L3 use wrangler dev with local SQLite D1.
+  # No remote database connection — completely isolated.
   # ─────────────────────────────────────────────────────
   quality:
     uses: nocoo/base-ci/.github/workflows/bun-quality.yml@v2026.1
     with:
       bun-version: "1.3.11"
-      pre-command: "bun run build"
+      pre-command: "bun run scripts/setup-ci-env.ts && bun run build"
       test-command: "bun run test:coverage"
       typecheck-command: "bun run typecheck"
       osv-config: "osv-scanner.toml"
-      enable-l2: "false"
-      enable-l3: "false"
+      enable-l2: "true"
+      l2-command: "bun run test:e2e:api"
+      enable-l3: "true"
+      l3-command: "bun run test:e2e:bdd"
+      l3-browser: "chromium"
       enable-worker: "false"
     secrets: inherit
-
-  # ─────────────────────────────────────────────────────
-  # L2: API E2E (wrangler dev --env test with local D1)
-  #
-  # ISOLATION: wrangler.toml [env.test] binds to dove-db-test.
-  # No `remote = true` → wrangler uses local SQLite D1,
-  # completely isolated from production.
-  # ─────────────────────────────────────────────────────
-  api-e2e:
-    name: "L2 API E2E"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.11"
-
-      - run: bun install --frozen-lockfile
-
-      - name: Build (assets required by wrangler)
-        run: bun run build
-
-      - name: Generate .env.test
-        run: |
-          cat > .env.test << 'EOF'
-          D1_WORKER_URL=http://localhost:17034
-          D1_WORKER_API_KEY=ci-placeholder
-          EMAIL_DRY_RUN=true
-          RESEND_DRY_RUN=true
-          DEV_MODE=true
-          RESEND_API_KEY=re_ci_placeholder_not_real
-          RESEND_FROM_DOMAIN=test.example.com
-          EOF
-
-      - name: "L2: API E2E tests"
-        run: bun run test:e2e:api
-
-  # ─────────────────────────────────────────────────────
-  # L3: Browser E2E (Playwright against wrangler dev --env test)
-  #
-  # ISOLATION: Same as L2 — local D1 SQLite, no production
-  # resources. Auth bypassed via localhost detection.
-  # ─────────────────────────────────────────────────────
-  browser-e2e:
-    name: "L3 Browser E2E"
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.11"
-
-      - run: bun install --frozen-lockfile
-
-      - name: Build (assets required by wrangler)
-        run: bun run build
-
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Generate .env.test
-        run: |
-          cat > .env.test << 'EOF'
-          D1_WORKER_URL=http://localhost:27034
-          D1_WORKER_API_KEY=ci-placeholder
-          EMAIL_DRY_RUN=true
-          RESEND_DRY_RUN=true
-          DEV_MODE=true
-          RESEND_API_KEY=re_ci_placeholder_not_real
-          RESEND_FROM_DOMAIN=test.example.com
-          EOF
-
-      - name: "L3: Playwright E2E tests"
-        run: bun run test:e2e:bdd
