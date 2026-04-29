@@ -32,6 +32,23 @@ function createApp(db: D1Database) {
   };
 }
 
+function createMockDBWithCapture(allResults: unknown[] = []) {
+  const bindCalls: unknown[][] = [];
+  const db = {
+    prepare: vi.fn(() => ({
+      bind: vi.fn((...params: unknown[]) => {
+        bindCalls.push(params);
+        return {
+          all: vi.fn(() => Promise.resolve({ results: allResults })),
+          first: vi.fn(() => Promise.resolve(null)),
+          run: vi.fn(() => Promise.resolve({ success: true })),
+        };
+      }),
+    })),
+  } as unknown as D1Database;
+  return { db, bindCalls };
+}
+
 describe("webhook-logs route handlers", () => {
   test("GET / returns all logs", async () => {
     const { req } = createApp(createMockDB([sampleLog]));
@@ -41,15 +58,29 @@ describe("webhook-logs route handlers", () => {
     expect(body).toHaveLength(1);
   });
 
-  test("GET /?projectId= filters by project", async () => {
-    const { req } = createApp(createMockDB([sampleLog]));
+  test("GET /?projectId= filters by project (binds projectId)", async () => {
+    const { db, bindCalls } = createMockDBWithCapture([sampleLog]);
+    const { req } = createApp(db);
     const res = await req("/?projectId=proj_001");
     expect(res.status).toBe(200);
+    const body = (await res.json()) as unknown[];
+    expect(body).toHaveLength(1);
+    // Tenancy guard: filter MUST be passed to the SELECT — a regression
+    // dropping it would return webhook logs across all projects (leak
+    // sender domains, recipient counts, error patterns).
+    expect(bindCalls.flat()).toContain("proj_001");
   });
 
-  test("GET / with pagination params", async () => {
-    const { req } = createApp(createMockDB([]));
+  test("GET / with pagination params (pin LIMIT/OFFSET bind positions)", async () => {
+    const { db, bindCalls } = createMockDBWithCapture([]);
+    const { req } = createApp(db);
     const res = await req("/?limit=10&offset=5");
     expect(res.status).toBe(200);
+    // limit↔offset swap silently passes toContain() since both numbers
+    // are present — just at swapped positions. Pin positions: route
+    // binds [limit, offset] for the no-projectId branch.
+    const binds = bindCalls[0] as unknown[];
+    expect(binds[0]).toBe(10); // LIMIT
+    expect(binds[1]).toBe(5);  // OFFSET
   });
 });

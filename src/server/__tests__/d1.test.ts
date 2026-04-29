@@ -69,6 +69,11 @@ describe("D1 wrapper", () => {
       expect(results).toHaveLength(2);
       expect(results[0]!.name).toBe("Project A");
       expect(mockDb._prepare).toHaveBeenCalledTimes(1);
+      // Pin the SQL fragment passed to prepare — a regression that
+      // sent a different SELECT (e.g. SELECT id FROM projects, dropping
+      // columns) would silently pass the toHaveLength check while
+      // breaking dashboards expecting full rows.
+      expect(mockDb._prepare).toHaveBeenCalledWith("SELECT * FROM projects WHERE active = ?");
     });
 
     test("returns empty array when no rows match", async () => {
@@ -166,6 +171,14 @@ describe("D1 wrapper", () => {
 
       expect(results).toHaveLength(2);
       expect(mockDb.batch).toHaveBeenCalledTimes(1);
+      // Pin the batch payload — a regression that swapped statement
+      // order, dropped params, or sent a different SQL would silently
+      // pass the toHaveLength check. Verify the prepared statements
+      // (D1PreparedStatement objects) were passed in order.
+      const batchCall = (mockDb.batch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+      expect(batchCall).toBeDefined();
+      expect(Array.isArray(batchCall![0])).toBe(true);
+      expect((batchCall![0] as unknown[]).length).toBe(2);
     });
 
     test("handles statements without params", async () => {

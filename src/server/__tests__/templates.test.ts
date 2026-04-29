@@ -61,13 +61,15 @@ function createMockDb(options: {
     first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
     run: vi.fn(() => Promise.resolve(createMockResult())),
   };
+  const bindFn = vi.fn(() => mockStmt);
 
   return {
     prepare: vi.fn(() => ({
-      bind: vi.fn(() => mockStmt),
+      bind: bindFn,
     })),
     _stmt: mockStmt,
-  } as unknown as D1Database;
+    _bind: bindFn,
+  } as unknown as D1Database & { _bind: typeof bindFn };
 }
 
 describe("Templates CRUD (native D1)", () => {
@@ -135,7 +137,7 @@ describe("Templates CRUD (native D1)", () => {
   });
 
   describe("getTemplate", () => {
-    test("returns template when found", async () => {
+    test("returns template when found AND pins WHERE id=? + id-bind (defends SQL-swap regression)", async () => {
       const template = makeTemplate();
       const mockDb = createMockDb({ firstResult: template });
 
@@ -143,6 +145,16 @@ describe("Templates CRUD (native D1)", () => {
 
       expect(result).not.toBeNull();
       expect(result?.slug).toBe("welcome");
+      // Same SQL+bind defense as #288 (getProject) and #290 (getRecipient/
+      // getEmailProvider). getTemplate is used by routes for read-by-id.
+      // A regression that swapped to e.g. WHERE slug=? would let a slug
+      // collision (or attacker probing) read the wrong template.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+id\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(template.id);
     });
 
     test("returns null when not found", async () => {
@@ -155,7 +167,7 @@ describe("Templates CRUD (native D1)", () => {
   });
 
   describe("getTemplateBySlug", () => {
-    test("returns template when slug matches", async () => {
+    test("returns template when slug matches AND pins WHERE project_id + slug binds", async () => {
       const template = makeTemplate();
       const mockDb = createMockDb({ firstResult: template });
 
@@ -167,6 +179,20 @@ describe("Templates CRUD (native D1)", () => {
 
       expect(result).not.toBeNull();
       expect(result?.slug).toBe(template.slug);
+      // CRITICAL cross-tenant defense: template slugs are per-project.
+      // A regression dropping WHERE project_id would let a webhook
+      // request for slug='welcome' grab ANOTHER tenant's 'welcome'
+      // template — sending the wrong content to the wrong recipients.
+      // Worst case: customer A's marketing template gets sent under
+      // customer B's webhook, with B's recipients getting A's email.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+project_id\s*=\s*\?/i);
+      expect(sql).toMatch(/slug\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(template.project_id); // project_id (NOT slug)
+      expect(binds[1]).toBe(template.slug);        // slug (NOT project)
     });
 
     test("returns null when slug not found", async () => {
@@ -179,8 +205,8 @@ describe("Templates CRUD (native D1)", () => {
   });
 
   describe("createTemplate", () => {
-    test("creates template with generated ID", async () => {
-      const mockDb = createMockDb({});
+    test("creates template with generated ID and pins INSERT bind positions", async () => {
+      const mockDb = createMockDb({}) as D1Database & { _bind: ReturnType<typeof vi.fn> };
 
       const result = await createTemplate(mockDb, {
         project_id: "proj-123",
@@ -194,6 +220,27 @@ describe("Templates CRUD (native D1)", () => {
       expect(result.name).toBe("New Template");
       expect(result.slug).toBe("new-template");
       expect(result.variables).toBe("[]");
+      // Guard against silent no-INSERT (would lose the template).
+      const sqlCalls = (mockDb.prepare as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(sqlCalls.some((s) => /INSERT INTO templates/i.test(s))).toBe(true);
+      // Bind order from src/server/lib/db/templates.ts:
+      //  [id, project_id, name, slug, subject, body_markdown, variables,
+      //   created_at, updated_at]
+      // Distinct values across name/slug/subject/body_markdown so a
+      // regression that swapped any pair of these textual columns
+      // (e.g. name ↔ slug, subject ↔ body_markdown) is caught.
+      // Without this, the in-memory result.* assertions ALWAYS pass and
+      // the wrong column would silently land in DB — sending email with
+      // the slug as subject is a real customer-visible incident class.
+      const binds = mockDb._bind.mock.calls[0] as unknown[];
+      expect(binds[1]).toBe("proj-123");              // project_id
+      expect(binds[2]).toBe("New Template");          // name
+      expect(binds[3]).toBe("new-template");          // slug
+      expect(binds[4]).toBe("Hello {{name}}");        // subject
+      expect(binds[5]).toBe("Hi {{name}}!");           // body_markdown
+      expect(binds[6]).toBe("[]");                    // variables (default)
     });
 
     test("creates template with variables", async () => {
@@ -230,9 +277,10 @@ describe("Templates CRUD (native D1)", () => {
         }),
         run: vi.fn(() => Promise.resolve(createMockResult())),
       };
+      const bindFn = vi.fn(() => mockStmt);
       const mockDb = {
         prepare: vi.fn(() => ({
-          bind: vi.fn(() => mockStmt),
+          bind: bindFn,
         })),
       } as unknown as D1Database;
 
@@ -245,6 +293,25 @@ describe("Templates CRUD (native D1)", () => {
       expect(result?.name).toBe("Updated Name");
       expect(result?.subject).toBe("New Subject");
       expect(result?.slug).toBe(existing.slug);
+      // Guard against in-memory-only update: assert UPDATE actually issued.
+      const sqlCalls = (mockDb.prepare as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(sqlCalls.some((s) => /UPDATE templates/i.test(s))).toBe(true);
+      // Pin UPDATE bind positions: [name, slug, subject, body_markdown,
+      //  variables, updated_at, id]. The merge logic in updateTemplate
+      // fills unchanged fields from `existing`. Critical swaps caught:
+      //   - name↔slug: send-by-slug lookups would break, dashboard
+      //     labels garbled.
+      //   - subject↔body_markdown: emails go out with body in subject
+      //     line and subject in body — customer-visible disaster.
+      const updateBinds = bindFn.mock.calls[1] as unknown[];
+      expect(updateBinds[0]).toBe("Updated Name");          // name (NOT slug)
+      expect(updateBinds[1]).toBe(existing.slug);           // slug unchanged
+      expect(updateBinds[2]).toBe("New Subject");           // subject (NOT body_markdown)
+      expect(updateBinds[3]).toBe(existing.body_markdown);  // body unchanged
+      expect(updateBinds[4]).toBe(existing.variables);      // variables unchanged
+      expect(updateBinds[6]).toBe(existing.id);              // WHERE id
     });
 
     test("updates variables array", async () => {
@@ -295,6 +362,18 @@ describe("Templates CRUD (native D1)", () => {
       const result = await deleteTemplate(mockDb, existing.id);
 
       expect(result).toBe(true);
+      // Guard: returning true without issuing DELETE would leave stale
+      // template rows; same data-integrity class as the recipient case.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sqlCalls = prepareMock.mock.calls.map((c) => c[0] as string);
+      const deleteIdx = sqlCalls.findIndex((s) => /DELETE FROM templates/i.test(s));
+      expect(deleteIdx).toBeGreaterThanOrEqual(0);
+      // Pin the WHERE id bind on DELETE — wrong-variable regression
+      // would silently target the wrong row (or none) while still
+      // returning true.
+      const bindMock = (prepareMock.mock.results[deleteIdx]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(existing.id);
     });
 
     test("returns false when template not found", async () => {

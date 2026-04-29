@@ -26,6 +26,15 @@ describe("escapeHtml", () => {
   test("leaves safe strings unchanged", () => {
     expect(escapeHtml("Hello World")).toBe("Hello World");
   });
+
+  test("escapes ampersand BEFORE angle brackets (order pins, not just per-char)", () => {
+    // Pins the documented `&` → `&amp;` first, THEN `<` → `&lt;` ordering.
+    // A regression that swapped the chain order would convert `<a>` to
+    // `&amp;lt;a&amp;gt;` (double-escape) since the later `&` pass would
+    // re-escape the `&` introduced by `<`/`>`/`\"` replacements.
+    expect(escapeHtml("<a>")).toBe("&lt;a&gt;");
+    expect(escapeHtml('a&"<b>')).toBe("a&amp;&quot;&lt;b&gt;");
+  });
 });
 
 describe("validateVariables", () => {
@@ -81,6 +90,34 @@ describe("validateVariables", () => {
     const result = validateVariables([optionalVar], {});
     expect(result.greeting).toBe("");
   });
+
+  test("empty string for required variable is treated as missing (not a value)", () => {
+    // Pins the `raw === ""` short-circuit on render.ts:40. A regression
+    // that dropped the `raw === ""` check would accept `{ name: "" }`
+    // as a valid value, silently sending emails with `Hello, !` blanks
+    // instead of failing fast for the operator to fix the payload.
+    expect(() => validateVariables([stringVar], { name: "" })).toThrow(
+      "Missing required variable: name",
+    );
+  });
+
+  test("required-with-empty-string-default is honored (not coerced to throw)", () => {
+    // Pins `decl.default !== undefined` (NOT truthy-check). A regression
+    // to `if (decl.default)` would skip an explicit empty-string default
+    // and throw, breaking templates that intentionally use `""` as a
+    // sentinel default.
+    const varWithEmptyDefault: TemplateVariable = { name: "name", type: "string", required: true, default: "" };
+    const result = validateVariables([varWithEmptyDefault], {});
+    expect(result.name).toBe("");
+  });
+
+  test("boolean coercion canonicalizes to lowercase regardless of input case", () => {
+    // Already partially covered (TRUE) but pin both sides + mixed-case
+    // to lock the canonicalization contract — downstream renderers can
+    // rely on receiving exactly "true"/"false".
+    expect(validateVariables([boolVar], { active: "FALSE" }).active).toBe("false");
+    expect(validateVariables([boolVar], { active: "True" }).active).toBe("true");
+  });
 });
 
 describe("substituteVariables", () => {
@@ -126,6 +163,134 @@ describe("markdownToHtml", () => {
     const html = await markdownToHtml("[link](https://example.com)");
     expect(html).toContain('<a href="https://example.com">link</a>');
   });
+
+  test("BLOCKS javascript: scheme in link href (defense-in-depth XSS)", async () => {
+    // Threat: variable substitution lets `[click]({{url}})` render as
+    // `<a href="javascript:alert(1)">` if the user supplies
+    // `url=javascript:alert(1)`. escapeHtml does NOT escape `:` so the
+    // payload reaches marked unchanged. Without this guard, ANY MUA
+    // that renders HTML anchors without its own URL-scheme sanitizer
+    // (legacy webmail, native mail clients on some platforms) would
+    // execute the script when the recipient clicks the link.
+    const html = await markdownToHtml("[click](javascript:alert(1))");
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain('href="#"');
+  });
+
+  test("BLOCKS data: scheme in link href (data-URL XSS / phishing)", async () => {
+    // data:text/html;base64,... lets attackers smuggle full HTML
+    // documents (including <script>) into a link target.
+    const html = await markdownToHtml("[x](data:text/html,<script>alert(1)</script>)");
+    expect(html).not.toContain("data:");
+    expect(html).toContain('href="#"');
+  });
+
+  test("BLOCKS vbscript: scheme in link href (legacy IE/Outlook XSS)", async () => {
+    // vbscript: URIs still execute in some Outlook configurations.
+    const html = await markdownToHtml("[x](vbscript:msgbox)");
+    expect(html).not.toContain("vbscript:");
+  });
+
+  test("BLOCKS leading-whitespace + uppercase scheme bypass attempts", async () => {
+    // Defense against case + whitespace bypasses: ` JavaScript:`,
+    // `\tJAVASCRIPT:`, `Data:` should all be blocked. The regex uses
+    // `\s*` prefix and `i` flag.
+    const html1 = await markdownToHtml("[x]( JavaScript:alert(1))");
+    expect(html1).not.toMatch(/javascript:/i);
+    const html2 = await markdownToHtml("[x](DATA:text/html,xx)");
+    expect(html2).not.toMatch(/data:/i);
+  });
+
+  test("PRESERVES safe schemes (https, mailto, relative paths)", async () => {
+    // Pin: only the dangerous-scheme regex matches. A regression that
+    // over-broadly stripped ALL hrefs (e.g. `if (href) href = '#'`)
+    // would break every link in every email — silently — since
+    // emails would still render with `href="#"` everywhere.
+    expect(await markdownToHtml("[a](https://example.com)")).toContain(
+      'href="https://example.com"',
+    );
+    expect(await markdownToHtml("[b](mailto:a@b.c)")).toContain(
+      'href="mailto:a@b.c"',
+    );
+    expect(await markdownToHtml("[c](/relative/path)")).toContain(
+      'href="/relative/path"',
+    );
+  });
+
+  test("safeRenderer override does NOT break other markdown features (defense-in-breadth)", async () => {
+    // The safeRenderer overrides `link` and `image` methods only. A
+    // regression that accidentally also overrode/broke other renderer
+    // methods (e.g. someone extending the override pattern and mis-
+    // wiring `list`/`code`/`blockquote` to undefined) would silently
+    // strip every list, code block, and blockquote from outbound emails
+    // — they'd render as plain text. Pin all four core block features.
+    const list = await markdownToHtml("- a\n- b");
+    expect(list).toContain("<ul>");
+    expect(list).toContain("<li>a</li>");
+    const code = await markdownToHtml("```js\nconst x = 1;\n```");
+    expect(code).toContain("<pre>");
+    expect(code).toContain("<code");
+    const table = await markdownToHtml("|a|b|\n|-|-|\n|1|2|");
+    expect(table).toContain("<table>");
+    expect(table).toContain("<th>a</th>");
+    const quote = await markdownToHtml("> quoted");
+    expect(quote).toContain("<blockquote>");
+    expect(quote).toContain("quoted");
+  });
+
+  test("safeRenderer link/image overrides preserve title and alt attributes", async () => {
+    // Specific defense for the security override: a regression that
+    // dropped the title or alt parameters when forwarding to origLink/
+    // origImage would silently strip those attributes from outbound
+    // emails. title=tooltip is used for accessibility (screen readers),
+    // alt is REQUIRED by WCAG for images. Pin both to defend the
+    // override's argument-forwarding completeness.
+    const linkTitle = await markdownToHtml('[a](https://example.com "tooltip")');
+    expect(linkTitle).toContain('href="https://example.com"');
+    expect(linkTitle).toContain('title="tooltip"');
+    const imgTitle = await markdownToHtml('![alt](https://x.com/i.png "tooltip")');
+    expect(imgTitle).toContain('src="https://x.com/i.png"');
+    expect(imgTitle).toContain('alt="alt"');
+    expect(imgTitle).toContain('title="tooltip"');
+    // Sanitized link must STILL preserve title (defends regression that
+    // re-stripped it on the security path).
+    const sanLinkTitle = await markdownToHtml('[a](javascript:bad "tooltip")');
+    expect(sanLinkTitle).toContain('href="#"');
+    expect(sanLinkTitle).toContain('title="tooltip"');
+  });
+
+  test("BLOCKS protocol-relative URLs in <a href> (//evil.com phishing vector)", async () => {
+    // Protocol-relative URLs inherit the page's protocol on the web,
+    // but in email contexts they're ambiguous (no base URL). MUAs that
+    // resolve them with a default https:// prefix would silently send
+    // recipients to attacker domains. The display text often hides the
+    // //-bare hostname, making this a common phishing pattern.
+    expect(await markdownToHtml("[a](//evil.com)")).toContain('href="#"');
+    expect(await markdownToHtml("[b](//evil.com/path)")).toContain('href="#"');
+    // Whitespace-prefix bypass attempt also blocked.
+    expect(await markdownToHtml("[c]( //evil.com)")).toContain('href="#"');
+    // Single-slash absolute paths are NOT protocol-relative — must
+    // pass through unchanged (legitimate email-relative or unsubscribe
+    // links may use them).
+    expect(await markdownToHtml("[d](/safe)")).toContain('href="/safe"');
+  });
+
+  test("BLOCKS javascript:/vbscript: in image src but PRESERVES data: (inline images)", async () => {
+    // <img src=javascript:> is largely a non-issue in modern browsers
+    // but legacy Outlook/MUAs may execute it. Block. Inline data:image/*
+    // base64 is a legitimate email pattern (embedded logos, icons), so
+    // ALLOW data: in img src — but never in <a href> (covered above).
+    const jsImg = await markdownToHtml("![x](javascript:alert(1))");
+    expect(jsImg).not.toMatch(/javascript:/i);
+    const vbsImg = await markdownToHtml("![y](vbscript:msgbox)");
+    expect(vbsImg).not.toMatch(/vbscript:/i);
+    // Legitimate inline image — must pass through.
+    const dataImg = await markdownToHtml("![z](data:image/png;base64,iVBORw0KG)");
+    expect(dataImg).toContain('src="data:image/png;base64,iVBORw0KG"');
+    // Normal external image must work.
+    const httpsImg = await markdownToHtml("![w](https://cdn.example.com/i.png)");
+    expect(httpsImg).toContain('src="https://cdn.example.com/i.png"');
+  });
 });
 
 describe("renderTemplate", () => {
@@ -158,6 +323,12 @@ describe("renderTemplate", () => {
 
     expect(result.html).not.toContain("<script>");
     expect(result.html).toContain("&lt;script&gt;");
+    // ALSO pin: subject is escaped too. Without this, a regression that
+    // skipped substitution-escape on the subject would inject raw HTML
+    // into email subjects — some MUAs render basic HTML in subject
+    // previews, which would leak the XSS payload to the recipient list.
+    expect(result.subject).not.toContain("<script>");
+    expect(result.subject).toContain("&lt;script&gt;");
   });
 
   test("throws on missing required variable", async () => {

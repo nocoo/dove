@@ -1,4 +1,5 @@
 import { describe, test, expect } from "vitest";
+import pkg from "../../../package.json" with { type: "json" };
 import { APP_VERSION } from "../lib/version";
 
 describe("server/lib/version", () => {
@@ -6,9 +7,9 @@ describe("server/lib/version", () => {
     expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  test("APP_VERSION is defined", () => {
-    expect(APP_VERSION).toBeDefined();
-    expect(typeof APP_VERSION).toBe("string");
-    expect(APP_VERSION.length).toBeGreaterThan(0);
+  test("APP_VERSION matches package.json version (catches release drift)", () => {
+    // The server version is hardcoded; this guards against forgetting to
+    // bump it when package.json changes.
+    expect(APP_VERSION).toBe(pkg.version);
   });
 });

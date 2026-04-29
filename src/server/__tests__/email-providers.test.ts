@@ -53,13 +53,15 @@ function createMockDb(options: {
     first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
     run: vi.fn(() => Promise.resolve(createMockResult())),
   };
+  const bindFn = vi.fn(() => mockStmt);
 
   return {
     prepare: vi.fn(() => ({
-      bind: vi.fn(() => mockStmt),
+      bind: bindFn,
     })),
     _stmt: mockStmt,
-  } as unknown as D1Database;
+    _bind: bindFn,
+  } as unknown as D1Database & { _bind: typeof bindFn };
 }
 
 describe("EmailProviders CRUD (native D1)", () => {
@@ -87,7 +89,7 @@ describe("EmailProviders CRUD (native D1)", () => {
   });
 
   describe("getEmailProvider", () => {
-    test("returns provider when found", async () => {
+    test("returns provider when found AND pins WHERE id=? + id-bind (defends api_key disclosure via SQL swap)", async () => {
       const provider = makeProvider();
       const mockDb = createMockDb({ firstResult: provider });
 
@@ -96,6 +98,18 @@ describe("EmailProviders CRUD (native D1)", () => {
       expect(result).not.toBeNull();
       expect(result?.name).toBe("Production Resend");
       expect(result?.type).toBe("resend");
+      // SECURITY: getEmailProvider returns the FULL provider record
+      // including the parsed config (which contains api_key for Resend
+      // providers). A regression that changed the SQL filter from
+      // `WHERE id = ?` to e.g. `WHERE name = ?` would let any caller
+      // who knows a provider name read its api_key (the config column)
+      // by passing the name where an id was expected. Pin SQL+bind.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+id\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(provider.id);
     });
 
     test("returns null when not found", async () => {
@@ -108,8 +122,8 @@ describe("EmailProviders CRUD (native D1)", () => {
   });
 
   describe("createEmailProvider", () => {
-    test("creates provider with generated ID", async () => {
-      const mockDb = createMockDb({});
+    test("creates provider with generated ID and pins INSERT bind positions", async () => {
+      const mockDb = createMockDb({}) as D1Database & { _bind: ReturnType<typeof vi.fn> };
 
       const result = await createEmailProvider(mockDb, {
         name: "New Provider",
@@ -122,6 +136,26 @@ describe("EmailProviders CRUD (native D1)", () => {
       expect(result.name).toBe("New Provider");
       expect(result.type).toBe("resend");
       expect(result.domain).toBe("example.com");
+      // Guard against silent no-INSERT (provider config + api_key lost).
+      const sqlCalls = (mockDb.prepare as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(sqlCalls.some((s) => /INSERT INTO email_providers/i.test(s))).toBe(true);
+      // Bind order from src/server/lib/db/email-providers.ts:59:
+      //  [id, name, type, domain, config, created_at, updated_at]
+      // Critical swap: name↔domain. Both strings, both customer-shown.
+      // A swap would put 'New Provider' as the SMTP-domain (sending email
+      // would fail with DNS/MX errors) and 'example.com' as the provider
+      // display name (dashboard label garbled). UNIQUE(type, domain)
+      // would also fail-open: same domain re-added under different name.
+      // Also pin type and config so a regression that wrote the API key
+      // (in config) into the type column — leaking the secret into a
+      // queryable enum field — is caught.
+      const binds = mockDb._bind.mock.calls[0] as unknown[];
+      expect(binds[1]).toBe("New Provider");                          // name
+      expect(binds[2]).toBe("resend");                                // type
+      expect(binds[3]).toBe("example.com");                            // domain (NOT name)
+      expect(binds[4]).toBe(JSON.stringify({ api_key: "key123" }));   // config (api_key MUST land here)
     });
 
     test("creates cloudflare provider", async () => {
@@ -150,9 +184,10 @@ describe("EmailProviders CRUD (native D1)", () => {
         }),
         run: vi.fn(() => Promise.resolve(createMockResult())),
       };
+      const bindFn = vi.fn(() => mockStmt);
       const mockDb = {
         prepare: vi.fn(() => ({
-          bind: vi.fn(() => mockStmt),
+          bind: bindFn,
         })),
       } as unknown as D1Database;
 
@@ -165,6 +200,22 @@ describe("EmailProviders CRUD (native D1)", () => {
       expect(result?.name).toBe("Updated Name");
       expect(result?.domain).toBe("newdomain.com");
       expect(result?.type).toBe(existing.type);
+      // Guard against in-memory-only update: assert UPDATE actually issued.
+      const sqlCalls = (mockDb.prepare as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(sqlCalls.some((s) => /UPDATE email_providers/i.test(s))).toBe(true);
+      // Pin UPDATE bind positions: [name, type, domain, config, updated_at, id].
+      // bindFn.mock.calls[1] is the UPDATE bind (calls[0] is SELECT existing).
+      // Critical: name↔domain swap would put 'Updated Name' as the SMTP
+      // domain (sends fail with DNS errors) AND 'newdomain.com' as the
+      // display name — in-memory result.* still passes (merged from input).
+      const updateBinds = bindFn.mock.calls[1] as unknown[];
+      expect(updateBinds[0]).toBe("Updated Name");          // name (NOT domain)
+      expect(updateBinds[1]).toBe(existing.type);           // type unchanged
+      expect(updateBinds[2]).toBe("newdomain.com");          // domain (NOT name)
+      expect(updateBinds[3]).toBe(existing.config);         // config unchanged
+      expect(updateBinds[5]).toBe(existing.id);             // WHERE id
     });
 
     test("updates config", async () => {
@@ -211,6 +262,18 @@ describe("EmailProviders CRUD (native D1)", () => {
       const result = await deleteEmailProvider(mockDb, existing.id);
 
       expect(result).toBe(true);
+      // Guard against silent no-delete: returning true without issuing
+      // DELETE would leave provider configs (with secrets) lingering.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sqlCalls = prepareMock.mock.calls.map((c) => c[0] as string);
+      const deleteIdx = sqlCalls.findIndex((s) => /DELETE FROM email_providers/i.test(s));
+      expect(deleteIdx).toBeGreaterThanOrEqual(0);
+      // Pin the WHERE id bind on DELETE — wrong-variable regression
+      // would leave provider configs (with secrets) lingering or delete
+      // the wrong provider row entirely.
+      const bindMock = (prepareMock.mock.results[deleteIdx]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(existing.id);
     });
 
     test("returns false when provider not found", async () => {
@@ -223,12 +286,28 @@ describe("EmailProviders CRUD (native D1)", () => {
   });
 
   describe("countProjectsByProvider", () => {
-    test("returns count of projects using provider", async () => {
+    test("returns count of projects using provider AND pins WHERE provider_id bind", async () => {
       const mockDb = createMockDb({ firstResult: { count: 3 } });
 
-      const result = await countProjectsByProvider(mockDb, "prov-123");
+      const result = await countProjectsByProvider(mockDb, "prov-distinct");
 
       expect(result).toBe(3);
+      // This count GATES the destructive DELETE provider operation.
+      // A regression that:
+      //  (a) drops WHERE provider_id → counts ALL projects, blocks
+      //      deletion of UNUSED providers (annoying);
+      //  (b) binds the wrong variable / hardcoded id → may silently
+      //      allow deletion of an IN-USE provider — orphaning every
+      //      project that referenced it (sends start failing because
+      //      provider lookup returns null mid-pipeline).
+      // The mock returns count=3 regardless of input — the existing
+      // test would silently pass either regression.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+provider_id\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe("prov-distinct");
     });
 
     test("returns 0 when no projects use provider", async () => {

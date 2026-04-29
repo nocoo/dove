@@ -59,6 +59,38 @@ describe("server provider", () => {
       ).toThrow("missing api_key");
     });
 
+    test("SECURITY: thrown error never echoes the api_key value (response-body leak defense)", () => {
+      // The webhook /send 'provider_config_invalid' response surfaces
+      // this error.message verbatim to bearer-token holders. If a
+      // regression interpolated the config OBJECT (or the api_key
+      // value) into the thrown message — e.g. for 'helpful' debugging
+      // — every webhook caller could read the project's Resend API
+      // key from the 500 response body. Pin the contract: even when
+      // the schema rejects an api_key (e.g. wrong format / too short),
+      // the secret value MUST NOT appear in the error message.
+      const SECRET = "re_supersecret_should_never_appear_anywhere_xyz";
+      // Empty api_key still triggers the 'missing api_key' / Zod rejection.
+      // Pre-include the secret in the config to detect verbatim echoes.
+      try {
+        parseProviderConfig(makeProvider({ config: JSON.stringify({ api_key: "", _other: SECRET }) }));
+        // Should have thrown.
+        expect.fail("parseProviderConfig must throw on empty api_key");
+      } catch (e) {
+        const msg = (e as Error).message;
+        expect(msg).not.toContain(SECRET);
+      }
+      // Non-empty but with a secret-looking value — if Zod accepts it,
+      // we have no rejection path. Use an invalid TYPE to force throw.
+      try {
+        parseProviderConfig(makeProvider({
+          config: JSON.stringify({ api_key: SECRET, extra_invalid: { nested: true } }),
+        }));
+      } catch (e) {
+        const msg = (e as Error).message;
+        expect(msg).not.toContain(SECRET);
+      }
+    });
+
     test("throws on unknown provider type", () => {
       expect(() =>
         parseProviderConfig(makeProvider({ type: "unknown" as "resend", config: "{}" })),

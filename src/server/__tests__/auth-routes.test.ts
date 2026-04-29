@@ -38,6 +38,11 @@ describe("auth routes", () => {
         user: { email: string; name: string };
       };
       expect(body.user.email).toBe("dev@localhost");
+      // Pin name too — a regression that injected a different bypass
+      // identity on production-host DEV_MODE branch (e.g. blank name,
+      // or the host-based 'admin@hexly.ai') would silently pass and
+      // could be a privilege-escalation footgun in non-dev deployments.
+      expect(body.user.name).toBe("Dev User");
     });
 
     test("returns null user when no JWT on non-localhost", async () => {

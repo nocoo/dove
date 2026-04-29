@@ -15,7 +15,7 @@ function createApp(env: Partial<Env> = {}) {
   app.post("/api/db/init", (c) => c.json({ ok: true }));
   app.get("/api/projects", (c) => {
     const user = c.get("user");
-    return c.json({ email: user.email });
+    return c.json({ email: user.email, name: user.name });
   });
 
   return {
@@ -30,6 +30,12 @@ describe("authSession middleware", () => {
       new Request("http://localhost:7034/api/live"),
     );
     expect(res.status).toBe(200);
+    // Critical: middleware must NOT inject a user var on skipped routes
+    // and must let the handler run unmodified. Body shape proves the
+    // handler ran (regression that returned 401 from the middleware
+    // would also be status=200 if shape changed by accident).
+    const body = (await res.json()) as { status: string };
+    expect(body.status).toBe("ok");
   });
 
   test("skips /api/auth/* routes", async () => {
@@ -38,6 +44,8 @@ describe("authSession middleware", () => {
       new Request("http://localhost:7034/api/auth/me"),
     );
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { user: null };
+    expect(body.user).toBeNull();
   });
 
   test("skips /api/webhook/* routes", async () => {
@@ -48,6 +56,8 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
   });
 
   test("skips /api/db/init", async () => {
@@ -56,6 +66,8 @@ describe("authSession middleware", () => {
       new Request("http://localhost:7034/api/db/init", { method: "POST" }),
     );
     expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
   });
 
   test("localhost bypasses auth and sets dev user", async () => {
@@ -64,8 +76,12 @@ describe("authSession middleware", () => {
       new Request("http://localhost:7034/api/projects"),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { email: string };
+    const body = (await res.json()) as { email: string; name: string };
     expect(body.email).toBe("dev@localhost");
+    // Pin name too — a regression that set name=email (e.g. dropped
+    // the DEV_USER constant and recomputed name as a fallback) would
+    // silently degrade the dev UX banner that displays "Dev User".
+    expect(body.name).toBe("Dev User");
   });
 
   test("DEV_MODE=true bypasses auth on non-localhost", async () => {
@@ -76,8 +92,13 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { email: string };
+    const body = (await res.json()) as { email: string; name: string };
     expect(body.email).toBe("dev@localhost");
+    // Same DEV_USER must be injected on the DEV_MODE branch — a
+    // regression that injected a different bypass identity (e.g.
+    // 'admin@hexly.ai') on production hosts would be a silent
+    // privilege-escalation footgun.
+    expect(body.name).toBe("Dev User");
   });
 
   test("returns 500 if CF_ACCESS_TEAM_DOMAIN missing on non-localhost", async () => {
@@ -88,6 +109,10 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(500);
+    // Must surface as a server-misconfig error, not crash with empty body —
+    // operator needs to see WHY the deployment can't auth users.
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/misconfig/i);
   });
 
   test("returns 500 if CF_ACCESS_AUD missing on non-localhost", async () => {
@@ -100,6 +125,8 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/misconfig/i);
   });
 
   test("returns 401 if no Cf-Access-Jwt-Assertion header", async () => {
@@ -113,6 +140,8 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Unauthorized");
   });
 
   test("returns 401 for invalid JWT", async () => {
@@ -129,5 +158,7 @@ describe("authSession middleware", () => {
       }),
     );
     expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe("Unauthorized");
   });
 });

@@ -58,14 +58,16 @@ function createMockDb(options: {
     first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
     run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
   };
+  const bindFn = vi.fn(() => mockStmt);
 
   return {
     prepare: vi.fn(() => ({
-      bind: vi.fn(() => mockStmt),
+      bind: bindFn,
     })),
     batch: vi.fn(() => Promise.resolve([createMockResult()])),
     _stmt: mockStmt,
-  } as unknown as D1Database & { _stmt: typeof mockStmt };
+    _bind: bindFn,
+  } as unknown as D1Database & { _stmt: typeof mockStmt; _bind: typeof bindFn };
 }
 
 describe("Projects CRUD (native D1)", () => {
@@ -94,7 +96,7 @@ describe("Projects CRUD (native D1)", () => {
   });
 
   describe("getProject", () => {
-    test("returns project when found", async () => {
+    test("returns project when found AND pins WHERE id=? bind (defends auth-bypass-by-SQL-swap)", async () => {
       const project = makeProject();
       const mockDb = createMockDb({ firstResult: project });
 
@@ -103,6 +105,20 @@ describe("Projects CRUD (native D1)", () => {
       expect(result).not.toBeNull();
       expect(result?.id).toBe(project.id);
       expect(result?.name).toBe("Test Project");
+      // SECURITY: pin SQL filter + bind. getProject is the lookup used
+      // by authBearer middleware (`getProject(db, projectId)` then
+      // `constantTimeEqual(project.webhook_token, token)`). A regression
+      // that changed the SQL to `WHERE webhook_token = ?` would create
+      // an auth-bypass: caller supplies projectId=<token>, getProject
+      // looks up by that id, but actually finds the project whose token
+      // equals that string — then constantTimeEqual passes (token IS
+      // the project's token). Pin the by-id SQL + bind position.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+id\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(project.id);
     });
 
     test("returns null when project not found", async () => {
@@ -115,7 +131,7 @@ describe("Projects CRUD (native D1)", () => {
   });
 
   describe("getProjectByToken", () => {
-    test("returns project when token matches", async () => {
+    test("returns project when token matches AND pins WHERE webhook_token bind (auth-critical)", async () => {
       const project = makeProject();
       const mockDb = createMockDb({ firstResult: project });
 
@@ -123,6 +139,25 @@ describe("Projects CRUD (native D1)", () => {
 
       expect(result).not.toBeNull();
       expect(result?.webhook_token).toBe(project.webhook_token);
+      // AUTH-CRITICAL: this lookup is the entire bearer-token authentication.
+      // A regression that:
+      //  (a) changes the SQL filter from `WHERE webhook_token = ?` to
+      //      `WHERE id = ?` would let a webhook authenticate as the
+      //      project whose UUID happens to equal the bearer token —
+      //      48-char tokens are unlikely to collide, but a determined
+      //      attacker who learns a project id could craft one;
+      //  (b) binds a stale outer-scope variable instead of `token`
+      //      would make every webhook auth as the same wrong project;
+      //  (c) drops the WHERE clause entirely (returns first project)
+      //      would let ANY bearer token auth as the first row.
+      // Mock returns project regardless of input — a 'mock-returns-
+      // regardless' false-positive (see #179). Pin SQL + bind.
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sql = prepareMock.mock.calls[0]?.[0] as string;
+      expect(sql).toMatch(/WHERE\s+webhook_token\s*=\s*\?/i);
+      const bindMock = (prepareMock.mock.results[0]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(project.webhook_token);
     });
 
     test("returns null when token not found", async () => {
@@ -152,10 +187,22 @@ describe("Projects CRUD (native D1)", () => {
       expect(result.quota_daily).toBe(100);
       expect(result.quota_monthly).toBe(1000);
       expect(result.provider_id).toBeNull();
+      // Guard against silent no-INSERT (project + secret token would be lost).
+      const sqlCalls = (mockDb.prepare as unknown as ReturnType<typeof vi.fn>).mock.calls.map(
+        (c) => c[0] as string,
+      );
+      expect(sqlCalls.some((s) => /INSERT INTO projects/i.test(s))).toBe(true);
     });
 
-    test("creates project with custom quotas", async () => {
-      const mockDb = createMockDb({});
+    test("creates project with custom quotas (pin INSERT bind positions)", async () => {
+      // Distinct values (500 ≠ 5000) so a regression that swapped
+      // quota_daily ↔ quota_monthly bind positions is caught — result
+      // object reflects the in-memory variables (always passes), so the
+      // ONLY way to detect column swap is by inspecting the prepared
+      // statement's bind args.
+      const mockDb = createMockDb({}) as D1Database & {
+        _bind: ReturnType<typeof vi.fn>;
+      };
 
       const result = await createProject(mockDb, {
         name: "High Volume",
@@ -167,6 +214,15 @@ describe("Projects CRUD (native D1)", () => {
 
       expect(result.quota_daily).toBe(500);
       expect(result.quota_monthly).toBe(5000);
+      // Bind order from src/server/lib/db/projects.ts:
+      //  [id, name, description, email_prefix, from_name, webhook_token,
+      //   quota_daily, quota_monthly, provider_id, created_at, updated_at]
+      const binds = mockDb._bind.mock.calls[0] as unknown[];
+      expect(binds[1]).toBe("High Volume");          // name
+      expect(binds[3]).toBe("bulk");                 // email_prefix
+      expect(binds[4]).toBe("Bulk Sender");           // from_name
+      expect(binds[6]).toBe(500);                    // quota_daily (NOT 5000)
+      expect(binds[7]).toBe(5000);                   // quota_monthly (NOT 500)
     });
 
     test("creates project with provider_id", async () => {
@@ -196,9 +252,10 @@ describe("Projects CRUD (native D1)", () => {
         }),
         run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
       };
+      const bindFn = vi.fn(() => mockStmt);
       const mockDb = {
         prepare: vi.fn(() => ({
-          bind: vi.fn(() => mockStmt),
+          bind: bindFn,
         })),
       } as unknown as D1Database;
 
@@ -212,6 +269,24 @@ describe("Projects CRUD (native D1)", () => {
       expect(result?.quota_daily).toBe(200);
       // Unchanged fields preserved
       expect(result?.email_prefix).toBe(existing.email_prefix);
+      // Pin UPDATE bind positions: [name, description, email_prefix,
+      //  from_name, quota_daily, quota_monthly, provider_id, updated_at, id].
+      // Critical swaps caught:
+      //   - name↔email_prefix: project label and SMTP local-part swapped.
+      //     New email goes from 'Updated Name@domain' (invalid local part).
+      //   - quota_daily↔quota_monthly: 200/day cap silently becomes
+      //     200/month — customer hits their cap in 1 day, not 1 month.
+      //   - from_name↔provider_id: provider lookup uses display name,
+      //     fails. Display name shows the provider UUID. Both broken.
+      const updateBinds = bindFn.mock.calls[1] as unknown[];
+      expect(updateBinds[0]).toBe("Updated Name");                  // name (NOT email_prefix)
+      expect(updateBinds[1]).toBe(existing.description);            // description unchanged
+      expect(updateBinds[2]).toBe(existing.email_prefix);            // email_prefix (NOT name)
+      expect(updateBinds[3]).toBe(existing.from_name);               // from_name unchanged
+      expect(updateBinds[4]).toBe(200);                              // quota_daily (NOT monthly)
+      expect(updateBinds[5]).toBe(existing.quota_monthly);          // quota_monthly unchanged
+      expect(updateBinds[6]).toBe(existing.provider_id);             // provider_id (NOT from_name)
+      expect(updateBinds[8]).toBe(existing.id);                       // WHERE id
     });
 
     test("returns null when project not found", async () => {
@@ -247,6 +322,67 @@ describe("Projects CRUD (native D1)", () => {
 
       expect(result?.provider_id).toBeNull();
     });
+
+    test("writes a new description (covers the data.description !== undefined branch)", async () => {
+      const existing = makeProject({ description: "old" });
+      let callCount = 0;
+      const mockStmt = {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
+          callCount++;
+          // First call returns the existing row; second returns the updated row.
+          return Promise.resolve(
+            callCount === 1 ? existing : { ...existing, description: "new desc" },
+          );
+        }),
+        run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
+      };
+      const mockDb = {
+        prepare: vi.fn(() => ({
+          bind: vi.fn(() => mockStmt),
+        })),
+      } as unknown as D1Database;
+
+      const result = await updateProject(mockDb, existing.id, {
+        description: "new desc",
+      });
+
+      expect(result?.description).toBe("new desc");
+    });
+
+    test("can CLEAR description by passing null (defends against ?? regression that breaks 'unset' UX)", async () => {
+      // Production code uses `data.description !== undefined ? data.description : existing.description`.
+      // A refactor swapping to `data.description ?? existing.description`
+      // would silently IGNORE null inputs (since `null ?? existing` returns existing),
+      // making it impossible for users to clear their project description
+      // via the dashboard. The bug is invisible to typecheck (both signatures match)
+      // and invisible to the existing 'set new desc' test (non-null path).
+      const existing = makeProject({ description: "old desc" });
+      let callCount = 0;
+      const mockStmt = {
+        all: vi.fn(() => Promise.resolve({ results: [] })),
+        first: vi.fn(() => {
+          callCount++;
+          return Promise.resolve(callCount === 1 ? existing : null);
+        }),
+        run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
+      };
+      const bindFn = vi.fn(() => mockStmt);
+      const mockDb = {
+        prepare: vi.fn(() => ({ bind: bindFn })),
+      } as unknown as D1Database;
+
+      const result = await updateProject(mockDb, existing.id, {
+        description: null,
+      });
+
+      // Both the in-memory result AND the UPDATE bind position 1
+      // (description column) MUST be null — a `??` regression would
+      // leave both as 'old desc'.
+      expect(result?.description).toBeNull();
+      const updateBinds = bindFn.mock.calls[1] as unknown[]; // calls[0] is SELECT existing
+      expect(updateBinds[1]).toBeNull();
+    });
   });
 
   describe("deleteProject", () => {
@@ -257,6 +393,21 @@ describe("Projects CRUD (native D1)", () => {
       const result = await deleteProject(mockDb, existing.id);
 
       expect(result).toBe(true);
+      // Guard: returning true without issuing DELETE would orphan all
+      // child recipients/templates/send_logs (FK CASCADE assumes the
+      // project row actually goes away).
+      const prepareMock = (mockDb as unknown as { prepare: ReturnType<typeof vi.fn> }).prepare;
+      const sqlCalls = prepareMock.mock.calls.map((c) => c[0] as string);
+      const deleteIdx = sqlCalls.findIndex((s) => /DELETE FROM projects/i.test(s));
+      expect(deleteIdx).toBeGreaterThanOrEqual(0);
+      // Pin the WHERE id BIND value — a regression that bound the wrong
+      // variable (e.g. a stale id from a different scope) or a hardcoded
+      // string would silently delete the wrong row, or no row, while
+      // still returning true. The existing-check via getProject
+      // doesn't validate the SECOND bind goes to DELETE correctly.
+      const bindMock = (prepareMock.mock.results[deleteIdx]?.value as { bind: ReturnType<typeof vi.fn> } | undefined)?.bind;
+      const binds = bindMock?.mock.calls[0] as unknown[];
+      expect(binds[0]).toBe(existing.id);
     });
 
     test("returns false when project not found", async () => {
@@ -281,9 +432,10 @@ describe("Projects CRUD (native D1)", () => {
         }),
         run: vi.fn(() => Promise.resolve(createMockResult({ changes: 1 }))),
       };
+      const bindFn = vi.fn(() => mockStmt);
       const mockDb = {
         prepare: vi.fn(() => ({
-          bind: vi.fn(() => mockStmt),
+          bind: bindFn,
         })),
       } as unknown as D1Database;
 
@@ -292,6 +444,18 @@ describe("Projects CRUD (native D1)", () => {
       expect(newToken).not.toBeNull();
       expect(newToken).toHaveLength(48);
       expect(newToken).not.toBe(oldToken);
+      // CRITICAL: verify the RETURNED token is the SAME one persisted.
+      // Pre-strengthening, the test only checked the return value — a
+      // regression that returned a fresh token but bound the OLD token
+      // (or an empty string) to UPDATE would silently rotate clients
+      // off the WRONG token, locking them out while the dashboard
+      // displays the new one. UPDATE bind order: [webhook_token,
+      // updated_at, id]. bindFn.mock.calls[1] is the UPDATE
+      // (calls[0] is the SELECT existing).
+      const updateBinds = bindFn.mock.calls[1] as unknown[];
+      expect(updateBinds[0]).toBe(newToken);    // NEW token persisted
+      expect(updateBinds[0]).not.toBe(oldToken); // explicitly NOT the old one
+      expect(updateBinds[2]).toBe(existing.id);  // WHERE correct project
     });
 
     test("returns null when project not found", async () => {
