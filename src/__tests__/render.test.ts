@@ -261,6 +261,24 @@ describe("markdownToHtml", () => {
     expect(invalid).toContain("<a");
   });
 
+  test("BLOCKS ASCII control char insertion bypass (java&Tab;script:)", async () => {
+    // WHATWG URL parser strips tab/newline/CR before scheme detection.
+    // Attackers exploit: java&Tab;script: decodes to java\tscript: which
+    // regex misses, but browsers parse as javascript:. Must strip control
+    // chars before checking.
+    const tabLink = await markdownToHtml("[x](java&Tab;script:alert(1))");
+    expect(tabLink).toContain('href="#"');
+    const newlineLink = await markdownToHtml("[x](java&NewLine;script:alert(1))");
+    expect(newlineLink).toContain('href="#"');
+    const numericTab = await markdownToHtml("[x](jav&#x09;ascript:alert(1))");
+    expect(numericTab).toContain('href="#"');
+    const dataTab = await markdownToHtml("[x](da&Tab;ta:text/html,x)");
+    expect(dataTab).toContain('href="#"');
+    // Image src also affected
+    const imgTab = await markdownToHtml("![x](java&Tab;script:alert(1))");
+    expect(imgTab).toContain('src="#"');
+  });
+
   test("PRESERVES safe schemes (https, mailto, relative paths)", async () => {
     // Pin: only the dangerous-scheme regex matches. A regression that
     // over-broadly stripped ALL hrefs (e.g. `if (href) href = '#'`)

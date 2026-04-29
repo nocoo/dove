@@ -113,13 +113,17 @@ const PROTOCOL_RELATIVE_RE = /^\s*\/\//;
 // Image src is more permissive: data: URLs are common for inline
 // images in emails (logos, icons embedded base64). Only block scripts.
 const DANGEROUS_IMG_RE = /^\s*(?:javascript|vbscript)\s*:/i;
+// URL parsers (WHATWG URL spec) strip ASCII tab/newline/CR before scheme
+// detection. Attackers exploit this: java&Tab;script: decodes to java\tscript:
+// which the regex misses, but browsers parse as javascript:.
+const URL_CONTROL_CHARS_RE = /[\t\n\r]/g;
 const safeRenderer = new marked.Renderer();
 const origLink = safeRenderer.link.bind(safeRenderer);
 const origImage = safeRenderer.image.bind(safeRenderer);
 safeRenderer.link = function ({ href, title, tokens }: { href: string; title?: string | null; tokens: unknown[] }) {
   if (typeof href === "string") {
-    const decoded = decodeHTML(href);
-    if (DANGEROUS_URL_RE.test(decoded) || PROTOCOL_RELATIVE_RE.test(decoded)) {
+    const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
+    if (DANGEROUS_URL_RE.test(normalized) || PROTOCOL_RELATIVE_RE.test(normalized)) {
       return origLink({ href: "#", title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
     }
   }
@@ -127,8 +131,8 @@ safeRenderer.link = function ({ href, title, tokens }: { href: string; title?: s
 };
 safeRenderer.image = function ({ href, title, text }: { href: string; title?: string | null; text: string }) {
   if (typeof href === "string") {
-    const decoded = decodeHTML(href);
-    if (DANGEROUS_IMG_RE.test(decoded)) {
+    const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
+    if (DANGEROUS_IMG_RE.test(normalized)) {
       return origImage({ href: "#", title: title ?? null, text } as Parameters<typeof origImage>[0]);
     }
   }
