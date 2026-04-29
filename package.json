@@ -25,6 +25,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "entities": "^8.0.0",
     "hono": "^4.12.14",
     "jose": "^6.2.2",
     "lucide-react": "^1.7.0",

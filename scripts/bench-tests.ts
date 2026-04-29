@@ -250,13 +250,22 @@ const sw = auditSqlWindowGaps();
 console.log(`sql-window audit: ${sw.total} SUT date-fragments, ${sw.unpinned} unpinned${sw.unpinned > 0 ? " -> " + sw.details.join(", ") : ""}`);
 console.log(`METRIC sql_window_unpinned_count=${sw.unpinned}`);
 
-const coverageOk = cov.lineCov >= 99 && cov.ok;
+// Coverage thresholds aligned with vitest.config.ts
+const COV_LINES = 99;
+const COV_FUNCS = 99;
+const COV_BRANCHES = 96;
+const coverageOk = cov.lineCov >= COV_LINES && cov.funcCov >= COV_FUNCS && cov.branchCov >= COV_BRANCHES && cov.ok;
 const statusOnlyOk = q.statusOnly === 0;
 const calledTimesOk = q.calledTimesWithoutArgs === 0;
 const rejectsOk = q.rejectsWithoutSideEffectCheck === 0;
 const allPassed = noCovRuns.every((r) => r.ok && r.failed === 0);
 if (!coverageOk) {
-  console.error(`FAIL: coverage gate (lines ${cov.lineCov}% < 99% or coverage run failed)`);
+  const fails: string[] = [];
+  if (cov.lineCov < COV_LINES) fails.push(`lines ${cov.lineCov}% < ${COV_LINES}%`);
+  if (cov.funcCov < COV_FUNCS) fails.push(`funcs ${cov.funcCov}% < ${COV_FUNCS}%`);
+  if (cov.branchCov < COV_BRANCHES) fails.push(`branches ${cov.branchCov}% < ${COV_BRANCHES}%`);
+  if (!cov.ok) fails.push("coverage run failed");
+  console.error(`FAIL: coverage gate (${fails.join(", ")})`);
   process.exit(2);
 }
 if (!statusOnlyOk) {

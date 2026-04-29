@@ -236,6 +236,31 @@ describe("markdownToHtml", () => {
     expect(vbsImg).toContain('src="#"');
   });
 
+  test("BLOCKS named HTML entity &colon; bypass (javascript&colon;)", async () => {
+    // Named entities like &colon; decode to ':' in browser/MUA parsing.
+    // Without full entity decoding, 'javascript&colon;alert(1)' bypasses
+    // the regex check but executes as 'javascript:alert(1)'.
+    const colonLink = await markdownToHtml("[x](javascript&colon;alert(1))");
+    expect(colonLink).toContain('href="#"');
+    expect(colonLink).not.toContain("javascript&colon;");
+    const dataColon = await markdownToHtml("[x](data&colon;text/html,x)");
+    expect(dataColon).toContain('href="#"');
+    const vbsColon = await markdownToHtml("[x](vbscript&colon;msgbox)");
+    expect(vbsColon).toContain('href="#"');
+    // Image src with named entity
+    const jsImgColon = await markdownToHtml("![x](javascript&colon;alert(1))");
+    expect(jsImgColon).toContain('src="#"');
+  });
+
+  test("handles invalid numeric entity codepoints gracefully (no crash)", async () => {
+    // Invalid codepoints (e.g. &#x110000; > U+10FFFF) should not cause
+    // markdownToHtml to throw. The entities library handles these gracefully.
+    const invalid = await markdownToHtml("[x](&#x110000;avascript:alert(1))");
+    expect(invalid).toBeDefined();
+    // Should still be a valid anchor (not crash)
+    expect(invalid).toContain("<a");
+  });
+
   test("PRESERVES safe schemes (https, mailto, relative paths)", async () => {
     // Pin: only the dangerous-scheme regex matches. A regression that
     // over-broadly stripped ALL hrefs (e.g. `if (href) href = '#'`)
