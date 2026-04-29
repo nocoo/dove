@@ -94,9 +94,41 @@ export function substituteVariables(
 
 /**
  * Convert Markdown to HTML using marked.
+ *
+ * Defense-in-depth: blocks dangerous URL schemes (javascript:, data:,
+ * vbscript:) in <a href> attributes. Variables flow through user-
+ * controlled `{{url}}` substitutions; without this guard, a payload
+ * like `url=javascript:alert(1)` against a template `[click]({{url}})`
+ * would render as `<a href="javascript:alert(1)">` and execute in any
+ * MUA that renders HTML anchors without its own URL sanitizer.
  */
+const DANGEROUS_URL_RE = /^\s*(?:javascript|data|vbscript)\s*:/i;
+// Protocol-relative URLs (//evil.com) inherit the page's protocol on
+// the web; in email contexts they're ambiguous (no base URL) and most
+// legitimate emails use absolute URLs. They're also a common phishing
+// pattern — the displayed link text often hides the //-bare hostname.
+// Block them in <a href> to prevent unintended outbound navigation.
+const PROTOCOL_RELATIVE_RE = /^\s*\/\//;
+// Image src is more permissive: data: URLs are common for inline
+// images in emails (logos, icons embedded base64). Only block scripts.
+const DANGEROUS_IMG_RE = /^\s*(?:javascript|vbscript)\s*:/i;
+const safeRenderer = new marked.Renderer();
+const origLink = safeRenderer.link.bind(safeRenderer);
+const origImage = safeRenderer.image.bind(safeRenderer);
+safeRenderer.link = function ({ href, title, tokens }: { href: string; title?: string | null; tokens: unknown[] }) {
+  if (typeof href === "string" && (DANGEROUS_URL_RE.test(href) || PROTOCOL_RELATIVE_RE.test(href))) {
+    return origLink({ href: "#", title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
+  }
+  return origLink({ href, title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
+};
+safeRenderer.image = function ({ href, title, text }: { href: string; title?: string | null; text: string }) {
+  if (typeof href === "string" && DANGEROUS_IMG_RE.test(href)) {
+    return origImage({ href: "#", title: title ?? null, text } as Parameters<typeof origImage>[0]);
+  }
+  return origImage({ href, title: title ?? null, text } as Parameters<typeof origImage>[0]);
+};
 export async function markdownToHtml(markdown: string): Promise<string> {
-  return marked.parse(markdown, { async: true });
+  return marked.parse(markdown, { async: true, renderer: safeRenderer });
 }
 
 /** Minimal responsive email HTML wrapper. */
