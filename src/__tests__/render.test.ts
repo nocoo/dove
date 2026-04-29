@@ -201,6 +201,41 @@ describe("markdownToHtml", () => {
     expect(html2).not.toMatch(/data:/i);
   });
 
+  test("BLOCKS HTML entity-encoded javascript: scheme bypass (&#x6a;avascript:)", async () => {
+    // Critical defense: attackers can encode scheme letters as HTML
+    // entities (&#x6a; = 'j', &#97; = 'a') to bypass regex detection.
+    // The regex runs before HTML entity decoding, so `&#x6a;avascript:`
+    // would pass the check but decode to `javascript:` in the browser.
+    // Fix: decode entities before applying the dangerous-scheme regex.
+    const hexEncoded = await markdownToHtml("[x](&#x6a;avascript:alert(1))");
+    expect(hexEncoded).toContain('href="#"');
+    expect(hexEncoded).not.toContain("javascript:");
+    const decEncoded = await markdownToHtml("[x](&#106;avascript:alert(1))");
+    expect(decEncoded).toContain('href="#"');
+    const mixedCase = await markdownToHtml("[x](&#x4A;AVASCRIPT:alert(1))");
+    expect(mixedCase).toContain('href="#"');
+    // data: and vbscript: entity-encoded variants
+    const dataEncoded = await markdownToHtml("[x](&#100;ata:text/html,x)");
+    expect(dataEncoded).toContain('href="#"');
+    const vbsEncoded = await markdownToHtml("[x](&#x76;bscript:msgbox)");
+    expect(vbsEncoded).toContain('href="#"');
+  });
+
+  test("BLOCKS HTML entity-encoded protocol-relative URLs (&#x2f;&#x2f;evil.com)", async () => {
+    // Protocol-relative bypass via entity-encoded slashes.
+    const encoded = await markdownToHtml("[x](&#x2f;&#x2f;evil.com)");
+    expect(encoded).toContain('href="#"');
+  });
+
+  test("BLOCKS HTML entity-encoded schemes in image src", async () => {
+    // Image src also needs entity decoding before scheme check.
+    const jsImg = await markdownToHtml("![x](&#x6a;avascript:alert(1))");
+    expect(jsImg).toContain('src="#"');
+    expect(jsImg).not.toContain("javascript:");
+    const vbsImg = await markdownToHtml("![x](&#x76;bscript:msgbox)");
+    expect(vbsImg).toContain('src="#"');
+  });
+
   test("PRESERVES safe schemes (https, mailto, relative paths)", async () => {
     // Pin: only the dangerous-scheme regex matches. A regression that
     // over-broadly stripped ALL hrefs (e.g. `if (href) href = '#'`)

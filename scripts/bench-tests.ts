@@ -250,13 +250,13 @@ const sw = auditSqlWindowGaps();
 console.log(`sql-window audit: ${sw.total} SUT date-fragments, ${sw.unpinned} unpinned${sw.unpinned > 0 ? " -> " + sw.details.join(", ") : ""}`);
 console.log(`METRIC sql_window_unpinned_count=${sw.unpinned}`);
 
-const coverageOk = cov.lineCov >= 95 && cov.ok;
+const coverageOk = cov.lineCov >= 99 && cov.ok;
 const statusOnlyOk = q.statusOnly === 0;
 const calledTimesOk = q.calledTimesWithoutArgs === 0;
 const rejectsOk = q.rejectsWithoutSideEffectCheck === 0;
 const allPassed = noCovRuns.every((r) => r.ok && r.failed === 0);
 if (!coverageOk) {
-  console.error(`FAIL: coverage gate (lines ${cov.lineCov}% < 95% or coverage run failed)`);
+  console.error(`FAIL: coverage gate (lines ${cov.lineCov}% < 99% or coverage run failed)`);
   process.exit(2);
 }
 if (!statusOnlyOk) {

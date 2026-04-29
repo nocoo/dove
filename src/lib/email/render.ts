@@ -17,6 +17,18 @@ export function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Decode HTML entities for URL sanitization (prevents entity-encoded bypass). */
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
 /**
  * Validate and coerce variables against the template's schema.
  *
@@ -116,14 +128,20 @@ const safeRenderer = new marked.Renderer();
 const origLink = safeRenderer.link.bind(safeRenderer);
 const origImage = safeRenderer.image.bind(safeRenderer);
 safeRenderer.link = function ({ href, title, tokens }: { href: string; title?: string | null; tokens: unknown[] }) {
-  if (typeof href === "string" && (DANGEROUS_URL_RE.test(href) || PROTOCOL_RELATIVE_RE.test(href))) {
-    return origLink({ href: "#", title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
+  if (typeof href === "string") {
+    const decoded = decodeHtmlEntities(href);
+    if (DANGEROUS_URL_RE.test(decoded) || PROTOCOL_RELATIVE_RE.test(decoded)) {
+      return origLink({ href: "#", title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
+    }
   }
   return origLink({ href, title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
 };
 safeRenderer.image = function ({ href, title, text }: { href: string; title?: string | null; text: string }) {
-  if (typeof href === "string" && DANGEROUS_IMG_RE.test(href)) {
-    return origImage({ href: "#", title: title ?? null, text } as Parameters<typeof origImage>[0]);
+  if (typeof href === "string") {
+    const decoded = decodeHtmlEntities(href);
+    if (DANGEROUS_IMG_RE.test(decoded)) {
+      return origImage({ href: "#", title: title ?? null, text } as Parameters<typeof origImage>[0]);
+    }
   }
   return origImage({ href, title: title ?? null, text } as Parameters<typeof origImage>[0]);
 };
