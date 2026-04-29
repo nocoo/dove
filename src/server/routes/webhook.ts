@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import type { Env } from "../env";
 import { getProject } from "../lib/db/projects";
 import { getRecipient, getRecipientByEmail } from "../lib/db/recipients";
+import { constantTimeEqual } from "../lib/constant-time";
 import { getTemplateBySlug, listTemplates, parseVariables } from "../lib/db/templates";
 import {
   findByIdempotencyKey,
@@ -66,7 +67,7 @@ webhook.get("/:projectId", async (c) => {
   }
   const token = authHeader.slice(7);
   const project = await getProject(c.env.DB, c.req.param("projectId"));
-  if (!project || project.webhook_token !== token) {
+  if (!project || !constantTimeEqual(project.webhook_token, token)) {
     return c.body(null, 403);
   }
   return c.body(null, 200);
@@ -79,7 +80,7 @@ webhook.get("/:projectId/templates", async (c) => {
   }
   const token = authHeader.slice(7);
   const project = await getProject(c.env.DB, c.req.param("projectId"));
-  if (!project || project.webhook_token !== token) {
+  if (!project || !constantTimeEqual(project.webhook_token, token)) {
     return c.json(errorJson("auth_invalid", "Invalid token or project not found"), 403);
   }
 
@@ -132,7 +133,7 @@ webhook.post("/:projectId/send", async (c) => {
 
     const token = authHeader.slice(7);
     const project = await getProject(db, projectId);
-    if (!project || project.webhook_token !== token) {
+    if (!project || !constantTimeEqual(project.webhook_token, token)) {
       return logAndRespond(403, errorJson("auth_invalid", "Invalid token or project not found"), "auth_invalid");
     }
 

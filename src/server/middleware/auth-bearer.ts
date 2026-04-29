@@ -1,6 +1,7 @@
 import { createMiddleware } from "hono/factory";
 import type { Env } from "../env";
 import { getProject, type Project } from "../lib/db/projects";
+import { constantTimeEqual } from "../lib/constant-time";
 
 type BearerEnv = {
   Bindings: Env;
@@ -24,7 +25,7 @@ export const authBearer = createMiddleware<BearerEnv>(async (c, next) => {
     return c.json({ error: { code: "project_not_found", message: "Project not found" } }, 404);
   }
 
-  if (project.webhook_token !== token) {
+  if (!constantTimeEqual(project.webhook_token, token)) {
     return c.json({ error: { code: "auth_invalid", message: "Invalid token" } }, 403);
   }
 
