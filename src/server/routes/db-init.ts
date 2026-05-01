@@ -129,10 +129,15 @@ dbInit.post("/", async (c) => {
     return c.json({ error: "Only available in local development" }, 403);
   }
 
-  const statements = SCHEMA_SQL
+  // Strip `--` line comments BEFORE splitting on `;` — otherwise an
+  // inline comment containing a semicolon (e.g. "Defaults to 0;") will
+  // be split mid-statement, leaving the residual comment text as a
+  // bogus second statement that D1 rejects with "incomplete input".
+  const stripped = SCHEMA_SQL.replace(/--[^\n]*/g, "");
+  const statements = stripped
     .split(";")
     .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith("--"));
+    .filter((s) => s.length > 0);
 
   for (const stmt of statements) {
     await c.env.DB.prepare(stmt).run();
