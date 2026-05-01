@@ -14,6 +14,7 @@ const testProject: Project = {
   quota_daily: 100,
   quota_monthly: 1000,
   provider_id: null,
+  allow_unknown_recipients: false,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };

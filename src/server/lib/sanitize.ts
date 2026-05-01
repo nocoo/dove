@@ -13,6 +13,7 @@ export function sanitizeProject(project: Project): SanitizedProject {
     quota_daily: project.quota_daily,
     quota_monthly: project.quota_monthly,
     provider_id: project.provider_id,
+    allow_unknown_recipients: project.allow_unknown_recipients,
     created_at: project.created_at,
     updated_at: project.updated_at,
   };

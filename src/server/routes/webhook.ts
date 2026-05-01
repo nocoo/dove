@@ -189,8 +189,35 @@ webhook.post("/:projectId/send", async (c) => {
     }
 
     // Step 5: Recipient
+    //
+    // Two modes:
+    //   (a) default — `recipients` whitelist enforced. Lookup by email or by
+    //       recipient id (the latter is tenancy-scoped via project_id check).
+    //   (b) `allow_unknown_recipients=1` — the project owns its own user
+    //       directory and verifies recipients itself (e.g. the ellie email
+    //       verification flow). We accept any RFC-valid email and forge an
+    //       ephemeral recipient object for the rest of the pipeline. The id
+    //       form (no `@`) is REJECTED in this mode — there's no recipients
+    //       table entry to look up, and treating the literal as "an id"
+    //       would silently bypass the email-format gate.
     let recipient;
-    if (to.includes("@")) {
+    if (project.allow_unknown_recipients) {
+      if (!to.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+        return logAndRespond(
+          400,
+          errorJson("recipient_invalid", "Recipient must be a valid email address"),
+          "recipient_invalid",
+        );
+      }
+      // Ephemeral, NOT persisted. recipient_id stays null on send_logs.
+      recipient = {
+        id: null as unknown as string,
+        project_id: projectId,
+        name: "",
+        email: to.trim().toLowerCase(),
+        created_at: new Date().toISOString(),
+      };
+    } else if (to.includes("@")) {
       recipient = await getRecipientByEmail(db, projectId, to);
     } else {
       recipient = await getRecipient(db, to);

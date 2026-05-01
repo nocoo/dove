@@ -21,6 +21,7 @@ const CreateProjectSchema = z.object({
   quota_daily: z.number().int().min(1).optional(),
   quota_monthly: z.number().int().min(1).optional(),
   provider_id: z.string().min(1).nullable().optional(),
+  allow_unknown_recipients: z.boolean().optional(),
 });
 
 const UpdateProjectSchema = z.object({
@@ -31,6 +32,7 @@ const UpdateProjectSchema = z.object({
   quota_daily: z.number().int().min(1).optional(),
   quota_monthly: z.number().int().min(1).optional(),
   provider_id: z.string().min(1).nullable().optional(),
+  allow_unknown_recipients: z.boolean().optional(),
 });
 
 projects.get("/", async (c) => {

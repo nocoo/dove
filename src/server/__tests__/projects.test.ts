@@ -42,6 +42,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     quota_daily: 100,
     quota_monthly: 1000,
     provider_id: null,
+    allow_unknown_recipients: false,
     created_at: "2025-01-01T00:00:00.000Z",
     updated_at: "2025-01-01T00:00:00.000Z",
     ...overrides,
@@ -216,13 +217,42 @@ describe("Projects CRUD (native D1)", () => {
       expect(result.quota_monthly).toBe(5000);
       // Bind order from src/server/lib/db/projects.ts:
       //  [id, name, description, email_prefix, from_name, webhook_token,
-      //   quota_daily, quota_monthly, provider_id, created_at, updated_at]
+      //   quota_daily, quota_monthly, provider_id, allow_unknown_recipients,
+      //   created_at, updated_at]
       const binds = mockDb._bind.mock.calls[0] as unknown[];
       expect(binds[1]).toBe("High Volume");          // name
       expect(binds[3]).toBe("bulk");                 // email_prefix
       expect(binds[4]).toBe("Bulk Sender");           // from_name
       expect(binds[6]).toBe(500);                    // quota_daily (NOT 5000)
       expect(binds[7]).toBe(5000);                   // quota_monthly (NOT 500)
+      // allow_unknown_recipients defaults to 0 on create — pin the bind
+      // index so a regression that shifted the column (e.g. accidentally
+      // dropped it from the INSERT, breaking schema-vs-bind alignment)
+      // would surface here. The default-false also defends against a
+      // regression that flipped the default to true (unauthenticated
+      // recipient bypass for every NEW project — disastrous).
+      expect(binds[9]).toBe(0);
+    });
+
+    test("creates project with allow_unknown_recipients=true (pin bind value)", async () => {
+      // Pin the truthy branch of `allow_unknown_recipients ? 1 : 0` at the
+      // INSERT bind. Without this, a regression that hardcoded the bind
+      // to 0 would silently break per-project opt-in (ellie's flow would
+      // hit recipient_not_found 404 for every verification email).
+      const mockDb = createMockDb({}) as D1Database & {
+        _bind: ReturnType<typeof vi.fn>;
+      };
+
+      const result = await createProject(mockDb, {
+        name: "Ellie",
+        email_prefix: "verify",
+        from_name: "Ellie",
+        allow_unknown_recipients: true,
+      });
+
+      expect(result.allow_unknown_recipients).toBe(true);
+      const binds = mockDb._bind.mock.calls[0] as unknown[];
+      expect(binds[9]).toBe(1);
     });
 
     test("creates project with provider_id", async () => {
@@ -270,7 +300,8 @@ describe("Projects CRUD (native D1)", () => {
       // Unchanged fields preserved
       expect(result?.email_prefix).toBe(existing.email_prefix);
       // Pin UPDATE bind positions: [name, description, email_prefix,
-      //  from_name, quota_daily, quota_monthly, provider_id, updated_at, id].
+      //  from_name, quota_daily, quota_monthly, provider_id,
+      //  allow_unknown_recipients, updated_at, id].
       // Critical swaps caught:
       //   - name↔email_prefix: project label and SMTP local-part swapped.
       //     New email goes from 'Updated Name@domain' (invalid local part).
@@ -286,7 +317,8 @@ describe("Projects CRUD (native D1)", () => {
       expect(updateBinds[4]).toBe(200);                              // quota_daily (NOT monthly)
       expect(updateBinds[5]).toBe(existing.quota_monthly);          // quota_monthly unchanged
       expect(updateBinds[6]).toBe(existing.provider_id);             // provider_id (NOT from_name)
-      expect(updateBinds[8]).toBe(existing.id);                       // WHERE id
+      expect(updateBinds[7]).toBe(0);                                // allow_unknown_recipients (false → 0)
+      expect(updateBinds[9]).toBe(existing.id);                       // WHERE id
     });
 
     test("returns null when project not found", async () => {

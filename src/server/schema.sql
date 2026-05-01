@@ -34,9 +34,19 @@ CREATE TABLE IF NOT EXISTS projects (
   quota_daily INTEGER NOT NULL DEFAULT 100,
   quota_monthly INTEGER NOT NULL DEFAULT 1000,
   provider_id TEXT REFERENCES email_providers(id),  -- NULL = legacy env-var mode
+  -- When 1, the webhook send endpoint skips the project-recipient whitelist
+  -- check and accepts any RFC-valid email. Used for projects (e.g. ellie) that
+  -- own their own user model and verify recipients themselves. Defaults to 0
+  -- so adding a project never accidentally opens its allowlist.
+  allow_unknown_recipients INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+-- For existing databases that pre-date `allow_unknown_recipients`, run
+-- `migrations/2026-05-01-projects-allow-unknown-recipients.sql` (one-shot
+-- ALTER TABLE; SQLite has no IF NOT EXISTS for columns). Fresh DBs already
+-- include the column from the CREATE TABLE above.
 
 CREATE INDEX IF NOT EXISTS idx_projects_webhook_token ON projects(webhook_token);
 

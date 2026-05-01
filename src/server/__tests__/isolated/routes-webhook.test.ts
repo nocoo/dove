@@ -18,6 +18,7 @@ const sampleProject: Project = {
   quota_daily: 100,
   quota_monthly: 1000,
   provider_id: null,
+  allow_unknown_recipients: false,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
@@ -1158,6 +1159,99 @@ describe("webhook route handlers", () => {
       expect(body.provider_message_id).toBe("msg_001");
       expect(body.provider_type).toBe("cloudflare");
       expect(body.status).toBe("sent");
+    });
+
+    describe("Step 5 recipient — allow_unknown_recipients", () => {
+      // Per-project opt-in flag (defaults false): when true, the project
+      // owns its own user directory & verifies recipients out-of-band
+      // (e.g. ellie's email-verify flow). Webhook MUST accept any
+      // RFC-shaped email and skip the whitelist lookup, but MUST still
+      // gate on email format — silently letting the no-`@` "id" form
+      // through would bypass that gate. Defaults must stay false to
+      // preserve the locked-down behavior every other project relies on.
+
+      test("flag ON + valid email: accepts and SKIPS whitelist lookup", async () => {
+        mockGetProject.mockImplementation(() =>
+          Promise.resolve({ ...sampleProject, allow_unknown_recipients: true }),
+        );
+        const res = await sendRequest({
+          template: "welcome",
+          to: "totally-unknown@example.com",
+          variables: { name: "Stranger" },
+        });
+        expect(res.status).toBe(200);
+        // Critical: NO recipient lookup of either form should fire.
+        expect(mockGetRecipientByEmail).not.toHaveBeenCalled();
+        expect(mockGetRecipient).not.toHaveBeenCalled();
+        // Provider was called with the ad-hoc email (no whitelist join).
+        expect(mockProviderSend).toHaveBeenCalledTimes(1);
+        const sendArgs = (mockProviderSend.mock.calls[0] as unknown as [Record<string, unknown>])[0];
+        expect(sendArgs.to).toBe("totally-unknown@example.com");
+        // Send log persisted with NULL recipient_id (no recipients row).
+        const createArgs = mockCreateSendLog.mock.calls[0] as unknown as [unknown, Record<string, unknown>];
+        expect(createArgs[1].recipient_id).toBeNull();
+      });
+
+      test("flag ON + malformed email: 400 recipient_invalid (NOT 404)", async () => {
+        mockGetProject.mockImplementation(() =>
+          Promise.resolve({ ...sampleProject, allow_unknown_recipients: true }),
+        );
+        const res = await sendRequest({
+          template: "welcome",
+          to: "plain@nodot",
+          variables: { name: "X" },
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe("recipient_invalid");
+        expect(mockProviderSend).not.toHaveBeenCalled();
+        expect(mockGetRecipientByEmail).not.toHaveBeenCalled();
+        expect(mockGetRecipient).not.toHaveBeenCalled();
+        // Audit-log drift defense: pin 400 + recipient_invalid.
+        const wlArgs = mockCreateWebhookLog.mock.calls[0] as unknown as [unknown, Record<string, unknown>];
+        expect(wlArgs[1].status_code).toBe(400);
+        expect(wlArgs[1].error_code).toBe("recipient_invalid");
+      });
+
+      test("flag ON + bare id (no @): rejected as recipient_invalid (no silent id-lookup bypass)", async () => {
+        // SECURITY: in flag-on mode the no-`@` id-form lookup MUST be
+        // disabled. A regression that fell through to getRecipient(...)
+        // here would let an attacker who learned a recipient ID from
+        // any tenant send to that ID's email, with the email-format
+        // gate completely bypassed.
+        mockGetProject.mockImplementation(() =>
+          Promise.resolve({ ...sampleProject, allow_unknown_recipients: true }),
+        );
+        const res = await sendRequest({
+          template: "welcome",
+          to: "rcpt_bareid",
+          variables: { name: "X" },
+        });
+        expect(res.status).toBe(400);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe("recipient_invalid");
+        expect(mockGetRecipient).not.toHaveBeenCalled();
+        expect(mockGetRecipientByEmail).not.toHaveBeenCalled();
+        expect(mockProviderSend).not.toHaveBeenCalled();
+      });
+
+      test("flag OFF (default): whitelist enforcement is unchanged (regression guard)", async () => {
+        // The default branch must continue to look up the recipient via
+        // the project's whitelist. A regression that always took the
+        // bypass path would silently disable per-project recipient
+        // gating for EVERY project.
+        mockGetRecipientByEmail.mockImplementation(() => Promise.resolve(null));
+        const res = await sendRequest({
+          template: "welcome",
+          to: "stranger@example.com",
+          variables: { name: "X" },
+        });
+        expect(res.status).toBe(404);
+        const body = (await res.json()) as { error: { code: string } };
+        expect(body.error.code).toBe("recipient_not_found");
+        expect(mockGetRecipientByEmail).toHaveBeenCalledTimes(1);
+        expect(mockProviderSend).not.toHaveBeenCalled();
+      });
     });
 
     test("returns 502 with cloudflare_failed code when configured cloudflare provider throws", async () => {

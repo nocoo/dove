@@ -136,7 +136,9 @@ export async function createSendLog(
     idempotency_key?: string | undefined;
     payload_hash?: string | undefined;
     template_id: string;
-    recipient_id: string;
+    // Nullable so projects with `allow_unknown_recipients=1` (which don't
+    // persist a recipients row for ad-hoc sends) can still create send_logs.
+    recipient_id: string | null;
     to_email: string;
     subject: string;
     provider_id?: string | null | undefined;
