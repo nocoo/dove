@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS projects (
   quota_daily INTEGER NOT NULL DEFAULT 100,
   quota_monthly INTEGER NOT NULL DEFAULT 1000,
   provider_id TEXT REFERENCES email_providers(id),
+  -- Per-project opt-in to bypass the recipients whitelist. Defaults to 0;
+  -- mirrors src/server/schema.sql. KEEP IN SYNC — see the schema-drift
+  -- guard test in src/server/__tests__/db-init-schema.test.ts.
+  allow_unknown_recipients INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
