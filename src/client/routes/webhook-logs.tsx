@@ -35,8 +35,8 @@ interface Project {
 
 const PAGE_SIZE = 20;
 
-function statusCodeVariant(code: number): "default" | "secondary" | "destructive" | "outline" {
-  if (code >= 200 && code < 300) return "default";
+function statusCodeVariant(code: number): "success" | "secondary" | "destructive" | "outline" {
+  if (code >= 200 && code < 300) return "success";
   if (code >= 400 && code < 500) return "secondary";
   if (code >= 500) return "destructive";
   return "outline";

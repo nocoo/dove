@@ -59,10 +59,10 @@ interface Project {
 
 const PAGE_SIZE = 20;
 
-function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+function statusVariant(status: string): "success" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "sent":
-      return "default";
+      return "success";
     case "sending":
       return "secondary";
     case "failed":
