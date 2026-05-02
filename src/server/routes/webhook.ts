@@ -260,6 +260,11 @@ webhook.post("/:projectId/send", async (c) => {
     // lock_token is always present when allowed=true
     const lockToken = rateLimitResult.lock_token ?? "";
 
+    // Flag: once provider confirms delivery, the lock must NEVER be released
+    // — even if subsequent DB writes or response construction fail.
+    let providerSendSucceeded = false;
+
+    try {
     // Step 9: Pre-log
     let sendLog;
     if (existingSendLog && existingSendLog.status === "failed") {
@@ -327,31 +332,21 @@ webhook.post("/:projectId/send", async (c) => {
       provider_type: providerType,
     });
 
+    // Step 10.5: Attempt send
+    let sendResult: { id: string };
     try {
-      const result = await provider.send({
+      sendResult = await provider.send({
         from: fromAddress,
         to: recipient.email,
         subject: rendered.subject,
         html: rendered.html,
         idempotencyKey: sendLog.id,
       });
-
-      // Step 11: Mark sent
-      await markSendLogSent(db, sendLog.id, {
-        providerMessageId: result.id,
-        providerType,
-      });
-
-      // Step 12: Response
-      return logAndRespond(200, {
-        id: sendLog.id,
-        resend_id: providerType === "cloudflare" ? null : result.id,
-        provider_message_id: result.id,
-        provider_type: providerType,
-        status: "sent",
-      });
+      providerSendSucceeded = true;
     } catch (error) {
       if (error instanceof IdempotentSendResult) {
+        // Cloudflare idempotent duplicate — still counts as success
+        providerSendSucceeded = true;
         await markSendLogSent(db, sendLog.id, {
           providerMessageId: error.idempotencyKey,
           providerType,
@@ -364,11 +359,37 @@ webhook.post("/:projectId/send", async (c) => {
           status: "sent",
         });
       }
+      // Provider explicitly failed — release lock for retry
       const message = error instanceof Error ? error.message : "Provider send failed";
       await markSendLogFailed(db, sendLog.id, message);
       await releaseAddressLock(db, projectId, recipient.email, lockToken);
       const errCode = providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed";
       return logAndRespond(502, errorJson(errCode, message), errCode, message);
+    }
+
+    // Step 11: Mark sent — provider already succeeded, lock stays regardless
+    await markSendLogSent(db, sendLog.id, {
+      providerMessageId: sendResult.id,
+      providerType,
+    });
+
+    // Step 12: Response
+    return logAndRespond(200, {
+      id: sendLog.id,
+      resend_id: providerType === "cloudflare" ? null : sendResult.id,
+      provider_message_id: sendResult.id,
+      provider_type: providerType,
+      status: "sent",
+    });
+
+    } catch (error) {
+      // Catch-all for pre-send failures (createSendLog, resetSendLogForRetry,
+      // updateSendLogProvider) and post-send failures (markSendLogSent).
+      // Only release the lock if provider has NOT confirmed delivery.
+      if (!providerSendSucceeded) {
+        await releaseAddressLock(db, projectId, recipient.email, lockToken);
+      }
+      throw error; // Re-throw to hit the outer catch for logging
     }
   } catch (error) {
     console.error("Webhook send unexpected error:", error);

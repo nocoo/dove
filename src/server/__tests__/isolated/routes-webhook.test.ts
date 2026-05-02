@@ -1349,5 +1349,40 @@ describe("webhook route handlers", () => {
       expect(res.status).toBe(200);
       expect(mockReleaseAddressLock).not.toHaveBeenCalled();
     });
+
+    test("does NOT release lock when markSendLogSent fails after provider success", async () => {
+      // BUG GUARD: if provider.send() succeeds but markSendLogSent throws,
+      // the lock must stay — email is already delivered, releasing would
+      // allow immediate resend within cooldown.
+      mockMarkSendLogSent.mockImplementation(() => Promise.reject(new Error("DB write failed")));
+
+      const res = await sendRequest({
+        template: "welcome",
+        to: "user@example.com",
+        variables: { name: "Alice" },
+      });
+      // Response may be 500 (internal error) — that's acceptable.
+      // The key assertion: lock was NOT released.
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(mockReleaseAddressLock).not.toHaveBeenCalled();
+    });
+
+    test("releases lock when createSendLog fails (pre-send DB error)", async () => {
+      // Pre-send failures should release the lock so the caller can retry.
+      mockCreateSendLog.mockImplementation(() => Promise.reject(new Error("D1 connection lost")));
+
+      const res = await sendRequest({
+        template: "welcome",
+        to: "user@example.com",
+        variables: { name: "Alice" },
+      });
+      expect(res.status).toBe(500);
+      expect(mockReleaseAddressLock).toHaveBeenCalledWith(
+        expect.anything(),
+        "proj_001",
+        "user@example.com",
+        "test-lock-token",
+      );
+    });
   });
 });
