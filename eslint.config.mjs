@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "e2e/**",
+    ".wrangler/**",
   ]),
 ]);
 
