@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.4.4
+
+### Added
+- Per-address rate limiting + recipient mode UI toggle
+- Per-project allow_unknown_recipients flag (default off)
+- Constant-time webhook bearer-token comparison + 500 message-leak fix
+- Block javascript:/data:/vbscript: + protocol-relative URLs in markdown renderer
+
+### Changed
+- Align coverage config with pew best practices
+- Session log + ideas backlog
+- Comprehensive test-suite hardening (1.59 -> 4.61 expects/test, +190%)
+- Bench-tests.ts with 5 hard quality gates + audit-test-quality.ts
+- Switch to forks pool + fake timers (9.86s -> 500ms, -94.9%)
+- Unify HTML title to "dove - Self-Hosted Email Relay"
+- Consolidate L2/L3 into base-ci workflow
+- Align with zhe CI config standards
+- Add comprehensive email provider coverage
+- Migrate from bun:test to vitest
+- Parallelize pre-commit hook stages
+- Upgrade vite to 8.0.10
+- Upgrade base-ci to v2026.1
+- Auto-deploy to Cloudflare on main after CI passes
+- Bump postcss to 8.5.10 to fix GHSA-qx2v-qp2m-jg93
+- Add release workflow for tag-triggered Cloudflare Worker deploy
+
+### Fixed
+- Correct lock release semantics for rate limiting
+- Add .wrangler/** to eslint globalIgnores
+- Strip line comments before splitting db-init SCHEMA_SQL
+- Sync db-init.ts SCHEMA_SQL with allow_unknown_recipients
+- Block ASCII control char insertion bypass (java&Tab;script:)
+- Named entity bypass + full coverage gate alignment
+- HTML entity-encoded URL scheme bypass + coverage gate alignment
+- Correct logo path in README
+- Anchor collapsed sidebar logo to prevent jitter
+- Allow localhost as a self-identifying test instance
+
+### Removed
+- Remove dead code modules
+- Remove unused dove-test worker config
+
 ## v0.4.3
 
 ### Changed
