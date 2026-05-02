@@ -110,6 +110,15 @@ CREATE TABLE IF NOT EXISTS cf_email_idempotency (
 );
 CREATE INDEX IF NOT EXISTS idx_cf_email_idempotency_status ON cf_email_idempotency(status);
 
+CREATE TABLE IF NOT EXISTS rate_limit_locks (
+  project_id TEXT NOT NULL,
+  to_email TEXT NOT NULL,
+  blocked_until TEXT NOT NULL,
+  lock_token TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, to_email)
+);
+
 CREATE TABLE IF NOT EXISTS _test_marker (
   id TEXT PRIMARY KEY,
   created_at TEXT NOT NULL

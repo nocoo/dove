@@ -17,6 +17,7 @@ import {
 import { createWebhookLog } from "../lib/db/webhook-logs";
 import { getEmailProvider } from "../lib/db/email-providers";
 import { checkQuota } from "../lib/email/quota";
+import { acquireAddressLock, releaseAddressLock } from "../lib/email/rate-limit";
 import { renderTemplate } from "../lib/email/render";
 import {
   createProvider,
@@ -245,6 +246,20 @@ webhook.post("/:projectId/send", async (c) => {
       return logAndRespond(422, errorJson("variables_invalid", message), "variables_invalid", message);
     }
 
+    // Step 8.5: Per-address rate limit
+    const rateLimitResult = await acquireAddressLock(db, projectId, recipient.email);
+    if (!rateLimitResult.allowed) {
+      const retryAfter = rateLimitResult.retry_after_seconds ?? 300;
+      c.header("Retry-After", String(retryAfter));
+      return logAndRespond(
+        429,
+        { error: { code: "rate_limit_address", message: `Rate limit: wait ${retryAfter} seconds before sending to this address again`, retry_after_seconds: retryAfter } },
+        "rate_limit_address",
+      );
+    }
+    // lock_token is always present when allowed=true
+    const lockToken = rateLimitResult.lock_token ?? "";
+
     // Step 9: Pre-log
     let sendLog;
     if (existingSendLog && existingSendLog.status === "failed") {
@@ -278,6 +293,7 @@ webhook.post("/:projectId/send", async (c) => {
         const record = await getEmailProvider(db, project.provider_id);
         if (!record) {
           await markSendLogFailed(db, sendLog.id, "Provider not found");
+          await releaseAddressLock(db, projectId, recipient.email, lockToken);
           return logAndRespond(500, errorJson("provider_not_found", "Configured email provider not found"), "provider_not_found");
         }
         providerRecord = record;
@@ -290,6 +306,7 @@ webhook.post("/:projectId/send", async (c) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Provider init failed";
       await markSendLogFailed(db, sendLog.id, message);
+      await releaseAddressLock(db, projectId, recipient.email, lockToken);
       return logAndRespond(500, errorJson("provider_config_invalid", message), "provider_config_invalid", message);
     }
 
@@ -299,6 +316,7 @@ webhook.post("/:projectId/send", async (c) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Domain resolution failed";
       await markSendLogFailed(db, sendLog.id, message);
+      await releaseAddressLock(db, projectId, recipient.email, lockToken);
       return logAndRespond(500, errorJson("internal_error", "Email sender not configured"), "internal_error");
     }
 
@@ -348,6 +366,7 @@ webhook.post("/:projectId/send", async (c) => {
       }
       const message = error instanceof Error ? error.message : "Provider send failed";
       await markSendLogFailed(db, sendLog.id, message);
+      await releaseAddressLock(db, projectId, recipient.email, lockToken);
       const errCode = providerType === "cloudflare" ? "cloudflare_failed" : "resend_failed";
       return logAndRespond(502, errorJson(errCode, message), errCode, message);
     }

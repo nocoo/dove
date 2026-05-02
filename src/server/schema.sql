@@ -155,3 +155,18 @@ CREATE TABLE IF NOT EXISTS cf_email_idempotency (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cf_email_idempotency_status ON cf_email_idempotency(status);
+
+--------------------------------------------------------------------------------
+-- Rate Limit Locks
+-- Atomic per-(project, email) send frequency limiting.
+-- Each row represents an active cooldown. lock_token ensures ownership on release.
+-- Expired rows are cleaned up lazily during acquire.
+--------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS rate_limit_locks (
+  project_id TEXT NOT NULL,
+  to_email TEXT NOT NULL,            -- normalized: trim().toLowerCase()
+  blocked_until TEXT NOT NULL,       -- UTC ISO-8601 timestamp
+  lock_token TEXT NOT NULL,          -- random token for ownership verification
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (project_id, to_email)
+);

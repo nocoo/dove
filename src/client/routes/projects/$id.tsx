@@ -10,6 +10,7 @@ import {
   Users,
   Eye,
   EyeOff,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 interface Project {
   id: string;
@@ -50,6 +52,7 @@ interface Project {
   quota_daily: number;
   quota_monthly: number;
   provider_id: string | null;
+  allow_unknown_recipients: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -117,6 +120,10 @@ export function ProjectDetailPage() {
   const [deletingRecipientId, setDeletingRecipientId] = useState<string | null>(null);
   const [recipientToDelete, setRecipientToDelete] = useState<Recipient | null>(null);
 
+  // Recipient mode toggle
+  const [allowUnknown, setAllowUnknown] = useState(false);
+  const [togglingMode, setTogglingMode] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -139,6 +146,7 @@ export function ProjectDetailPage() {
       setQuotaDaily(String(proj.quota_daily));
       setQuotaMonthly(String(proj.quota_monthly));
       setProviderId(proj.provider_id ?? "");
+      setAllowUnknown(proj.allow_unknown_recipients ?? false);
 
       if (recipientsRes.ok) setRecipients(await recipientsRes.json() as Recipient[]);
       if (templatesRes.ok) setTemplates(await templatesRes.json() as Template[]);
@@ -218,6 +226,29 @@ export function ProjectDetailPage() {
     setQuotaDaily(String(project.quota_daily));
     setQuotaMonthly(String(project.quota_monthly));
     setProviderId(project.provider_id ?? "");
+  }
+
+  async function handleToggleRecipientMode(checked: boolean) {
+    if (!projectId) return;
+    const previous = allowUnknown;
+    try {
+      setTogglingMode(true);
+      setAllowUnknown(checked);
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allow_unknown_recipients: checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update recipient mode");
+      const updated = await res.json() as Project;
+      setProject(updated);
+      toast.success(checked ? "Any email address accepted" : "Whitelist mode enabled");
+    } catch {
+      setAllowUnknown(previous);
+      toast.error("Failed to update recipient mode");
+    } finally {
+      setTogglingMode(false);
+    }
   }
 
   async function handleRegenerateToken() {
@@ -543,21 +574,51 @@ export function ProjectDetailPage() {
             <div>
               <CardTitle className="text-base">Recipients</CardTitle>
               <CardDescription>
-                Allowed email addresses for this project ({recipients.length}).
+                Control who can receive emails from this project.
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAddRecipient(!showAddRecipient)}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-              Add
-            </Button>
+            {!allowUnknown && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddRecipient(!showAddRecipient)}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+                Add
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          {showAddRecipient && (
+          {/* Recipient mode toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Globe className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+              <div>
+                <p className="text-sm font-medium">Accept any email address</p>
+                <p className="text-xs text-muted-foreground">
+                  {allowUnknown
+                    ? "Sends skip the whitelist. Rate limits and quotas still apply."
+                    : "Only whitelisted recipients can receive emails."}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={allowUnknown}
+              onCheckedChange={(checked) => void handleToggleRecipientMode(checked)}
+              disabled={togglingMode}
+            />
+          </div>
+
+          {allowUnknown && (
+            <p className="text-xs text-muted-foreground italic">
+              Your existing whitelist is preserved and will re-activate if you turn this off.
+            </p>
+          )}
+
+          {!allowUnknown && (
+            <>
+              {showAddRecipient && (
             <form
               onSubmit={(e) => void handleAddRecipient(e)}
               className="flex flex-col gap-3 rounded-[var(--radius-widget)] bg-muted/20 p-3"
@@ -627,6 +688,8 @@ export function ProjectDetailPage() {
                 </div>
               ))}
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>

@@ -70,4 +70,10 @@ describe("db-init.ts SCHEMA_SQL ↔ schema.sql drift guard", () => {
     expect(canonicalSchema).toMatch(re);
     expect(dbInitSource).toMatch(re);
   });
+
+  test("rate_limit_locks table exists in BOTH schemas", () => {
+    const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?rate_limit_locks/i;
+    expect(canonicalSchema).toMatch(re);
+    expect(dbInitSource).toMatch(re);
+  });
 });

@@ -79,6 +79,8 @@ const mockCreateWebhookLog = vi.fn(() => Promise.resolve());
 const mockGetEmailProvider = vi.fn<() => Promise<unknown>>(() => Promise.resolve(null));
 const mockCheckQuota = vi.fn(() => Promise.resolve({ allowed: true } as { allowed: boolean; error_code?: string }));
 const mockRenderTemplate = vi.fn(() => Promise.resolve({ subject: "Hello World", html: "<p>Welcome!</p>" }));
+const mockAcquireAddressLock = vi.fn<() => Promise<{ allowed: boolean; lock_token?: string; retry_after_seconds?: number }>>(() => Promise.resolve({ allowed: true, lock_token: "test-lock-token" }));
+const mockReleaseAddressLock = vi.fn(() => Promise.resolve());
 
 const mockProviderSend = vi.fn(() => Promise.resolve({ id: "msg_001" }));
 const mockCreateProvider = vi.fn(() =>
@@ -126,6 +128,10 @@ vi.mock("../../lib/db/email-providers", () => ({
   getEmailProvider: mockGetEmailProvider,
 }));
 vi.mock("../../lib/email/quota", () => ({ checkQuota: mockCheckQuota }));
+vi.mock("../../lib/email/rate-limit", () => ({
+  acquireAddressLock: mockAcquireAddressLock,
+  releaseAddressLock: mockReleaseAddressLock,
+}));
 vi.mock("../../lib/email/render", () => ({ renderTemplate: mockRenderTemplate }));
 vi.mock("../../lib/email/provider", () => ({
   createProvider: mockCreateProvider,
@@ -181,6 +187,8 @@ beforeEach(() => {
   mockGetRecipientByEmail.mockImplementation(() => Promise.resolve(sampleRecipient));
   mockGetTemplateBySlug.mockImplementation(() => Promise.resolve(sampleTemplate));
   mockCheckQuota.mockImplementation(() => Promise.resolve({ allowed: true }));
+  mockAcquireAddressLock.mockImplementation(() => Promise.resolve({ allowed: true, lock_token: "test-lock-token" }));
+  mockReleaseAddressLock.mockImplementation(() => Promise.resolve());
   mockRenderTemplate.mockImplementation(() => Promise.resolve({ subject: "Hello World", html: "<p>Welcome!</p>" }));
   mockCreateSendLog.mockImplementation(() => Promise.resolve(sampleSendLog));
   mockProviderSend.mockImplementation(() => Promise.resolve({ id: "msg_001" }));
@@ -1294,6 +1302,52 @@ describe("webhook route handlers", () => {
       const wlArgs = mockCreateWebhookLog.mock.calls[0] as unknown as [unknown, Record<string, unknown>];
       expect(wlArgs[1].status_code).toBe(502);
       expect(wlArgs[1].error_code).toBe("cloudflare_failed");
+    });
+  });
+
+  describe("rate limiting", () => {
+    test("returns 429 when rate limit is active", async () => {
+      mockAcquireAddressLock.mockImplementation(() =>
+        Promise.resolve({ allowed: false, retry_after_seconds: 245 }),
+      );
+
+      const res = await sendRequest({
+        template: "welcome",
+        to: "user@example.com",
+        variables: { name: "Alice" },
+      });
+      expect(res.status).toBe(429);
+      expect(res.headers.get("Retry-After")).toBe("245");
+      const body = (await res.json()) as { error: { code: string; retry_after_seconds: number } };
+      expect(body.error.code).toBe("rate_limit_address");
+      expect(body.error.retry_after_seconds).toBe(245);
+    });
+
+    test("releases lock on provider send failure", async () => {
+      mockProviderSend.mockImplementation(() => Promise.reject(new Error("provider down")));
+
+      const res = await sendRequest({
+        template: "welcome",
+        to: "user@example.com",
+        variables: { name: "Alice" },
+      });
+      expect(res.status).toBe(502);
+      expect(mockReleaseAddressLock).toHaveBeenCalledWith(
+        expect.anything(),
+        "proj_001",
+        "user@example.com",
+        "test-lock-token",
+      );
+    });
+
+    test("does NOT release lock on successful send", async () => {
+      const res = await sendRequest({
+        template: "welcome",
+        to: "user@example.com",
+        variables: { name: "Alice" },
+      });
+      expect(res.status).toBe(200);
+      expect(mockReleaseAddressLock).not.toHaveBeenCalled();
     });
   });
 });
