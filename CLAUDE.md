@@ -62,7 +62,7 @@ src/
       pagination.ts          # Cursor pagination helpers
       id.ts                  # nanoid generators
       version.ts             # Version from package.json
-    __tests__/               # Server unit tests (bun:test)
+    __tests__/               # Server unit tests (vitest)
   client/
     main.tsx                 # React Router SPA entry
     lib/
@@ -108,7 +108,7 @@ src/
     ui/                      # shadcn/ui primitives
   hooks/
     use-mobile.ts            # Mobile detection hook
-  __tests__/                 # Shared lib unit tests (bun:test)
+  __tests__/                 # Shared lib unit tests (vitest)
 scripts/
   check-coverage.ts          # 90% coverage gate
   run-e2e.ts                 # L2 server lifecycle
@@ -120,7 +120,7 @@ scripts/
 
 | Layer | Tool | Script | Trigger | Requirement |
 |---|---|---|---|---|
-| L1 Unit | bun test | `bun run test:coverage` | pre-commit | 90%+ coverage |
+| L1 Unit | vitest | `bun run test:coverage` | pre-commit | 90%+ coverage |
 | L2 Integration/API | Custom BDD runner | `bun run test:e2e:api` | pre-push | All route/method combos |
 | L3 System/E2E | Playwright (Chromium) | `bun run test:e2e:bdd` | on-demand | Core user flow specs |
 | G1 Static Analysis | tsc + ESLint | `bun run typecheck && bun run lint:staged` | pre-commit | 0 errors, 0 warnings |
@@ -147,7 +147,7 @@ scripts/
 ```bash
 bun dev                # Dev server (7034)
 bun run build          # Production build
-bun test               # Unit tests
+vitest run             # Unit tests
 bun run test:coverage  # Unit tests + 90% coverage gate
 bun run typecheck      # TypeScript type check
 bun run lint           # ESLint

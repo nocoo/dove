@@ -65,7 +65,7 @@ bun dev  # http://localhost:7034
 |---|---|
 | `bun dev` | 启动开发服务器 (port 7034) |
 | `bun run build` | 生产构建 |
-| `bun test` | 运行单元测试 |
+| `vitest run` | 运行单元测试 |
 | `bun run test:coverage` | 单元测试 + 90% 覆盖率门控 |
 | `bun run typecheck` | TypeScript 类型检查 |
 | `bun run lint` | ESLint (strict, 0 warnings) |
@@ -78,7 +78,7 @@ bun dev  # http://localhost:7034
 
 | 层 | 内容 | 触发时机 |
 |---|---|---|
-| L1 Unit | ≥90% coverage (bun test) | pre-commit |
+| L1 Unit | ≥90% coverage (vitest) | pre-commit |
 | G1 Static | tsc strict + ESLint strict + max-warnings=0 | pre-commit |
 | L2 API E2E | REST endpoint coverage (port 17034) | pre-push |
 | G2 Security | osv-scanner + gitleaks | pre-push |
