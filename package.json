@@ -28,7 +28,7 @@
     "entities": "^8.0.0",
     "hono": "^4.12.23",
     "jose": "^6.2.2",
-    "lucide-react": "^1.7.0",
+    "lucide-react": "^1.17.0",
     "marked": "^18.0.5",
     "nanoid": "^5.1.7",
     "postcss": "^8.5.10",
