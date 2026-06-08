@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.4.5
+
+### Changed
+- Bump pinned react/react-dom 19.2.4 → 19.2.7 + vite 8.0.10 → 8.0.16
+- Batch bump minor/patch (18 packages)
+- Upgrade lucide-react 1.11 → 1.17.0
+- Upgrade marked 15 → 18.0.5
+- Upgrade lint-staged 16 → 17.0.7
+- Upgrade eslint 9 → 10.4.1 + typescript-eslint 8.60.1
+- Upgrade typescript 5.9 → 6.0.3
+- Add --ignore-scripts to custom workflows (Shai-Hulud defense)
+- Update test references from bun test to vitest
+
+### Fixed
+- Bump hono, react-router, ws, brace-expansion (CVE)
+- Upgrade hono to fix CVEs (GHSA-69xw, GHSA-9vqf)
+- Replace bg-input with bg-secondary in switch component
+- Remove pink color bleed from avatar and status badges
+
 ## v0.4.4
 
 ### Added
