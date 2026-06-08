@@ -66,7 +66,7 @@
     "wrangler": "^4.98.0"
   },
   "overrides": {
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.15",
     "brace-expansion": "^5.0.6",
     "ws": "^8.20.1"
   }
