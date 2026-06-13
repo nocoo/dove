@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260612.1",
-    "@happy-dom/global-registrator": "^20.10.2",
+    "@happy-dom/global-registrator": "^20.10.3",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/react": "^16.3.2",
