@@ -36,13 +36,13 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-router": "^8.1.0",
-    "recharts": "^3.9.1",
+    "recharts": "^3.9.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260703.1",
+    "@cloudflare/workers-types": "5.20260704.1",
     "@happy-dom/global-registrator": "^20.10.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
