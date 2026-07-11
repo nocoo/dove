@@ -26,7 +26,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "entities": "^8.0.0",
-    "hono": "^4.12.28",
+    "hono": "^4.12.29",
     "jose": "^6.2.3",
     "lucide-react": "1.24.0",
     "marked": "18.0.6",
@@ -42,7 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260708.1",
+    "@cloudflare/workers-types": "5.20260710.1",
     "@happy-dom/global-registrator": "^20.10.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
@@ -54,7 +54,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "tailwindcss": "^4.3.2",
