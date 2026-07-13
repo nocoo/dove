@@ -26,12 +26,12 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "entities": "^8.0.0",
-    "hono": "^4.12.29",
+    "hono": "^4.12.30",
     "jose": "^6.2.3",
     "lucide-react": "1.24.0",
     "marked": "18.0.6",
     "nanoid": "^5.1.16",
-    "postcss": "^8.5.17",
+    "postcss": "^8.5.18",
     "radix-ui": "^1.6.2",
     "react": "19.2.7",
     "react-dom": "19.2.7",
@@ -42,7 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260711.1",
+    "@cloudflare/workers-types": "5.20260712.1",
     "@happy-dom/global-registrator": "^20.10.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.2",
@@ -66,7 +66,7 @@
     "wrangler": "4.110.0"
   },
   "overrides": {
-    "postcss": "^8.5.17",
+    "postcss": "^8.5.18",
     "brace-expansion": "^5.0.6",
     "ws": "^8.20.1",
     "esbuild": "^0.28.1",
