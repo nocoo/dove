@@ -30,7 +30,7 @@
     "jose": "^6.2.3",
     "lucide-react": "1.24.0",
     "marked": "18.0.6",
-    "nanoid": "^5.1.16",
+    "nanoid": "^6.0.0",
     "postcss": "^8.5.18",
     "radix-ui": "^1.6.2",
     "react": "19.2.7",
