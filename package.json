@@ -28,7 +28,7 @@
     "entities": "^8.0.0",
     "hono": "^4.12.30",
     "jose": "^6.2.3",
-    "lucide-react": "1.24.0",
+    "lucide-react": "1.25.0",
     "marked": "18.0.6",
     "nanoid": "^6.0.0",
     "postcss": "^8.5.19",
@@ -42,7 +42,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260716.1",
+    "@cloudflare/workers-types": "5.20260717.1",
     "@happy-dom/global-registrator": "^20.10.6",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.3.3",
@@ -63,7 +63,7 @@
     "typescript-eslint": "^8.64.0",
     "vite": "8.1.5",
     "vitest": "^4.1.10",
-    "wrangler": "4.111.0"
+    "wrangler": "4.112.0"
   },
   "overrides": {
     "postcss": "^8.5.19",
