@@ -45,3 +45,7 @@ e2e/bdd/.tmp/
 .claude/
 .superset/
 dist/
+
+# Wrangler local secrets
+.dev.vars
+.dev.vars.*
