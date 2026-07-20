@@ -440,7 +440,7 @@ export function ProjectDetailPage() {
 						<Label htmlFor="provider_id">Email Provider</Label>
 						<Select
 							value={providerId === "" ? "__legacy__" : providerId}
-							onValueChange={(v) => setProviderId(v === "__legacy__" ? "" : v)}
+							onValueChange={(v: string) => setProviderId(v === "__legacy__" ? "" : v)}
 						>
 							<SelectTrigger id="provider_id">
 								<SelectValue />
@@ -601,7 +601,7 @@ export function ProjectDetailPage() {
 						</div>
 						<Switch
 							checked={allowUnknown}
-							onCheckedChange={(checked) => void handleToggleRecipientMode(checked)}
+							onCheckedChange={(checked: boolean) => void handleToggleRecipientMode(checked)}
 							disabled={togglingMode}
 						/>
 					</div>
@@ -798,7 +798,7 @@ export function ProjectDetailPage() {
 			{/* Recipient delete confirmation */}
 			<Dialog
 				open={recipientToDelete !== null}
-				onOpenChange={(open) => {
+				onOpenChange={(open: boolean) => {
 					if (!open) setRecipientToDelete(null);
 				}}
 			>

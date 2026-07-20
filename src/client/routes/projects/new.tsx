@@ -186,7 +186,7 @@ export function NewProjectPage() {
 					<Label htmlFor="provider_id">Email Provider</Label>
 					<Select
 						value={providerId === "" ? "__legacy__" : providerId}
-						onValueChange={(v) => setProviderId(v === "__legacy__" ? "" : v)}
+						onValueChange={(v: string) => setProviderId(v === "__legacy__" ? "" : v)}
 						disabled={saving}
 					>
 						<SelectTrigger id="provider_id">

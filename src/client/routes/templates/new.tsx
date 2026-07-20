@@ -241,7 +241,9 @@ export function NewTemplatePage() {
 								/>
 								<Select
 									value={v.type}
-									onValueChange={(val) => updateVariable(i, { type: val as Variable["type"] })}
+									onValueChange={(val: string) =>
+										updateVariable(i, { type: val as Variable["type"] })
+									}
 								>
 									<SelectTrigger className="text-sm">
 										<SelectValue />
@@ -254,7 +256,9 @@ export function NewTemplatePage() {
 								</Select>
 								<Select
 									value={v.required ? "required" : "optional"}
-									onValueChange={(val) => updateVariable(i, { required: val === "required" })}
+									onValueChange={(val: string) =>
+										updateVariable(i, { required: val === "required" })
+									}
 								>
 									<SelectTrigger className="text-sm">
 										<SelectValue />

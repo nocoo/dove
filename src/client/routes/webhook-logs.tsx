@@ -175,7 +175,7 @@ export function WebhookLogsPage() {
 			<div className="flex flex-wrap items-center gap-2">
 				<Select
 					value={filterProject}
-					onValueChange={(v) => {
+					onValueChange={(v: string) => {
 						setFilterProject(v);
 						setPage(1);
 					}}

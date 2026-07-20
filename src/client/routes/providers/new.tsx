@@ -90,7 +90,11 @@ export function NewProviderPage() {
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="type">Type</Label>
-					<Select value={type} onValueChange={(v) => setType(v as ProviderType)} disabled={saving}>
+					<Select
+						value={type}
+						onValueChange={(v: string) => setType(v as ProviderType)}
+						disabled={saving}
+					>
 						<SelectTrigger id="type">
 							<SelectValue />
 						</SelectTrigger>

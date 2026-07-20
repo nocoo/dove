@@ -212,7 +212,7 @@ export function ProviderDetailPage() {
 								<Label htmlFor="type">Type</Label>
 								<Select
 									value={type}
-									onValueChange={(v) => setType(v as ProviderType)}
+									onValueChange={(v: string) => setType(v as ProviderType)}
 									disabled={saving}
 								>
 									<SelectTrigger id="type">

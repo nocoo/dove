@@ -413,7 +413,7 @@ export function TemplateDetailPage() {
 											/>
 											<Select
 												value={v.type}
-												onValueChange={(val) =>
+												onValueChange={(val: string) =>
 													updateVariable(i, { type: val as Variable["type"] })
 												}
 											>
@@ -428,7 +428,9 @@ export function TemplateDetailPage() {
 											</Select>
 											<Select
 												value={v.required ? "required" : "optional"}
-												onValueChange={(val) => updateVariable(i, { required: val === "required" })}
+												onValueChange={(val: string) =>
+													updateVariable(i, { required: val === "required" })
+												}
 											>
 												<SelectTrigger className="text-xs h-8">
 													<SelectValue />
