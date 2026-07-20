@@ -81,7 +81,9 @@
 			"!**/CHANGELOG.md",
 			"!**/autoresearch.jsonl",
 			"!**/autoresearch.ideas.md",
-			"!**/src/components/ui"
+			"!**/src/components/ui",
+			"!**/playwright-report",
+			"!**/test-results"
 		]
 	}
 }
