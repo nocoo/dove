@@ -120,10 +120,10 @@ scripts/
 
 | Layer | Tool | Script | Trigger | Requirement |
 |---|---|---|---|---|
-| L1 Unit | vitest | `bun run test:coverage` | pre-commit | 90%+ coverage |
+| L1 Unit | vitest | `bun run test:coverage` | pre-commit | 99/99/96/99 thresholds (lines/funcs/branches/stmts) |
 | L2 Integration/API | Custom BDD runner | `bun run test:e2e:api` | pre-push | All route/method combos |
 | L3 System/E2E | Playwright (Chromium) | `bun run test:e2e:bdd` | on-demand | Core user flow specs |
-| G1 Static Analysis | tsc + ESLint | `bun run typecheck && bun run lint:staged` | pre-commit | 0 errors, 0 warnings |
+| G1 Static Analysis | tsc + Biome | `bun run typecheck && bun run lint:staged` | pre-commit | 0 errors, 0 warnings (`biome check --error-on-warnings`) |
 | G2 Security | osv-scanner + gitleaks | `bun run gate:security` | pre-push | 0 vulnerabilities, 0 leaked secrets |
 
 ### Hooks Mapping
@@ -149,9 +149,10 @@ bun dev                # Dev server (7034)
 bun run build          # Production build
 vitest run             # Unit tests
 bun run test:coverage  # Unit tests + 90% coverage gate
-bun run typecheck      # TypeScript type check
-bun run lint           # ESLint
-bun run lint:staged    # ESLint on staged files only
+bun run typecheck      # TypeScript type check (7.0.2)
+bun run lint           # Biome check (--error-on-warnings)
+bun run lint:fix      # Biome check --write
+bun run lint:staged    # Biome on staged files only
 bun run gate:security  # Security scan (osv-scanner + gitleaks)
 bun run test:e2e:api   # L2 API E2E (port 17034)
 bun run test:e2e:bdd   # L3 Playwright BDD E2E (port 27034)
