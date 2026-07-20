@@ -7,6 +7,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.5.0
+
+### Changed
+- Exclude playwright artifacts from biome
+- Ignore wrangler .dev.vars for local secrets
+- Align readme and claude with biome gates
+- Note biome lint and ts 7 in quality table
+- Bump typescript to 7.0.2
+- Replace eslint with biome
+- Batch bump workers-types, postcss, typescript-eslint (2026-07-14) (#226)
+- Bump nanoid 5.1.16 → 6.0.0 (#219)
+- Batch bump hono, workers-types, postcss (2026-07-13)
+- Bump @cloudflare/workers-types 5.20260710.1 → 5.20260711.1 (#214)
+- Bump postcss 8.5.16 → 8.5.17 (#215)
+- Batch bump hono, eslint, workers-types (2026-07-11) (#213)
+- Bump lucide-react 1.23.0 → 1.24.0
+- Bump marked 18.0.5 → 18.0.6
+- Bump vite 8.1.3 → 8.1.4
+- Bump wrangler 4.107.1 → 4.110.0
+- Bump wrangler 4.107.0 → 4.107.1
+- Bump react-router 8.1.0 → 8.2.0
+- Bump @types/node 26.1.0 → 26.1.1
+- Bump @cloudflare/workers-types 5.20260706.1 → 5.20260708.1
+- Bump @cloudflare/workers-types 5.20260705.1 → 5.20260706.1
+- Bump hono 4.12.27 → 4.12.28
+- Bump radix-ui 1.6.1 → 1.6.2
+- Bump typescript-eslint 8.62.1 → 8.63.0
+- Bump @vitest/coverage-v8 4.1.9 → 4.1.10
+- Bump vitest 4.1.9 → 4.1.10
+- Bump @cloudflare/workers-types 5.20260704.1 → 5.20260705.1
+- Bump @cloudflare/workers-types 5.20260703.1 → 5.20260704.1
+- Bump recharts 3.9.1 → 3.9.2
+- Bump @cloudflare/workers-types 4.20260702.1 → 5.20260703.1
+- Bump wrangler 4.106.0 → 4.107.0
+- Bump vite 8.1.2 → 8.1.3
+- Add root .npmrc for supply chain security baseline
+- Upgrade dependencies (batch 2026-07-02) (#180)
+- Bump wrangler 4.105.0 → 4.106.0
+- Bump vite 8.1.0 → 8.1.2
+- Bump recharts 3.9.0 → 3.9.1
+- Bump radix-ui 1.6.0 → 1.6.1
+- Upgrade dependencies (batch 2026-06-30) (#171)
+- Bump postcss 8.5.15 → 8.5.16
+- Bump lucide-react 1.21.0 → 1.22.0
+- Bump @cloudflare/workers-types 4.20260626.1 → 4.20260628.1
+- Restore caret range for eslint in bun.lock
+- Restore caret range for @cloudflare/workers-types in bun.lock
+- Bump eslint 10.5.0 → 10.6.0
+- Bump @cloudflare/workers-types 4.20260625.1 → 4.20260626.1
+- Bump @cloudflare/workers-types 4.20260624.1 → 4.20260625.1
+- Bump wrangler 4.104.0 → 4.105.0
+- Bump nanoid 5.1.15 → 5.1.16
+- Bump @types/node 26.0.0 → 26.0.1
+- Bump wrangler 4.103.0 → 4.104.0
+- Bump vite 8.0.16 → 8.1.0
+- Bump recharts 3.8.1 → 3.9.0
+- Bump hono 4.12.26 → 4.12.27
+- Bump @vitejs/plugin-react 6.0.2 → 6.0.3
+- Bump @playwright/test 1.61.0 → 1.61.1
+- Bump @cloudflare/workers-types 4.20260621.1 → 4.20260623.1
+- Bump typescript-eslint 8.61.1 → 8.62.0
+- Bump @cloudflare/workers-types 4.20260620.1 → 4.20260621.1
+- Bump @types/node 25.9.3 → 26.0.0
+- Bump nanoid 5.1.14 → 5.1.15
+- Bump lint-staged 17.0.7 → 17.0.8
+- Bump @cloudflare/workers-types 4.20260619.1 → 4.20260620.1
+- Restore caret ranges for batch bumps
+- Bump wrangler 4.101.0 → 4.103.0
+- Bump @cloudflare/workers-types 4.20260617.1 → 4.20260619.1
+- Bump react-router 8.0.0 → 8.0.1
+- Bump nanoid 5.1.11 → 5.1.14
+- Bump lucide-react 1.20.0 → 1.21.0
+- Bump hono 4.12.25 → 4.12.26
+- Override undici to ^7.28.0 for security advisories
+- Pin base-ci reusable workflow to v2026.5 SHA
+- Restore caret ranges for upgraded deps
+- Bump react-router to 8.0.0
+- Bump @happy-dom/global-registrator to 20.10.6
+- Bump @cloudflare/workers-types to 4.20260617.1
+- Bump react-router to 7.18.0
+- Bump lucide-react to 1.20.0
+- Bump @happy-dom/global-registrator to 20.10.5
+- Bump @cloudflare/workers-types 4.20260615.1 → 4.20260616.1
+- Bump wrangler 4.98.0 → 4.101.0
+- Batch dependency upgrades (2026-06-16) incl. vite security fix (#114)
+- Bump @cloudflare/workers-types 4.20260612.1 → 4.20260613.1
+- Upgrade base-ci to v2026.4
+- Bump tailwindcss 4.3.0 → 4.3.1
+- Bump lucide-react 1.17.0 → 1.18.0
+- Bump eslint 10.4.1 → 10.5.0
+- Bump @tailwindcss/postcss 4.3.0 → 4.3.1
+- Bump @happy-dom/global-registrator 20.10.2 → 20.10.3
+- Bump @cloudflare/workers-types 4.20260611.1 → 4.20260612.1
+- Bump @cloudflare/workers-types 4.20260610.1 → 4.20260611.1
+- Bump @types/node 25.9.2 → 25.9.3
+- Bump @cloudflare/workers-types 4.20260608.1 → 4.20260610.1
+- Bump hono 4.12.24 → 4.12.25
+- Bump hono 4.12.23 → 4.12.24 + typescript-eslint 8.60.1 → 8.61.0
+- Bump @cloudflare/workers-types 4.20260607.1 → 4.20260608.1
+- Bump postcss override 8.5.10 → 8.5.15
+
+### Fixed
+- Override esbuild ^0.28.1 (GHSA-gv7w-rqvm-qjhr, GHSA-g7r4-m6w7-qqqr)
+
 ## v0.4.5
 
 ### Changed

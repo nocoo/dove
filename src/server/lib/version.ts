@@ -3,4 +3,4 @@
  *
  * Hardcoded at build time. Update this when releasing a new version.
  */
-export const APP_VERSION = "0.4.5";
+export const APP_VERSION = "0.5.0";
