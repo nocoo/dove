@@ -5,17 +5,17 @@
  * All variable values are HTML-escaped before substitution.
  */
 
-import { marked } from "marked";
 import { decodeHTML } from "entities";
+import { marked } from "marked";
 import type { TemplateVariable } from "@/lib/types/template";
 
 /** HTML escape a string to prevent XSS via template variables. */
 export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+	return str
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;");
 }
 
 /**
@@ -30,67 +30,64 @@ export function escapeHtml(str: string): string {
  * Throws descriptive error on validation failure.
  */
 export function validateVariables(
-  schema: TemplateVariable[],
-  provided: Record<string, string | undefined>,
+	schema: TemplateVariable[],
+	provided: Record<string, string | undefined>,
 ): Record<string, string> {
-  const result: Record<string, string> = {};
+	const result: Record<string, string> = {};
 
-  for (const decl of schema) {
-    const raw = provided[decl.name];
+	for (const decl of schema) {
+		const raw = provided[decl.name];
 
-    if (raw === undefined || raw === "") {
-      if (decl.required) {
-        if (decl.default !== undefined) {
-          result[decl.name] = decl.default;
-          continue;
-        }
-        throw new Error(`Missing required variable: ${decl.name}`);
-      }
-      // Optional with no value — use default or empty string
-      result[decl.name] = decl.default ?? "";
-      continue;
-    }
+		if (raw === undefined || raw === "") {
+			if (decl.required) {
+				if (decl.default !== undefined) {
+					result[decl.name] = decl.default;
+					continue;
+				}
+				throw new Error(`Missing required variable: ${decl.name}`);
+			}
+			// Optional with no value — use default or empty string
+			result[decl.name] = decl.default ?? "";
+			continue;
+		}
 
-    // Type coercion
-    switch (decl.type) {
-      case "string":
-        result[decl.name] = raw;
-        break;
-      case "number": {
-        const num = Number(raw);
-        if (Number.isNaN(num)) {
-          throw new Error(`Variable "${decl.name}" must be a valid number, got "${raw}"`);
-        }
-        result[decl.name] = String(num);
-        break;
-      }
-      case "boolean": {
-        const lower = raw.toLowerCase();
-        if (lower !== "true" && lower !== "false") {
-          throw new Error(`Variable "${decl.name}" must be "true" or "false", got "${raw}"`);
-        }
-        result[decl.name] = lower;
-        break;
-      }
-    }
-  }
+		// Type coercion
+		switch (decl.type) {
+			case "string":
+				result[decl.name] = raw;
+				break;
+			case "number": {
+				const num = Number(raw);
+				if (Number.isNaN(num)) {
+					throw new Error(`Variable "${decl.name}" must be a valid number, got "${raw}"`);
+				}
+				result[decl.name] = String(num);
+				break;
+			}
+			case "boolean": {
+				const lower = raw.toLowerCase();
+				if (lower !== "true" && lower !== "false") {
+					throw new Error(`Variable "${decl.name}" must be "true" or "false", got "${raw}"`);
+				}
+				result[decl.name] = lower;
+				break;
+			}
+		}
+	}
 
-  return result;
+	return result;
 }
 
 /**
  * Substitute {{var}} placeholders in a template string.
  * Values are HTML-escaped before insertion.
  */
-export function substituteVariables(
-  template: string,
-  variables: Record<string, string>,
-): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => {
-    const value = variables[name];
-    if (value === undefined) return `{{${name}}}`;
-    return escapeHtml(value);
-  });
+export function substituteVariables(template: string, variables: Record<string, string>): string {
+	return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => {
+		const value = variables[name];
+		if (value === undefined) return `{{${name}}}`;
+		return escapeHtml(value);
+	});
 }
 
 /**
@@ -120,31 +117,51 @@ const URL_CONTROL_CHARS_RE = /[\t\n\r]/g;
 const safeRenderer = new marked.Renderer();
 const origLink = safeRenderer.link.bind(safeRenderer);
 const origImage = safeRenderer.image.bind(safeRenderer);
-safeRenderer.link = function ({ href, title, tokens }: { href: string; title?: string | null; tokens: unknown[] }) {
-  if (typeof href === "string") {
-    const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
-    if (DANGEROUS_URL_RE.test(normalized) || PROTOCOL_RELATIVE_RE.test(normalized)) {
-      return origLink({ href: "#", title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
-    }
-  }
-  return origLink({ href, title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
+safeRenderer.link = ({
+	href,
+	title,
+	tokens,
+}: {
+	href: string;
+	title?: string | null;
+	tokens: unknown[];
+}) => {
+	if (typeof href === "string") {
+		const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
+		if (DANGEROUS_URL_RE.test(normalized) || PROTOCOL_RELATIVE_RE.test(normalized)) {
+			return origLink({ href: "#", title: title ?? null, tokens } as Parameters<
+				typeof origLink
+			>[0]);
+		}
+	}
+	return origLink({ href, title: title ?? null, tokens } as Parameters<typeof origLink>[0]);
 };
-safeRenderer.image = function ({ href, title, text }: { href: string; title?: string | null; text: string }) {
-  if (typeof href === "string") {
-    const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
-    if (DANGEROUS_IMG_RE.test(normalized)) {
-      return origImage({ href: "#", title: title ?? null, text } as Parameters<typeof origImage>[0]);
-    }
-  }
-  return origImage({ href, title: title ?? null, text } as Parameters<typeof origImage>[0]);
+safeRenderer.image = ({
+	href,
+	title,
+	text,
+}: {
+	href: string;
+	title?: string | null;
+	text: string;
+}) => {
+	if (typeof href === "string") {
+		const normalized = decodeHTML(href).replace(URL_CONTROL_CHARS_RE, "");
+		if (DANGEROUS_IMG_RE.test(normalized)) {
+			return origImage({ href: "#", title: title ?? null, text } as Parameters<
+				typeof origImage
+			>[0]);
+		}
+	}
+	return origImage({ href, title: title ?? null, text } as Parameters<typeof origImage>[0]);
 };
 export async function markdownToHtml(markdown: string): Promise<string> {
-  return marked.parse(markdown, { async: true, renderer: safeRenderer });
+	return marked.parse(markdown, { async: true, renderer: safeRenderer });
 }
 
 /** Minimal responsive email HTML wrapper. */
 function wrapHtml(bodyHtml: string): string {
-  return `<!DOCTYPE html>
+	return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -173,23 +190,23 @@ ${bodyHtml}
  * Returns { subject, html } ready for Resend API.
  */
 export async function renderTemplate(
-  subjectTemplate: string,
-  bodyMarkdown: string,
-  schema: TemplateVariable[],
-  providedVariables: Record<string, string | undefined>,
+	subjectTemplate: string,
+	bodyMarkdown: string,
+	schema: TemplateVariable[],
+	providedVariables: Record<string, string | undefined>,
 ): Promise<{ subject: string; html: string }> {
-  // 1. Validate and coerce
-  const variables = validateVariables(schema, providedVariables);
+	// 1. Validate and coerce
+	const variables = validateVariables(schema, providedVariables);
 
-  // 2. Substitute in subject (plain text, still escaped for safety)
-  const subject = substituteVariables(subjectTemplate, variables);
+	// 2. Substitute in subject (plain text, still escaped for safety)
+	const subject = substituteVariables(subjectTemplate, variables);
 
-  // 3. Substitute in body, then convert Markdown → HTML
-  const substitutedBody = substituteVariables(bodyMarkdown, variables);
-  const bodyHtml = await markdownToHtml(substitutedBody);
+	// 3. Substitute in body, then convert Markdown → HTML
+	const substitutedBody = substituteVariables(bodyMarkdown, variables);
+	const bodyHtml = await markdownToHtml(substitutedBody);
 
-  // 4. Wrap in email HTML
-  const html = wrapHtml(bodyHtml);
+	// 4. Wrap in email HTML
+	const html = wrapHtml(bodyHtml);
 
-  return { subject, html };
+	return { subject, html };
 }

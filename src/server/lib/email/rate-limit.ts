@@ -14,16 +14,16 @@
  *       caller can retry immediately
  */
 
-import { queryOne, execute } from "../db/d1";
+import { execute, queryOne } from "../db/d1";
 
 const DEFAULT_WINDOW_MINUTES = 5;
 
 export interface RateLimitResult {
-  allowed: boolean;
-  /** Seconds until the lock expires. Present when allowed=false. */
-  retry_after_seconds?: number;
-  /** Opaque token to pass to releaseAddressLock on send failure. */
-  lock_token?: string;
+	allowed: boolean;
+	/** Seconds until the lock expires. Present when allowed=false. */
+	retry_after_seconds?: number;
+	/** Opaque token to pass to releaseAddressLock on send failure. */
+	lock_token?: string;
 }
 
 /**
@@ -35,57 +35,57 @@ export interface RateLimitResult {
  *   3. If UPDATE returned 0 changes — lock is active → reject
  */
 export async function acquireAddressLock(
-  db: D1Database,
-  projectId: string,
-  toEmail: string,
-  windowMinutes: number = DEFAULT_WINDOW_MINUTES,
+	db: D1Database,
+	projectId: string,
+	toEmail: string,
+	windowMinutes: number = DEFAULT_WINDOW_MINUTES,
 ): Promise<RateLimitResult> {
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const blockedUntil = new Date(now.getTime() + windowMinutes * 60_000).toISOString();
-  const lockToken = crypto.randomUUID();
+	const now = new Date();
+	const nowIso = now.toISOString();
+	const blockedUntil = new Date(now.getTime() + windowMinutes * 60_000).toISOString();
+	const lockToken = crypto.randomUUID();
 
-  // Step 1: try inserting a new lock row
-  const insertResult = await execute(
-    db,
-    `INSERT OR IGNORE INTO rate_limit_locks (project_id, to_email, blocked_until, lock_token, created_at)
+	// Step 1: try inserting a new lock row
+	const insertResult = await execute(
+		db,
+		`INSERT OR IGNORE INTO rate_limit_locks (project_id, to_email, blocked_until, lock_token, created_at)
      VALUES (?, ?, ?, ?, ?)`,
-    [projectId, toEmail, blockedUntil, lockToken, nowIso],
-  );
+		[projectId, toEmail, blockedUntil, lockToken, nowIso],
+	);
 
-  if ((insertResult.meta?.changes ?? 0) > 0) {
-    // Fresh lock acquired
-    return { allowed: true, lock_token: lockToken };
-  }
+	if ((insertResult.meta?.changes ?? 0) > 0) {
+		// Fresh lock acquired
+		return { allowed: true, lock_token: lockToken };
+	}
 
-  // Step 2: row exists — try to refresh only if expired
-  const updateResult = await execute(
-    db,
-    `UPDATE rate_limit_locks
+	// Step 2: row exists — try to refresh only if expired
+	const updateResult = await execute(
+		db,
+		`UPDATE rate_limit_locks
      SET blocked_until = ?, lock_token = ?, created_at = ?
      WHERE project_id = ? AND to_email = ? AND blocked_until <= ?`,
-    [blockedUntil, lockToken, nowIso, projectId, toEmail, nowIso],
-  );
+		[blockedUntil, lockToken, nowIso, projectId, toEmail, nowIso],
+	);
 
-  if ((updateResult.meta?.changes ?? 0) > 0) {
-    // Expired lock refreshed
-    return { allowed: true, lock_token: lockToken };
-  }
+	if ((updateResult.meta?.changes ?? 0) > 0) {
+		// Expired lock refreshed
+		return { allowed: true, lock_token: lockToken };
+	}
 
-  // Step 3: lock is still active — compute retry_after
-  const existing = await queryOne<{ blocked_until: string }>(
-    db,
-    `SELECT blocked_until FROM rate_limit_locks WHERE project_id = ? AND to_email = ?`,
-    [projectId, toEmail],
-  );
+	// Step 3: lock is still active — compute retry_after
+	const existing = await queryOne<{ blocked_until: string }>(
+		db,
+		`SELECT blocked_until FROM rate_limit_locks WHERE project_id = ? AND to_email = ?`,
+		[projectId, toEmail],
+	);
 
-  let retryAfter = windowMinutes * 60;
-  if (existing?.blocked_until) {
-    const expiresAt = new Date(existing.blocked_until).getTime();
-    retryAfter = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
-  }
+	let retryAfter = windowMinutes * 60;
+	if (existing?.blocked_until) {
+		const expiresAt = new Date(existing.blocked_until).getTime();
+		retryAfter = Math.max(1, Math.ceil((expiresAt - Date.now()) / 1000));
+	}
 
-  return { allowed: false, retry_after_seconds: retryAfter };
+	return { allowed: false, retry_after_seconds: retryAfter };
 }
 
 /**
@@ -96,15 +96,15 @@ export async function acquireAddressLock(
  * won't be affected.
  */
 export async function releaseAddressLock(
-  db: D1Database,
-  projectId: string,
-  toEmail: string,
-  lockToken: string,
+	db: D1Database,
+	projectId: string,
+	toEmail: string,
+	lockToken: string,
 ): Promise<void> {
-  await execute(
-    db,
-    `DELETE FROM rate_limit_locks
+	await execute(
+		db,
+		`DELETE FROM rate_limit_locks
      WHERE project_id = ? AND to_email = ? AND lock_token = ?`,
-    [projectId, toEmail, lockToken],
-  );
+		[projectId, toEmail, lockToken],
+	);
 }

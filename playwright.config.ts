@@ -11,29 +11,29 @@ import { defineConfig } from "@playwright/test";
  * EMAIL_DRY_RUN + RESEND_DRY_RUN env vars.
  */
 export default defineConfig({
-  testDir: "./e2e/bdd",
-  globalSetup: "./e2e/bdd/global-setup.ts",
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 2,
-  reporter: "html",
-  use: {
-    baseURL: "http://localhost:27034",
-    trace: "on-first-retry",
-    headless: true,
-  },
-  webServer: {
-    command: [
-      "EMAIL_DRY_RUN=true",
-      "RESEND_DRY_RUN=true",
-      "DEV_MODE=true",
-      "RESEND_API_KEY=re_test_placeholder_not_used",
-      "RESEND_FROM_DOMAIN=test.example.com",
-      "npx wrangler dev --env test --env-file .env.test --port 27034",
-    ].join(" "),
-    port: 27034,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+	testDir: "./e2e/bdd",
+	globalSetup: "./e2e/bdd/global-setup.ts",
+	fullyParallel: true,
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 2 : 0,
+	workers: process.env.CI ? 1 : 2,
+	reporter: "html",
+	use: {
+		baseURL: "http://localhost:27034",
+		trace: "on-first-retry",
+		headless: true,
+	},
+	webServer: {
+		command: [
+			"EMAIL_DRY_RUN=true",
+			"RESEND_DRY_RUN=true",
+			"DEV_MODE=true",
+			"RESEND_API_KEY=re_test_placeholder_not_used",
+			"RESEND_FROM_DOMAIN=test.example.com",
+			"npx wrangler dev --env test --env-file .env.test --port 27034",
+		].join(" "),
+		port: 27034,
+		reuseExistingServer: !process.env.CI,
+		timeout: 60_000,
+	},
 });

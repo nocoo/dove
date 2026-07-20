@@ -1,41 +1,31 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { fetchUser, type User } from "../lib/auth";
 
 interface AuthContextValue {
-  user: User | null;
-  loading: boolean;
+	user: User | null;
+	loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  loading: true,
+	user: null,
+	loading: true,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+	const [user, setUser] = useState<User | null>(null);
+	const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUser()
-      .then(setUser)
-      .finally(() => setLoading(false));
-  }, []);
+	useEffect(() => {
+		fetchUser()
+			.then(setUser)
+			.finally(() => setLoading(false));
+	}, []);
 
-  if (loading) return null;
+	if (loading) return null;
 
-  return (
-    <AuthContext.Provider value={{ user, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+	return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
-  return useContext(AuthContext);
+	return useContext(AuthContext);
 }

@@ -9,7 +9,7 @@
 import { z } from "zod/v4";
 
 export const ResendConfigSchema = z.object({
-  api_key: z.string().min(1),
+	api_key: z.string().min(1),
 });
 
 export const CloudflareConfigSchema = z.object({});
@@ -18,13 +18,9 @@ export const CloudflareConfigSchema = z.object({});
  * Validate a config object against its declared provider type.
  * Returns the parsed config or a ZodError on failure.
  */
-export function parseConfigForType(
-  type: "resend" | "cloudflare",
-  config: unknown,
-) {
-  const schema =
-    type === "resend" ? ResendConfigSchema : CloudflareConfigSchema;
-  return schema.safeParse(config);
+export function parseConfigForType(type: "resend" | "cloudflare", config: unknown) {
+	const schema = type === "resend" ? ResendConfigSchema : CloudflareConfigSchema;
+	return schema.safeParse(config);
 }
 
 /**
@@ -34,7 +30,7 @@ export function parseConfigForType(
  * time this runs — call DomainSchema which lowercases+trims first.
  */
 const HOSTNAME_RE =
-  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))+$/;
+	/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))+$/;
 
 /**
  * Zod schema for a sender domain. Normalizes case and whitespace before
@@ -46,9 +42,9 @@ const HOSTNAME_RE =
  * prefixes ("https://mail.x.com"), IPs, and trailing dots.
  */
 export const DomainSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(1)
-  .max(253)
-  .regex(HOSTNAME_RE, "must be a valid hostname (e.g. mail.example.com)");
+	.string()
+	.trim()
+	.toLowerCase()
+	.min(1)
+	.max(253)
+	.regex(HOSTNAME_RE, "must be a valid hostname (e.g. mail.example.com)");

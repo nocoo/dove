@@ -9,51 +9,51 @@ import type { Env } from "./env";
 import { APP_VERSION } from "./lib/version";
 import { authSession } from "./middleware/auth-session";
 import { auth } from "./routes/auth";
-import { projects } from "./routes/projects";
-import { recipients } from "./routes/recipients";
-import { templates } from "./routes/templates";
-import { providers } from "./routes/providers";
-import { sendLogs } from "./routes/send-logs";
-import { webhookLogs } from "./routes/webhook-logs";
-import { stats } from "./routes/stats";
-import { webhook } from "./routes/webhook";
 import { dbInit } from "./routes/db-init";
+import { projects } from "./routes/projects";
+import { providers } from "./routes/providers";
+import { recipients } from "./routes/recipients";
+import { sendLogs } from "./routes/send-logs";
+import { stats } from "./routes/stats";
+import { templates } from "./routes/templates";
+import { webhook } from "./routes/webhook";
+import { webhookLogs } from "./routes/webhook-logs";
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.use("/*", authSession);
 
 app.get("/api/live", async (c) => {
-  const startTime = Date.now();
-  let dbConnected = false;
-  let dbError: string | null = null;
+	const startTime = Date.now();
+	let dbConnected = false;
+	let dbError: string | null = null;
 
-  try {
-    const result = await c.env.DB.prepare("SELECT 1 AS ping").first();
-    dbConnected = result !== null;
-  } catch (err) {
-    dbError = err instanceof Error ? err.message : "Unknown error";
-  }
+	try {
+		const result = await c.env.DB.prepare("SELECT 1 AS ping").first();
+		dbConnected = result !== null;
+	} catch (err) {
+		dbError = err instanceof Error ? err.message : "Unknown error";
+	}
 
-  const status = dbConnected ? "ok" : "error";
-  const statusCode = dbConnected ? 200 : 503;
+	const status = dbConnected ? "ok" : "error";
+	const statusCode = dbConnected ? 200 : 503;
 
-  c.header("cache-control", "no-store");
+	c.header("cache-control", "no-store");
 
-  return c.json(
-    {
-      status,
-      version: APP_VERSION,
-      component: "dove",
-      timestamp: new Date().toISOString(),
-      uptime: (Date.now() - startTime) / 1000,
-      database: {
-        connected: dbConnected,
-        ...(dbError ? { error: dbError } : {}),
-      },
-    },
-    statusCode,
-  );
+	return c.json(
+		{
+			status,
+			version: APP_VERSION,
+			component: "dove",
+			timestamp: new Date().toISOString(),
+			uptime: (Date.now() - startTime) / 1000,
+			database: {
+				connected: dbConnected,
+				...(dbError ? { error: dbError } : {}),
+			},
+		},
+		statusCode,
+	);
 });
 
 app.route("/api/auth", auth);

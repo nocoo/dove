@@ -2,195 +2,189 @@
  * Tests for D1 native binding wrapper.
  */
 import { describe, expect, test, vi } from "vitest";
-import { query, queryOne, execute, batch } from "../lib/db/d1";
+import { batch, execute, query, queryOne } from "../lib/db/d1";
 
 // Create a vi D1Result for testing
 function createMockResult(overrides: { changes?: number; last_row_id?: number } = {}): D1Result {
-  return {
-    success: true,
-    meta: {
-      duration: 1,
-      changes: overrides.changes ?? 0,
-      last_row_id: overrides.last_row_id ?? 0,
-      rows_read: 0,
-      rows_written: 0,
-      size_after: 0,
-      changed_db: false,
-    },
-    results: [],
-  } as unknown as D1Result;
+	return {
+		success: true,
+		meta: {
+			duration: 1,
+			changes: overrides.changes ?? 0,
+			last_row_id: overrides.last_row_id ?? 0,
+			rows_read: 0,
+			rows_written: 0,
+			size_after: 0,
+			changed_db: false,
+		},
+		results: [],
+	} as unknown as D1Result;
 }
 
 // Mock D1Database
-function createMockDb(options: {
-  allResults?: unknown[];
-  firstResult?: unknown;
-  runResult?: { changes?: number; last_row_id?: number };
-  batchResults?: D1Result[];
-} = {}) {
-  const mockStmt = {
-    all: vi.fn(() => Promise.resolve({ results: options.allResults ?? [] })),
-    first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
-    run: vi.fn(() => Promise.resolve(createMockResult(options.runResult))),
-  };
+function createMockDb(
+	options: {
+		allResults?: unknown[];
+		firstResult?: unknown;
+		runResult?: { changes?: number; last_row_id?: number };
+		batchResults?: D1Result[];
+	} = {},
+) {
+	const mockStmt = {
+		all: vi.fn(() => Promise.resolve({ results: options.allResults ?? [] })),
+		first: vi.fn(() => Promise.resolve(options.firstResult ?? null)),
+		run: vi.fn(() => Promise.resolve(createMockResult(options.runResult))),
+	};
 
-  const mockPrepare = vi.fn(() => ({
-    bind: vi.fn(() => mockStmt),
-  }));
+	const mockPrepare = vi.fn(() => ({
+		bind: vi.fn(() => mockStmt),
+	}));
 
-  const mockBatch = vi.fn(() => Promise.resolve(
-    options.batchResults ?? [createMockResult()]
-  ));
+	const mockBatch = vi.fn(() => Promise.resolve(options.batchResults ?? [createMockResult()]));
 
-  return {
-    prepare: mockPrepare,
-    batch: mockBatch,
-    _stmt: mockStmt,
-    _prepare: mockPrepare,
-  } as unknown as D1Database & { _stmt: typeof mockStmt; _prepare: typeof mockPrepare };
+	return {
+		prepare: mockPrepare,
+		batch: mockBatch,
+		_stmt: mockStmt,
+		_prepare: mockPrepare,
+	} as unknown as D1Database & { _stmt: typeof mockStmt; _prepare: typeof mockPrepare };
 }
 
 describe("D1 wrapper", () => {
-  describe("query", () => {
-    test("returns all rows from SELECT", async () => {
-      const mockDb = createMockDb({
-        allResults: [
-          { id: "1", name: "Project A" },
-          { id: "2", name: "Project B" },
-        ],
-      });
+	describe("query", () => {
+		test("returns all rows from SELECT", async () => {
+			const mockDb = createMockDb({
+				allResults: [
+					{ id: "1", name: "Project A" },
+					{ id: "2", name: "Project B" },
+				],
+			});
 
-      const results = await query<{ id: string; name: string }>(
-        mockDb,
-        "SELECT * FROM projects WHERE active = ?",
-        [true],
-      );
+			const results = await query<{ id: string; name: string }>(
+				mockDb,
+				"SELECT * FROM projects WHERE active = ?",
+				[true],
+			);
 
-      expect(results).toHaveLength(2);
-      expect(results[0]!.name).toBe("Project A");
-      expect(mockDb._prepare).toHaveBeenCalledTimes(1);
-      // Pin the SQL fragment passed to prepare — a regression that
-      // sent a different SELECT (e.g. SELECT id FROM projects, dropping
-      // columns) would silently pass the toHaveLength check while
-      // breaking dashboards expecting full rows.
-      expect(mockDb._prepare).toHaveBeenCalledWith("SELECT * FROM projects WHERE active = ?");
-    });
+			expect(results).toHaveLength(2);
+			expect(results[0]?.name).toBe("Project A");
+			expect(mockDb._prepare).toHaveBeenCalledTimes(1);
+			// Pin the SQL fragment passed to prepare — a regression that
+			// sent a different SELECT (e.g. SELECT id FROM projects, dropping
+			// columns) would silently pass the toHaveLength check while
+			// breaking dashboards expecting full rows.
+			expect(mockDb._prepare).toHaveBeenCalledWith("SELECT * FROM projects WHERE active = ?");
+		});
 
-    test("returns empty array when no rows match", async () => {
-      const mockDb = createMockDb({ allResults: [] });
+		test("returns empty array when no rows match", async () => {
+			const mockDb = createMockDb({ allResults: [] });
 
-      const results = await query(mockDb, "SELECT * FROM projects WHERE id = ?", ["nonexistent"]);
+			const results = await query(mockDb, "SELECT * FROM projects WHERE id = ?", ["nonexistent"]);
 
-      expect(results).toEqual([]);
-    });
-  });
+			expect(results).toEqual([]);
+		});
+	});
 
-  describe("queryOne", () => {
-    test("returns first matching row", async () => {
-      const mockDb = createMockDb({
-        firstResult: { id: "1", name: "Project A" },
-      });
+	describe("queryOne", () => {
+		test("returns first matching row", async () => {
+			const mockDb = createMockDb({
+				firstResult: { id: "1", name: "Project A" },
+			});
 
-      const result = await queryOne<{ id: string; name: string }>(
-        mockDb,
-        "SELECT * FROM projects WHERE id = ?",
-        ["1"],
-      );
+			const result = await queryOne<{ id: string; name: string }>(
+				mockDb,
+				"SELECT * FROM projects WHERE id = ?",
+				["1"],
+			);
 
-      expect(result).not.toBeNull();
-      expect(result?.name).toBe("Project A");
-    });
+			expect(result).not.toBeNull();
+			expect(result?.name).toBe("Project A");
+		});
 
-    test("returns null when no row matches", async () => {
-      const mockDb = createMockDb({ firstResult: null });
+		test("returns null when no row matches", async () => {
+			const mockDb = createMockDb({ firstResult: null });
 
-      const result = await queryOne(mockDb, "SELECT * FROM projects WHERE id = ?", ["nonexistent"]);
+			const result = await queryOne(mockDb, "SELECT * FROM projects WHERE id = ?", ["nonexistent"]);
 
-      expect(result).toBeNull();
-    });
-  });
+			expect(result).toBeNull();
+		});
+	});
 
-  describe("execute", () => {
-    test("executes INSERT and returns result", async () => {
-      const mockDb = createMockDb({
-        runResult: { changes: 1, last_row_id: 42 },
-      });
+	describe("execute", () => {
+		test("executes INSERT and returns result", async () => {
+			const mockDb = createMockDb({
+				runResult: { changes: 1, last_row_id: 42 },
+			});
 
-      const result = await execute(
-        mockDb,
-        "INSERT INTO projects (id, name) VALUES (?, ?)",
-        ["new-id", "New Project"],
-      );
+			const result = await execute(mockDb, "INSERT INTO projects (id, name) VALUES (?, ?)", [
+				"new-id",
+				"New Project",
+			]);
 
-      expect(result.success).toBe(true);
-      expect(result.meta.changes).toBe(1);
-    });
+			expect(result.success).toBe(true);
+			expect(result.meta.changes).toBe(1);
+		});
 
-    test("executes UPDATE and returns affected rows", async () => {
-      const mockDb = createMockDb({
-        runResult: { changes: 3, last_row_id: 0 },
-      });
+		test("executes UPDATE and returns affected rows", async () => {
+			const mockDb = createMockDb({
+				runResult: { changes: 3, last_row_id: 0 },
+			});
 
-      const result = await execute(
-        mockDb,
-        "UPDATE projects SET active = ? WHERE archived = ?",
-        [false, true],
-      );
+			const result = await execute(mockDb, "UPDATE projects SET active = ? WHERE archived = ?", [
+				false,
+				true,
+			]);
 
-      expect(result.meta.changes).toBe(3);
-    });
+			expect(result.meta.changes).toBe(3);
+		});
 
-    test("executes DELETE and returns affected rows", async () => {
-      const mockDb = createMockDb({
-        runResult: { changes: 5, last_row_id: 0 },
-      });
+		test("executes DELETE and returns affected rows", async () => {
+			const mockDb = createMockDb({
+				runResult: { changes: 5, last_row_id: 0 },
+			});
 
-      const result = await execute(
-        mockDb,
-        "DELETE FROM projects WHERE created_at < ?",
-        ["2020-01-01"],
-      );
+			const result = await execute(mockDb, "DELETE FROM projects WHERE created_at < ?", [
+				"2020-01-01",
+			]);
 
-      expect(result.meta.changes).toBe(5);
-    });
-  });
+			expect(result.meta.changes).toBe(5);
+		});
+	});
 
-  describe("batch", () => {
-    test("executes multiple statements in single round-trip", async () => {
-      const mockDb = createMockDb({
-        batchResults: [
-          createMockResult(),
-          createMockResult(),
-        ],
-      });
+	describe("batch", () => {
+		test("executes multiple statements in single round-trip", async () => {
+			const mockDb = createMockDb({
+				batchResults: [createMockResult(), createMockResult()],
+			});
 
-      const results = await batch(mockDb, [
-        { sql: "INSERT INTO projects (id, name) VALUES (?, ?)", params: ["1", "A"] },
-        { sql: "INSERT INTO projects (id, name) VALUES (?, ?)", params: ["2", "B"] },
-      ]);
+			const results = await batch(mockDb, [
+				{ sql: "INSERT INTO projects (id, name) VALUES (?, ?)", params: ["1", "A"] },
+				{ sql: "INSERT INTO projects (id, name) VALUES (?, ?)", params: ["2", "B"] },
+			]);
 
-      expect(results).toHaveLength(2);
-      expect(mockDb.batch).toHaveBeenCalledTimes(1);
-      // Pin the batch payload — a regression that swapped statement
-      // order, dropped params, or sent a different SQL would silently
-      // pass the toHaveLength check. Verify the prepared statements
-      // (D1PreparedStatement objects) were passed in order.
-      const batchCall = (mockDb.batch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
-      expect(batchCall).toBeDefined();
-      expect(Array.isArray(batchCall![0])).toBe(true);
-      expect((batchCall![0] as unknown[]).length).toBe(2);
-    });
+			expect(results).toHaveLength(2);
+			expect(mockDb.batch).toHaveBeenCalledTimes(1);
+			// Pin the batch payload — a regression that swapped statement
+			// order, dropped params, or sent a different SQL would silently
+			// pass the toHaveLength check. Verify the prepared statements
+			// (D1PreparedStatement objects) were passed in order.
+			const batchCall = (mockDb.batch as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+			expect(batchCall).toBeDefined();
+			if (!batchCall) throw new Error("expected batch call");
+			expect(Array.isArray(batchCall[0])).toBe(true);
+			expect((batchCall[0] as unknown[]).length).toBe(2);
+		});
 
-    test("handles statements without params", async () => {
-      const mockDb = createMockDb({
-        batchResults: [createMockResult()],
-      });
+		test("handles statements without params", async () => {
+			const mockDb = createMockDb({
+				batchResults: [createMockResult()],
+			});
 
-      const results = await batch(mockDb, [
-        { sql: "DELETE FROM sessions WHERE expires_at < datetime('now')" },
-      ]);
+			const results = await batch(mockDb, [
+				{ sql: "DELETE FROM sessions WHERE expires_at < datetime('now')" },
+			]);
 
-      expect(results).toHaveLength(1);
-    });
-  });
+			expect(results).toHaveLength(1);
+		});
+	});
 });

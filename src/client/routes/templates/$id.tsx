@@ -1,560 +1,616 @@
+import { Eye, Loader2, Plus, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Loader2, Plus, Trash2, Eye, Send } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { TemplateDetailSkeleton } from "@/components/skeletons";
+import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+	Card,
+	CardAction,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Variable {
-  name: string;
-  type: "string" | "number" | "boolean";
-  required: boolean;
-  default?: string | undefined;
+	name: string;
+	type: "string" | "number" | "boolean";
+	required: boolean;
+	default?: string | undefined;
+}
+
+/** Client-only row id for React keys; never persisted to the API. */
+interface EditorVariable extends Variable {
+	uid: string;
+}
+
+function withUid(v: Variable): EditorVariable {
+	return { ...v, uid: crypto.randomUUID() };
+}
+
+function stripUid(v: EditorVariable): Variable {
+	const { uid: _, ...rest } = v;
+	void _;
+	return rest;
 }
 
 interface Template {
-  id: string;
-  project_id: string;
-  slug: string;
-  name: string;
-  subject: string;
-  body_markdown: string;
-  variables: string | null;
-  created_at: string;
-  updated_at: string;
+	id: string;
+	project_id: string;
+	slug: string;
+	name: string;
+	subject: string;
+	body_markdown: string;
+	variables: string | null;
+	created_at: string;
+	updated_at: string;
 }
 
 export function TemplateDetailPage() {
-  const navigate = useNavigate();
-  const { id: templateId } = useParams<"id">();
-  const [template, setTemplate] = useState<Template | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+	const navigate = useNavigate();
+	const { id: templateId } = useParams<"id">();
+	const [template, setTemplate] = useState<Template | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [subject, setSubject] = useState("");
-  const [bodyMarkdown, setBodyMarkdown] = useState("");
-  const [variables, setVariables] = useState<Variable[]>([]);
+	// Form state
+	const [name, setName] = useState("");
+	const [slug, setSlug] = useState("");
+	const [subject, setSubject] = useState("");
+	const [bodyMarkdown, setBodyMarkdown] = useState("");
+	const [variables, setVariables] = useState<EditorVariable[]>([]);
 
-  // Preview state
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [previewSubject, setPreviewSubject] = useState<string | null>(null);
-  const [previewing, setPreviewing] = useState(false);
-  const [previewVars, setPreviewVars] = useState<Record<string, string>>({});
+	// Preview state
+	const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+	const [previewSubject, setPreviewSubject] = useState<string | null>(null);
+	const [previewing, setPreviewing] = useState(false);
+	const [previewVars, setPreviewVars] = useState<Record<string, string>>({});
 
-  // Delete state
-  const [deleting, setDeleting] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	// Delete state
+	const [deleting, setDeleting] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  // Test send state
-  const [testTo, setTestTo] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
+	// Test send state
+	const [testTo, setTestTo] = useState("");
+	const [sending, setSending] = useState(false);
+	const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  const fetchTemplate = useCallback(async () => {
-    if (!templateId) return;
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`/api/templates/${templateId}`);
-      if (!res.ok) throw new Error("Template not found");
+	const fetchTemplate = useCallback(async () => {
+		if (!templateId) return;
+		try {
+			setLoading(true);
+			setError(null);
+			const res = await fetch(`/api/templates/${templateId}`);
+			if (!res.ok) throw new Error("Template not found");
 
-      const tmpl = await res.json() as Template;
-      setTemplate(tmpl);
-      setName(tmpl.name);
-      setSlug(tmpl.slug);
-      setSubject(tmpl.subject);
-      setBodyMarkdown(tmpl.body_markdown);
+			const tmpl = (await res.json()) as Template;
+			setTemplate(tmpl);
+			setName(tmpl.name);
+			setSlug(tmpl.slug);
+			setSubject(tmpl.subject);
+			setBodyMarkdown(tmpl.body_markdown);
 
-      const parsed: Variable[] = tmpl.variables ? JSON.parse(tmpl.variables) as Variable[] : [];
-      setVariables(parsed);
-    } catch {
-      setError("Failed to load template");
-      toast.error("Failed to load template");
-    } finally {
-      setLoading(false);
-    }
-  }, [templateId]);
+			const parsed: Variable[] = tmpl.variables ? (JSON.parse(tmpl.variables) as Variable[]) : [];
+			setVariables(parsed.map(withUid));
+		} catch {
+			setError("Failed to load template");
+			toast.error("Failed to load template");
+		} finally {
+			setLoading(false);
+		}
+	}, [templateId]);
 
-  useEffect(() => {
-    void fetchTemplate();
-  }, [fetchTemplate]);
+	useEffect(() => {
+		void fetchTemplate();
+	}, [fetchTemplate]);
 
-  const originalVariables = useMemo(() => {
-    if (!template?.variables) return "[]";
-    return template.variables;
-  }, [template]);
+	const originalVariables = useMemo(() => {
+		if (!template?.variables) return "[]";
+		return template.variables;
+	}, [template]);
 
-  const dirty = useMemo(() => {
-    if (!template) return false;
-    return (
-      name !== template.name ||
-      slug !== template.slug ||
-      subject !== template.subject ||
-      bodyMarkdown !== template.body_markdown ||
-      JSON.stringify(variables) !== originalVariables
-    );
-  }, [template, name, slug, subject, bodyMarkdown, variables, originalVariables]);
+	const dirty = useMemo(() => {
+		if (!template) return false;
+		return (
+			name !== template.name ||
+			slug !== template.slug ||
+			subject !== template.subject ||
+			bodyMarkdown !== template.body_markdown ||
+			JSON.stringify(variables.map(stripUid)) !== originalVariables
+		);
+	}, [template, name, slug, subject, bodyMarkdown, variables, originalVariables]);
 
-  async function handleSave() {
-    if (!templateId) return;
-    try {
-      setSaving(true);
-      const res = await fetch(`/api/templates/${templateId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          slug: slug.trim(),
-          subject: subject.trim(),
-          body_markdown: bodyMarkdown,
-          variables: variables.length > 0 ? variables : [],
-        }),
-      });
+	async function handleSave() {
+		if (!templateId) return;
+		try {
+			setSaving(true);
+			const res = await fetch(`/api/templates/${templateId}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					name: name.trim(),
+					slug: slug.trim(),
+					subject: subject.trim(),
+					body_markdown: bodyMarkdown,
+					variables: variables.length > 0 ? variables.map(stripUid) : [],
+				}),
+			});
 
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+			if (!res.ok) {
+				const data = (await res.json()) as { error?: string };
+				throw new Error(data.error ?? "Failed to save");
+			}
 
-      const updated = await res.json() as Template;
-      setTemplate(updated);
-      toast.success("Template saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save template");
-    } finally {
-      setSaving(false);
-    }
-  }
+			const updated = (await res.json()) as Template;
+			setTemplate(updated);
+			toast.success("Template saved");
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "Failed to save template");
+		} finally {
+			setSaving(false);
+		}
+	}
 
-  function resetForm() {
-    if (!template) return;
-    setName(template.name);
-    setSlug(template.slug);
-    setSubject(template.subject);
-    setBodyMarkdown(template.body_markdown);
-    const parsed: Variable[] = template.variables ? JSON.parse(template.variables) as Variable[] : [];
-    setVariables(parsed);
-  }
+	function resetForm() {
+		if (!template) return;
+		setName(template.name);
+		setSlug(template.slug);
+		setSubject(template.subject);
+		setBodyMarkdown(template.body_markdown);
+		const parsed: Variable[] = template.variables
+			? (JSON.parse(template.variables) as Variable[])
+			: [];
+		setVariables(parsed.map(withUid));
+	}
 
-  async function handlePreview() {
-    if (!templateId) return;
-    try {
-      setPreviewing(true);
-      if (dirty) {
-        await handleSave();
-      }
+	async function handlePreview() {
+		if (!templateId) return;
+		try {
+			setPreviewing(true);
+			if (dirty) {
+				await handleSave();
+			}
 
-      const mergedPreviewVars: Record<string, string> = {};
-      for (const v of variables) {
-        if (v.name) {
-          mergedPreviewVars[v.name] = previewVars[v.name] ?? v.default ?? "";
-        }
-      }
-      const res = await fetch(`/api/templates/${templateId}/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ variables: mergedPreviewVars }),
-      });
+			const mergedPreviewVars: Record<string, string> = {};
+			for (const v of variables) {
+				if (v.name) {
+					mergedPreviewVars[v.name] = previewVars[v.name] ?? v.default ?? "";
+				}
+			}
+			const res = await fetch(`/api/templates/${templateId}/preview`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ variables: mergedPreviewVars }),
+			});
 
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Failed to preview");
-      }
+			if (!res.ok) {
+				const data = (await res.json()) as { error?: string };
+				throw new Error(data.error ?? "Failed to preview");
+			}
 
-      const result = await res.json() as { subject: string; html: string };
-      setPreviewSubject(result.subject);
-      setPreviewHtml(result.html);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to preview template");
-    } finally {
-      setPreviewing(false);
-    }
-  }
+			const result = (await res.json()) as { subject: string; html: string };
+			setPreviewSubject(result.subject);
+			setPreviewHtml(result.html);
+		} catch (err) {
+			toast.error(err instanceof Error ? err.message : "Failed to preview template");
+		} finally {
+			setPreviewing(false);
+		}
+	}
 
-  function addVariable() {
-    setVariables([...variables, { name: "", type: "string", required: true }]);
-  }
+	function addVariable() {
+		setVariables([...variables, withUid({ name: "", type: "string", required: true })]);
+	}
 
-  function updateVariable(index: number, updates: Partial<Variable>) {
-    setVariables((prev) =>
-      prev.map((v, i) => (i === index ? { ...v, ...updates } : v)),
-    );
-  }
+	function updateVariable(index: number, updates: Partial<Variable>) {
+		setVariables((prev) => prev.map((v, i) => (i === index ? { ...v, ...updates } : v)));
+	}
 
-  function removeVariable(index: number) {
-    setVariables((prev) => prev.filter((_, i) => i !== index));
-  }
+	function removeVariable(index: number) {
+		setVariables((prev) => prev.filter((_, i) => i !== index));
+	}
 
-  async function handleDelete() {
-    if (!templateId) return;
-    try {
-      setDeleting(true);
-      const res = await fetch(`/api/templates/${templateId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Template deleted");
-      void navigate("/templates");
-    } catch {
-      toast.error("Failed to delete template");
-    } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-    }
-  }
+	async function handleDelete() {
+		if (!templateId) return;
+		try {
+			setDeleting(true);
+			const res = await fetch(`/api/templates/${templateId}`, { method: "DELETE" });
+			if (!res.ok) throw new Error("Failed to delete");
+			toast.success("Template deleted");
+			void navigate("/templates");
+		} catch {
+			toast.error("Failed to delete template");
+		} finally {
+			setDeleting(false);
+			setDeleteDialogOpen(false);
+		}
+	}
 
-  async function handleTestSend() {
-    if (!templateId || !testTo.trim()) return;
-    try {
-      setSending(true);
-      setSendResult(null);
-      if (dirty) {
-        await handleSave();
-      }
-      const mergedVars: Record<string, string> = {};
-      for (const v of variables) {
-        if (v.name) {
-          mergedVars[v.name] = previewVars[v.name] ?? v.default ?? "";
-        }
-      }
-      const res = await fetch(`/api/templates/${templateId}/test-send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: testTo.trim(), variables: mergedVars }),
-      });
-      let data: { status?: string; provider_type?: string; error?: string };
-      try {
-        data = await res.json() as typeof data;
-      } catch {
-        throw new Error(`Server returned ${res.status}`);
-      }
-      if (!res.ok) {
-        throw new Error(data.error ?? `Server returned ${res.status}`);
-      }
-      setSendResult({ ok: true, message: `Sent via ${data.provider_type}` });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to send test email";
-      setSendResult({ ok: false, message });
-    } finally {
-      setSending(false);
-    }
-  }
+	async function handleTestSend() {
+		if (!templateId || !testTo.trim()) return;
+		try {
+			setSending(true);
+			setSendResult(null);
+			if (dirty) {
+				await handleSave();
+			}
+			const mergedVars: Record<string, string> = {};
+			for (const v of variables) {
+				if (v.name) {
+					mergedVars[v.name] = previewVars[v.name] ?? v.default ?? "";
+				}
+			}
+			const res = await fetch(`/api/templates/${templateId}/test-send`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ to: testTo.trim(), variables: mergedVars }),
+			});
+			let data: { status?: string; provider_type?: string; error?: string };
+			try {
+				data = (await res.json()) as typeof data;
+			} catch {
+				throw new Error(`Server returned ${res.status}`);
+			}
+			if (!res.ok) {
+				throw new Error(data.error ?? `Server returned ${res.status}`);
+			}
+			setSendResult({ ok: true, message: `Sent via ${data.provider_type}` });
+		} catch (err) {
+			const message = err instanceof Error ? err.message : "Failed to send test email";
+			setSendResult({ ok: false, message });
+		} finally {
+			setSending(false);
+		}
+	}
 
-  if (loading) {
-    return <TemplateDetailSkeleton />;
-  }
+	if (loading) {
+		return <TemplateDetailSkeleton />;
+	}
 
-  if (error && !template) {
-    return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => void navigate("/templates")}>
-          Back to Templates
-        </Button>
-      </div>
-    );
-  }
+	if (error && !template) {
+		return (
+			<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
+				<p className="text-sm text-destructive">{error}</p>
+				<Button
+					variant="outline"
+					size="sm"
+					className="mt-3"
+					onClick={() => void navigate("/templates")}
+				>
+					Back to Templates
+				</Button>
+			</div>
+		);
+	}
 
-  return (
-    <div className="flex flex-col gap-6">
-      {/* Unsaved changes bar */}
-      {dirty && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-          <p className="text-sm text-muted-foreground flex-1">You have unsaved changes.</p>
-          <Button size="sm" variant="outline" onClick={resetForm}>Reset</Button>
-          <Button size="sm" onClick={() => void handleSave()} disabled={saving || !name.trim()}>
-            {saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-            Save Changes
-          </Button>
-        </div>
-      )}
+	return (
+		<div className="flex flex-col gap-6">
+			{/* Unsaved changes bar */}
+			{dirty && (
+				<div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+					<p className="text-sm text-muted-foreground flex-1">You have unsaved changes.</p>
+					<Button size="sm" variant="outline" onClick={resetForm}>
+						Reset
+					</Button>
+					<Button size="sm" onClick={() => void handleSave()} disabled={saving || !name.trim()}>
+						{saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+						Save Changes
+					</Button>
+				</div>
+			)}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Editor */}
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Template Settings</CardTitle>
-              <CardDescription>Name, slug, and subject line.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={128} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="slug">Slug</Label>
-                  <Input id="slug" value={slug} onChange={(e) => setSlug(e.target.value)} maxLength={64} className="font-mono" />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={500} />
-              </div>
-            </CardContent>
-          </Card>
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				{/* Left: Editor */}
+				<div className="flex flex-col gap-6">
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Template Settings</CardTitle>
+							<CardDescription>Name, slug, and subject line.</CardDescription>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-4">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="name">Name</Label>
+									<Input
+										id="name"
+										value={name}
+										onChange={(e) => setName(e.target.value)}
+										maxLength={128}
+									/>
+								</div>
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="slug">Slug</Label>
+									<Input
+										id="slug"
+										value={slug}
+										onChange={(e) => setSlug(e.target.value)}
+										maxLength={64}
+										className="font-mono"
+									/>
+								</div>
+							</div>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="subject">Subject</Label>
+								<Input
+									id="subject"
+									value={subject}
+									onChange={(e) => setSubject(e.target.value)}
+									maxLength={500}
+								/>
+							</div>
+						</CardContent>
+					</Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Body (Markdown)</CardTitle>
-              <CardDescription>
-                Use {"{{variable_name}}"} for dynamic content.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                value={bodyMarkdown}
-                onChange={(e) => setBodyMarkdown(e.target.value)}
-                rows={16}
-                className="font-mono text-sm"
-              />
-            </CardContent>
-          </Card>
+					<Card>
+						<CardHeader>
+							<CardTitle className="text-base">Body (Markdown)</CardTitle>
+							<CardDescription>Use {"{{variable_name}}"} for dynamic content.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<Textarea
+								value={bodyMarkdown}
+								onChange={(e) => setBodyMarkdown(e.target.value)}
+								rows={16}
+								className="font-mono text-sm"
+							/>
+						</CardContent>
+					</Card>
 
-          {/* Variables */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Variables</CardTitle>
-                  <CardDescription>Declare template variables with types and defaults.</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={addVariable}>
-                  <Plus className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-                  Add
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              {variables.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-3">
-                  No variables declared. Add one to validate template inputs.
-                </p>
-              ) : (
-                variables.map((v, i) => (
-                  <div key={i} className="flex items-start gap-2 rounded-[var(--radius-widget)] bg-muted/20 p-2.5">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
-                      <Input
-                        placeholder="name"
-                        value={v.name}
-                        onChange={(e) => updateVariable(i, { name: e.target.value })}
-                        className="font-mono text-xs h-8"
-                      />
-                      <Select
-                        value={v.type}
-                        onValueChange={(val) => updateVariable(i, { type: val as Variable["type"] })}
-                      >
-                        <SelectTrigger className="text-xs h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="string">string</SelectItem>
-                          <SelectItem value="number">number</SelectItem>
-                          <SelectItem value="boolean">boolean</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={v.required ? "required" : "optional"}
-                        onValueChange={(val) => updateVariable(i, { required: val === "required" })}
-                      >
-                        <SelectTrigger className="text-xs h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="required">Required</SelectItem>
-                          <SelectItem value="optional">Optional</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {!v.required && (
-                        <Input
-                          placeholder="default"
-                          value={v.default ?? ""}
-                          onChange={(e) =>
-                            updateVariable(i, { default: e.target.value || undefined })
-                          }
-                          className="text-xs h-8"
-                        />
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeVariable(i)}
-                      className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 shrink-0"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                    </Button>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+					{/* Variables */}
+					<Card>
+						<CardHeader>
+							<div className="flex items-center justify-between">
+								<div>
+									<CardTitle className="text-base">Variables</CardTitle>
+									<CardDescription>
+										Declare template variables with types and defaults.
+									</CardDescription>
+								</div>
+								<Button variant="outline" size="sm" onClick={addVariable}>
+									<Plus className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+									Add
+								</Button>
+							</div>
+						</CardHeader>
+						<CardContent className="flex flex-col gap-2">
+							{variables.length === 0 ? (
+								<p className="text-xs text-muted-foreground text-center py-3">
+									No variables declared. Add one to validate template inputs.
+								</p>
+							) : (
+								variables.map((v, i) => (
+									<div
+										key={v.uid}
+										className="flex items-start gap-2 rounded-[var(--radius-widget)] bg-muted/20 p-2.5"
+									>
+										<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
+											<Input
+												placeholder="name"
+												value={v.name}
+												onChange={(e) => updateVariable(i, { name: e.target.value })}
+												className="font-mono text-xs h-8"
+											/>
+											<Select
+												value={v.type}
+												onValueChange={(val) =>
+													updateVariable(i, { type: val as Variable["type"] })
+												}
+											>
+												<SelectTrigger className="text-xs h-8">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="string">string</SelectItem>
+													<SelectItem value="number">number</SelectItem>
+													<SelectItem value="boolean">boolean</SelectItem>
+												</SelectContent>
+											</Select>
+											<Select
+												value={v.required ? "required" : "optional"}
+												onValueChange={(val) => updateVariable(i, { required: val === "required" })}
+											>
+												<SelectTrigger className="text-xs h-8">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="required">Required</SelectItem>
+													<SelectItem value="optional">Optional</SelectItem>
+												</SelectContent>
+											</Select>
+											{!v.required && (
+												<Input
+													placeholder="default"
+													value={v.default ?? ""}
+													onChange={(e) =>
+														updateVariable(i, { default: e.target.value || undefined })
+													}
+													className="text-xs h-8"
+												/>
+											)}
+										</div>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => removeVariable(i)}
+											className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 shrink-0"
+										>
+											<Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+										</Button>
+									</div>
+								))
+							)}
+						</CardContent>
+					</Card>
 
-          {/* Danger zone */}
-          <Card className="ring-1 ring-destructive/30">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.5} />
-                    Delete Template
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Delete Template?</DialogTitle>
-                    <DialogDescription>
-                      This will permanently delete the template <strong>{template?.name}</strong>.
-                      Existing send logs referencing this template will not be affected.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
-                      Cancel
-                    </Button>
-                    <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
-                      {deleting && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                      Delete
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardContent>
-          </Card>
-        </div>
+					{/* Danger zone */}
+					<Card className="ring-1 ring-destructive/30">
+						<CardHeader>
+							<CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+								<DialogTrigger asChild>
+									<Button variant="destructive" size="sm">
+										<Trash2 className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.5} />
+										Delete Template
+									</Button>
+								</DialogTrigger>
+								<DialogContent>
+									<DialogHeader>
+										<DialogTitle>Delete Template?</DialogTitle>
+										<DialogDescription>
+											This will permanently delete the template <strong>{template?.name}</strong>.
+											Existing send logs referencing this template will not be affected.
+										</DialogDescription>
+									</DialogHeader>
+									<DialogFooter>
+										<Button
+											variant="outline"
+											onClick={() => setDeleteDialogOpen(false)}
+											disabled={deleting}
+										>
+											Cancel
+										</Button>
+										<Button
+											variant="destructive"
+											onClick={() => void handleDelete()}
+											disabled={deleting}
+										>
+											{deleting && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+											Delete
+										</Button>
+									</DialogFooter>
+								</DialogContent>
+							</Dialog>
+						</CardContent>
+					</Card>
+				</div>
 
-        {/* Right: Preview */}
-        <Card className="sticky top-0 self-start">
-          <CardHeader>
-            <CardTitle className="text-base">Preview</CardTitle>
-            <CardDescription>Rendered email output.</CardDescription>
-            <CardAction>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void handlePreview()}
-                disabled={previewing}
-              >
-                {previewing ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <Eye className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-                )}
-                Render
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {/* Preview variables input */}
-            {variables.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium text-muted-foreground">Sample Variables</p>
-                {variables.map((v) => (
-                  <div key={v.name} className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground w-24 shrink-0 truncate">
-                      {v.name}
-                    </span>
-                    <Input
-                      value={previewVars[v.name] ?? v.default ?? ""}
-                      onChange={(e) =>
-                        setPreviewVars((prev) => ({ ...prev, [v.name]: e.target.value }))
-                      }
-                      className="text-xs h-7"
-                      placeholder={v.default ?? (v.required ? "required" : "optional")}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+				{/* Right: Preview */}
+				<Card className="sticky top-0 self-start">
+					<CardHeader>
+						<CardTitle className="text-base">Preview</CardTitle>
+						<CardDescription>Rendered email output.</CardDescription>
+						<CardAction>
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => void handlePreview()}
+								disabled={previewing}
+							>
+								{previewing ? (
+									<Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+								) : (
+									<Eye className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+								)}
+								Render
+							</Button>
+						</CardAction>
+					</CardHeader>
+					<CardContent className="flex flex-col gap-4">
+						{/* Preview variables input */}
+						{variables.length > 0 && (
+							<div className="flex flex-col gap-2">
+								<p className="text-xs font-medium text-muted-foreground">Sample Variables</p>
+								{variables.map((v) => (
+									<div key={v.name} className="flex items-center gap-2">
+										<span className="text-xs font-mono text-muted-foreground w-24 shrink-0 truncate">
+											{v.name}
+										</span>
+										<Input
+											value={previewVars[v.name] ?? v.default ?? ""}
+											onChange={(e) =>
+												setPreviewVars((prev) => ({ ...prev, [v.name]: e.target.value }))
+											}
+											className="text-xs h-7"
+											placeholder={v.default ?? (v.required ? "required" : "optional")}
+										/>
+									</div>
+								))}
+							</div>
+						)}
 
-            {previewSubject && (
-              <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Subject</p>
-                <p className="text-sm font-medium text-foreground">{previewSubject}</p>
-              </div>
-            )}
+						{previewSubject && (
+							<div>
+								<p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+									Subject
+								</p>
+								<p className="text-sm font-medium text-foreground">{previewSubject}</p>
+							</div>
+						)}
 
-            {previewHtml ? (
-              <div className="rounded-lg border border-border bg-background p-4 overflow-auto max-h-[500px]">
-                <div
-                  className="prose prose-sm max-w-none text-foreground"
-                  dangerouslySetInnerHTML={{ __html: previewHtml }}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8 rounded-[var(--radius-card)] bg-secondary">
-                <p className="text-xs text-muted-foreground">
-                  Click &quot;Render&quot; to preview the template.
-                </p>
-              </div>
-            )}
+						{previewHtml ? (
+							<div className="rounded-lg border border-border bg-background p-4 overflow-auto max-h-[500px]">
+								<div
+									className="prose prose-sm max-w-none text-foreground"
+									dangerouslySetInnerHTML={{ __html: previewHtml }}
+								/>
+							</div>
+						) : (
+							<div className="flex items-center justify-center py-8 rounded-[var(--radius-card)] bg-secondary">
+								<p className="text-xs text-muted-foreground">
+									Click &quot;Render&quot; to preview the template.
+								</p>
+							</div>
+						)}
 
-            <div className="border-t border-border pt-4">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Send Test Email</p>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="email"
-                  placeholder="recipient@example.com"
-                  value={testTo}
-                  onChange={(e) => setTestTo(e.target.value)}
-                  className="text-sm h-8"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void handleTestSend()}
-                  disabled={sending || !testTo.trim()}
-                >
-                  {sending ? (
-                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-                  )}
-                  Send
-                </Button>
-              </div>
-              {sendResult && (
-                <p className={`text-xs mt-2 ${sendResult.ok ? "text-emerald-600" : "text-destructive"}`}>
-                  {sendResult.ok ? "✓ " : "✗ "}{sendResult.message}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+						<div className="border-t border-border pt-4">
+							<p className="text-xs font-medium text-muted-foreground mb-2">Send Test Email</p>
+							<div className="flex items-center gap-2">
+								<Input
+									type="email"
+									placeholder="recipient@example.com"
+									value={testTo}
+									onChange={(e) => setTestTo(e.target.value)}
+									className="text-sm h-8"
+								/>
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => void handleTestSend()}
+									disabled={sending || !testTo.trim()}
+								>
+									{sending ? (
+										<Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+									) : (
+										<Send className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+									)}
+									Send
+								</Button>
+							</div>
+							{sendResult && (
+								<p
+									className={`text-xs mt-2 ${sendResult.ok ? "text-emerald-600" : "text-destructive"}`}
+								>
+									{sendResult.ok ? "✓ " : "✗ "}
+									{sendResult.message}
+								</p>
+							)}
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+		</div>
+	);
 }

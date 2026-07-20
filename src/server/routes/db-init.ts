@@ -127,50 +127,52 @@ INSERT OR IGNORE INTO _test_marker(id, created_at) VALUES ('e2e-test-db', dateti
 `;
 
 dbInit.post("/", async (c) => {
-  const host = c.req.header("host") ?? new URL(c.req.url).host;
-  const isLocal =
-    c.env.DEV_MODE === "true" ||
-    host.startsWith("localhost") ||
-    host.startsWith("127.0.0.1") ||
-    host.startsWith("[::1]");
+	const host = c.req.header("host") ?? new URL(c.req.url).host;
+	const isLocal =
+		c.env.DEV_MODE === "true" ||
+		host.startsWith("localhost") ||
+		host.startsWith("127.0.0.1") ||
+		host.startsWith("[::1]");
 
-  if (!isLocal) {
-    return c.json({ error: "Only available in local development" }, 403);
-  }
+	if (!isLocal) {
+		return c.json({ error: "Only available in local development" }, 403);
+	}
 
-  // Strip `--` line comments BEFORE splitting on `;` — otherwise an
-  // inline comment containing a semicolon (e.g. "Defaults to 0;") will
-  // be split mid-statement, leaving the residual comment text as a
-  // bogus second statement that D1 rejects with "incomplete input".
-  const stripped = SCHEMA_SQL.replace(/--[^\n]*/g, "");
-  const statements = stripped
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+	// Strip `--` line comments BEFORE splitting on `;` — otherwise an
+	// inline comment containing a semicolon (e.g. "Defaults to 0;") will
+	// be split mid-statement, leaving the residual comment text as a
+	// bogus second statement that D1 rejects with "incomplete input".
+	const stripped = SCHEMA_SQL.replace(/--[^\n]*/g, "");
+	const statements = stripped
+		.split(";")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
 
-  for (const stmt of statements) {
-    await c.env.DB.prepare(stmt).run();
-  }
+	for (const stmt of statements) {
+		await c.env.DB.prepare(stmt).run();
+	}
 
-  return c.json({ ok: true, statements: statements.length });
+	return c.json({ ok: true, statements: statements.length });
 });
 
 dbInit.get("/marker", async (c) => {
-  const host = c.req.header("host") ?? new URL(c.req.url).host;
-  const isLocal =
-    c.env.DEV_MODE === "true" ||
-    host.startsWith("localhost") ||
-    host.startsWith("127.0.0.1") ||
-    host.startsWith("[::1]");
-  if (!isLocal) {
-    return c.json({ error: "Only available in local development" }, 403);
-  }
-  try {
-    const row = await c.env.DB.prepare("SELECT id FROM _test_marker LIMIT 1").first<{ id: string }>();
-    return c.json({ marker: row?.id ?? null });
-  } catch (err) {
-    return c.json({ marker: null, error: err instanceof Error ? err.message : String(err) });
-  }
+	const host = c.req.header("host") ?? new URL(c.req.url).host;
+	const isLocal =
+		c.env.DEV_MODE === "true" ||
+		host.startsWith("localhost") ||
+		host.startsWith("127.0.0.1") ||
+		host.startsWith("[::1]");
+	if (!isLocal) {
+		return c.json({ error: "Only available in local development" }, 403);
+	}
+	try {
+		const row = await c.env.DB.prepare("SELECT id FROM _test_marker LIMIT 1").first<{
+			id: string;
+		}>();
+		return c.json({ marker: row?.id ?? null });
+	} catch (err) {
+		return c.json({ marker: null, error: err instanceof Error ? err.message : String(err) });
+	}
 });
 
 export { dbInit };

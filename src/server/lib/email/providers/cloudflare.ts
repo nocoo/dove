@@ -1,1 +1,6 @@
-export { CloudflareProvider, IdempotentSendResult, extractName, extractAddress } from "@/lib/email/providers/cloudflare";
+export {
+	CloudflareProvider,
+	extractAddress,
+	extractName,
+	IdempotentSendResult,
+} from "@/lib/email/providers/cloudflare";

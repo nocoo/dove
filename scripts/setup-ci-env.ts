@@ -9,7 +9,7 @@
  * EMAIL_DRY_RUN=true, and D1 uses local SQLite (no remote connection).
  */
 
-import { writeFileSync, existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
@@ -26,8 +26,8 @@ RESEND_FROM_DOMAIN=test.example.com
 `;
 
 if (existsSync(ENV_PATH)) {
-  console.log(".env.test already exists, skipping generation");
+	console.log(".env.test already exists, skipping generation");
 } else {
-  writeFileSync(ENV_PATH, CI_ENV_CONTENT);
-  console.log(".env.test generated for CI");
+	writeFileSync(ENV_PATH, CI_ENV_CONTENT);
+	console.log(".env.test generated for CI");
 }

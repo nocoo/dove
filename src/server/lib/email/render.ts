@@ -1,7 +1,7 @@
 export {
-  escapeHtml,
-  validateVariables,
-  substituteVariables,
-  markdownToHtml,
-  renderTemplate,
+	escapeHtml,
+	markdownToHtml,
+	renderTemplate,
+	substituteVariables,
+	validateVariables,
 } from "@/lib/email/render";
