@@ -110,7 +110,7 @@ src/
     use-mobile.ts            # Mobile detection hook
   __tests__/                 # Shared lib unit tests (vitest)
 scripts/
-  check-coverage.ts          # 90% coverage gate
+  check-coverage.ts          # coverage gate (vitest thresholds)
   run-e2e.ts                 # L2 server lifecycle
   gate-security.ts           # G2: osv-scanner + gitleaks
   release.ts                 # SemVer + CHANGELOG + GitHub release
@@ -148,7 +148,7 @@ scripts/
 bun dev                # Dev server (7034)
 bun run build          # Production build
 vitest run             # Unit tests
-bun run test:coverage  # Unit tests + 90% coverage gate
+bun run test:coverage  # Unit tests + coverage gate (99/99/96/99)
 bun run typecheck      # TypeScript type check (7.0.2)
 bun run lint           # Biome check (--error-on-warnings)
 bun run lint:fix      # Biome check --write

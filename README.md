@@ -66,9 +66,9 @@ bun dev  # http://localhost:7034
 | `bun dev` | 启动开发服务器 (port 7034) |
 | `bun run build` | 生产构建 |
 | `vitest run` | 运行单元测试 |
-| `bun run test:coverage` | 单元测试 + 90% 覆盖率门控 |
-| `bun run typecheck` | TypeScript 类型检查 |
-| `bun run lint` | ESLint (strict, 0 warnings) |
+| `bun run test:coverage` | 单元测试 + 覆盖率门控 (99/99/96/99) |
+| `bun run typecheck` | TypeScript 类型检查 (7.0.2) |
+| `bun run lint` | Biome check (--error-on-warnings) |
 | `bun run test:e2e:api` | L2 API E2E 测试 (port 17034) |
 | `bun run test:e2e:bdd` | L3 Playwright BDD E2E (port 27034) |
 | `bun run gate:security` | 安全扫描 (osv-scanner + gitleaks) |
@@ -78,8 +78,8 @@ bun dev  # http://localhost:7034
 
 | 层 | 内容 | 触发时机 |
 |---|---|---|
-| L1 Unit | ≥90% coverage (vitest) | pre-commit |
-| G1 Static | tsc strict + ESLint strict + max-warnings=0 | pre-commit |
+| L1 Unit | vitest coverage thresholds 99/99/96/99 (lines/funcs/branches/stmts) | pre-commit |
+| G1 Static | tsc strict + Biome (`--error-on-warnings`) | pre-commit |
 | L2 API E2E | REST endpoint coverage (port 17034) | pre-push |
 | G2 Security | osv-scanner + gitleaks | pre-push |
 | L3 BDD E2E | Playwright 核心流程 (port 27034) | on-demand |
