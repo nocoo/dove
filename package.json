@@ -43,7 +43,7 @@
 		"marked": "18.0.6",
 		"nanoid": "^6.0.0",
 		"postcss": "^8.5.20",
-		"radix-ui": "^1.6.2",
+		"radix-ui": "^1.6.4",
 		"react": "19.2.7",
 		"react-dom": "19.2.7",
 		"react-router": "^8.2.0",
