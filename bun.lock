@@ -8,7 +8,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "entities": "^8.0.0",
-        "hono": "^4.12.34",
+        "hono": "4.13.0",
         "jose": "^6.2.7",
         "lucide-react": "1.28.0",
         "marked": "18.0.9",
