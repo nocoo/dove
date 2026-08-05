@@ -40,7 +40,7 @@
 		"hono": "^4.12.34",
 		"jose": "^6.2.7",
 		"lucide-react": "1.28.0",
-		"marked": "18.0.7",
+		"marked": "18.0.9",
 		"nanoid": "^6.0.0",
 		"postcss": "^8.5.25",
 		"radix-ui": "^1.6.7",
