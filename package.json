@@ -42,7 +42,7 @@
 		"lucide-react": "1.28.0",
 		"marked": "18.0.9",
 		"nanoid": "6.0.1",
-		"postcss": "^8.5.25",
+		"postcss": "8.5.26",
 		"radix-ui": "^1.6.7",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",
@@ -76,7 +76,7 @@
 		"wrangler": "4.119.0"
 	},
 	"overrides": {
-		"postcss": "^8.5.25",
+		"postcss": "^8.5.26",
 		"brace-expansion": "^5.0.6",
 		"ws": "^8.20.1",
 		"esbuild": "^0.28.1",
