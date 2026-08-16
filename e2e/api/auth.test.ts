@@ -15,7 +15,20 @@ describe("GET /api/auth/me", () => {
     expect(response.status).toBe(200);
     const body = await parseJson<{ user: { email: string; name: string } | null }>(response);
     expect(body.user).not.toBeNull();
-    expect(body.user?.email).toBe("dev@localhost");
+    expect(body.user?.email).toBe("architie@gmail.com");
+  });
+});
+
+describe("GET /api/auth/profile", () => {
+  test("returns public name and avatar without email id or slug", async () => {
+    const response = await get("/api/auth/profile");
+    expect(response.status).toBe(200);
+    const body = await parseJson<Record<string, unknown>>(response);
+    expect(body).not.toHaveProperty("email");
+    expect(body).not.toHaveProperty("id");
+    expect(body).not.toHaveProperty("slug");
+    expect(body.name === null || typeof body.name === "string").toBe(true);
+    expect(body.avatar === null || typeof body.avatar === "string").toBe(true);
   });
 });
 

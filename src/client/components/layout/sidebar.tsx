@@ -10,9 +10,9 @@ import {
 	ScrollText,
 	Server,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
@@ -123,10 +123,39 @@ export function Sidebar() {
 	const { pathname } = useLocation();
 	const { collapsed, toggle } = useSidebar();
 	const { user } = useAuth();
+	const [profile, setProfile] = useState<{ name: string | null; avatar: string | null }>({
+		name: null,
+		avatar: null,
+	});
 
-	const userName = user?.name ?? "User";
+	useEffect(() => {
+		let cancelled = false;
+		fetch("/api/auth/profile")
+			.then((res) => (res.ok ? res.json() : { name: null, avatar: null }))
+			.then((data: unknown) => {
+				if (cancelled) return;
+				if (typeof data !== "object" || data === null) {
+					setProfile({ name: null, avatar: null });
+					return;
+				}
+				const rec = data as Record<string, unknown>;
+				setProfile({
+					name: typeof rec.name === "string" ? rec.name : null,
+					avatar: typeof rec.avatar === "string" ? rec.avatar : null,
+				});
+			})
+			.catch(() => {
+				if (!cancelled) setProfile({ name: null, avatar: null });
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, []);
+
+	const userName = profile.name ?? user?.name ?? "User";
 	const userEmail = user?.email ?? "";
 	const userInitial = userName[0] ?? "?";
+	const avatarUrl = profile.avatar;
 
 	return (
 		<aside
@@ -194,6 +223,7 @@ export function Sidebar() {
 									aria-label="User menu"
 								>
 									<Avatar className="h-9 w-9">
+										{avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
 										<AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
 									</Avatar>
 								</button>
@@ -248,6 +278,7 @@ export function Sidebar() {
 									className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-accent transition-colors cursor-pointer"
 								>
 									<Avatar className="h-9 w-9 shrink-0">
+										{avatarUrl && <AvatarImage src={avatarUrl} alt={userName} />}
 										<AvatarFallback className="text-xs">{userInitial}</AvatarFallback>
 									</Avatar>
 									<div className="flex-1 min-w-0 text-left">

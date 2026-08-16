@@ -71,7 +71,7 @@ describe("authSession middleware", () => {
 		const res = await app.fetch(new Request("http://localhost:7034/api/projects"));
 		expect(res.status).toBe(200);
 		const body = (await res.json()) as { email: string; name: string };
-		expect(body.email).toBe("dev@localhost");
+		expect(body.email).toBe("architie@gmail.com");
 		// Pin name too — a regression that set name=email (e.g. dropped
 		// the DEV_USER constant and recomputed name as a fallback) would
 		// silently degrade the dev UX banner that displays "Dev User".
@@ -87,7 +87,7 @@ describe("authSession middleware", () => {
 		);
 		expect(res.status).toBe(200);
 		const body = (await res.json()) as { email: string; name: string };
-		expect(body.email).toBe("dev@localhost");
+		expect(body.email).toBe("architie@gmail.com");
 		// Same DEV_USER must be injected on the DEV_MODE branch — a
 		// regression that injected a different bypass identity (e.g.
 		// 'admin@hexly.ai') on production hosts would be a silent

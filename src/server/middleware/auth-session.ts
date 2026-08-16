@@ -32,8 +32,8 @@ function isDevMode(env: Env, host: string): boolean {
 	return isLocalhost(host);
 }
 
-const DEV_USER: AccessUser = {
-	email: "dev@localhost",
+export const DEV_USER: AccessUser = {
+	email: "architie@gmail.com",
 	name: "Dev User",
 };
 

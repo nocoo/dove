@@ -97,6 +97,42 @@ describe("auth.ts /me success branch (jose mocked)", () => {
 		expect(body.user.name).toBe("noname@example.com");
 	});
 
+	test("returns public profile for a valid JWT without leaking email", async () => {
+		mockJwtVerify.mockResolvedValueOnce({
+			payload: { email: "architie@gmail.com", name: "Alice A." },
+		});
+		const mockFetch = vi.fn().mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			json: () =>
+				Promise.resolve({
+					name: "Zheng Li",
+					avatar: "https://cdn.example.com/avatar-80.jpg",
+				}),
+		});
+		vi.stubGlobal("fetch", mockFetch);
+		try {
+			const fetchApp = await loadAuthApp();
+			const res = await fetchApp(
+				new Request("https://dove.hexly.ai/api/auth/profile", { headers }),
+			);
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as { name: string | null; avatar: string | null };
+			expect(body).toEqual({
+				name: "Zheng Li",
+				avatar: "https://cdn.example.com/avatar-80.jpg",
+			});
+			expect(body).not.toHaveProperty("email");
+			const [url] = mockFetch.mock.calls[0] as [string];
+			expect(url).toContain(
+				"hash=7ba563171c26fb9b82e9f7750840c0455602eb35025192027230bcb40aae1217",
+			);
+			expect(url).not.toContain("architie");
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
 	test("returns null user when payload has no email", async () => {
 		// The 'no email in valid token' branch is distinct from invalid-JWT —
 		// it must NOT throw; it must return null user (treated as signed-out).
