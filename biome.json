@@ -79,8 +79,6 @@
 			"!**/bun.lock",
 			"!**/*.d.ts",
 			"!**/CHANGELOG.md",
-			"!**/autoresearch.jsonl",
-			"!**/autoresearch.ideas.md",
 			"!**/src/components/ui",
 			"!**/playwright-report",
 			"!**/test-results"
