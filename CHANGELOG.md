@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.5.1
+
+### Added
+- Resolve sidebar identity via author hash
+
+### Changed
+- Bump wrangler to 4.123.0 (GH #356) (#360)
+- Bump hono to 4.13.2 (GH #354) (#358)
+- Bump @cloudflare/workers-types to 5.20260814.1 (GH #353) (#357)
+- Bump transitive nanoid 3.3.17 → 3.3.18 (GH #355) (#359)
+- Bump wrangler to 4.122.0 (GH #351)
+- Bump wrangler to 4.121.0 (GH #349)
+- Bump @testing-library/user-event to 14.6.4 (GH #348)
+- Bump @cloudflare/workers-types to 5.20260812.1 (GH #347)
+- Bump @biomejs/biome to 2.5.8 (GH #346)
+- Bump @cloudflare/workers-types to 5.20260811.1 (GH #342)
+- Bump wrangler to 4.120.1 (GH #343)
+- Bump sonner to 2.0.8 (GH #335)
+- Bump @cloudflare/workers-types to 5.20260810.1 (GH #333)
+- Bump lucide-react to 1.31.0 (GH #334)
+- Bump @cloudflare/workers-types to 5.20260809.1 (GH #330)
+- Bump @happy-dom/global-registrator to 20.11.2 (GH #319)
+- Bump lucide-react to 1.30.0 (GH #322)
+- Bump wrangler to 4.120.0
+- Bump hono to 4.13.1 (GH #321)
+- Bump @types/node to 26.2.0
+- Bump workers types to 5.20260808.1
+- Bump lucide-react to 1.29.0 (GH #312)
+- Bump postcss to 8.5.26
+- Bump vite 8.2.0 to 8.2.1 (GH #314)
+- Bump wrangler to 4.119.0
+- Bump user-event 14.6.1 to 14.6.3 (GH #297)
+- Bump hono to 4.13.0 (GH #298)
+- Bump nanoid 6.0.0 to 6.0.1 (GH #300)
+- Bump biome 2.5.6 to 2.5.7 (GH #306)
+- Bump workers types to 5.20260804.1 (GH #307)
+- Bump marked 18.0.7 to 18.0.9 (GH #308)
+- Bump jose 6.2.5 → 6.2.7 (GH #296)
+- Bump wrangler 4.116.0 → 4.118.0
+- Bump lint-staged 17.2.0 → 17.3.0
+- Bump jose 6.2.5 → 6.2.7
+- Bump @cloudflare/workers-types 5.20260730.1 → 5.20260801.1
+- Bump hono 4.12.32→4.12.34, undici override 7.28.0→7.29.0
+- Bump @types/react 19.2.17 → 19.2.18
+- Bump @types/react-dom 19.2.3 → 19.2.4
+- Bump @vitejs/plugin-react 6.0.4 → 6.0.5
+- Bump lucide-react 1.27.0 → 1.28.0
+- Bump vite 8.1.5 → 8.2.0
+- Bump wrangler 4.115.0 → 4.116.0
+- Bump wrangler 4.113.0 → 4.115.0
+- Bump recharts 3.10.0 → 3.10.1
+- Bump radix-ui 1.6.5 → 1.6.7
+- Bump lucide-react 1.25.0 → 1.27.0
+- Bump lint-staged 17.1.1 → 17.2.0
+- Bump jose 6.2.4 → 6.2.5
+- Bump hono 4.12.31 → 4.12.32
+- Bump @types/node 26.1.1 → 26.1.2
+- Bump @playwright/test 1.61.1 → 1.62.0
+- Bump @cloudflare/workers-types 5.20260722.1 → 5.20260730.1
+- Bump @biomejs/biome 2.5.5 → 2.5.6
+- Bump postcss 8.5.22 → 8.5.25
+- Bump react-router 8.2.0 → 8.3.0
+- Bump radix-ui 1.6.4 → 1.6.5
+- Bump postcss 8.5.21 → 8.5.22
+- Bump lint-staged 17.1.0 → 17.1.1
+- Bump @vitejs/plugin-react 6.0.3 → 6.0.4
+- Bump @happy-dom/global-registrator 20.11.0 → 20.11.1
+- Bump @cloudflare/workers-types 5.20260721.1 → 5.20260722.1
+- Bump @biomejs/biome 2.5.4 → 2.5.5
+- Bump @cloudflare/workers-types 5.20260719.1 → 5.20260721.1
+- Bump jose 6.2.3 → 6.2.4
+- Bump marked 18.0.6 → 18.0.7
+- Bump postcss 8.5.20 → 8.5.21
+- Bump react + react-dom 19.2.7 → 19.2.8
+- Bump wrangler 4.112.0 → 4.113.0
+- Override sharp to ^0.35.0 (security fix)
+- Bump recharts 3.9.2 → 3.10.0
+- Bump radix-ui 1.6.3 → 1.6.4
+
+### Fixed
+- Type select and dialog callbacks for ts7
+
+### Removed
+- Remove autoresearch session files
+
 ## v0.5.0
 
 ### Changed
