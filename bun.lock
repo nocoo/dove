@@ -11,7 +11,7 @@
         "hono": "4.13.3",
         "jose": "6.2.9",
         "lucide-react": "1.32.0",
-        "marked": "18.0.9",
+        "marked": "18.0.10",
         "nanoid": "6.0.1",
         "postcss": "8.5.26",
         "radix-ui": "^1.6.7",
@@ -710,7 +710,7 @@
 
     "make-dir": ["make-dir@4.0.0", "", { "dependencies": { "semver": "^7.5.3" } }, "sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw=="],
 
-    "marked": ["marked@18.0.9", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-/Sa4qiiHZxf0/FQdBBowr9q4r10krCwMvpK48FUBdXdUXScDxiQGR9zCPrFgRVR5LU3iySOiIjy09ZQvADir1w=="],
+    "marked": ["marked@18.0.10", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-FJeH4bRpYoXiggcgriCGItKCSv3xkngJc4QCZ/rkQCogU3VYaLxYJoZl8Nw/b4+x7iij/pd+09mZ6A1dXzpL0A=="],
 
     "miniflare": ["miniflare@5.20260811.1-alpha", "", { "dependencies": { "@cspotcode/source-map-support": "0.8.1", "sharp": "0.35.2", "undici": "7.29.0", "workerd": "1.20260811.1", "ws": "8.21.0", "youch": "4.1.0-beta.10" } }, "sha512-DtOG0BeanIxs2sH0smFvExZD89cBQwGckbHiFkRJrrNAUu3NGClZkUxqu+zy7HYfKBAgq935EMY49vIPm3JVdA=="],
 
