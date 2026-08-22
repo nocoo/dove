@@ -38,7 +38,7 @@
 		"clsx": "^2.1.1",
 		"entities": "^8.0.0",
 		"hono": "4.13.3",
-		"jose": "6.2.9",
+		"jose": "6.2.10",
 		"lucide-react": "1.33.0",
 		"marked": "18.0.10",
 		"nanoid": "6.0.1",
@@ -53,8 +53,8 @@
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.9",
-		"@cloudflare/workers-types": "5.20260821.1",
+		"@biomejs/biome": "2.5.10",
+		"@cloudflare/workers-types": "5.20260822.1",
 		"@happy-dom/global-registrator": "^20.11.6",
 		"@playwright/test": "^1.62.0",
 		"@tailwindcss/postcss": "^4.3.3",
