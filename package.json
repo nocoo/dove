@@ -37,7 +37,7 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"entities": "^8.0.0",
-		"hono": "4.13.3",
+		"hono": "4.13.4",
 		"jose": "6.2.10",
 		"lucide-react": "1.34.0",
 		"marked": "18.0.11",
