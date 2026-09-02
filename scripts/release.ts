@@ -377,6 +377,10 @@ async function main(): Promise<void> {
 		["symbolic-ref", "--short", "HEAD"],
 		"Detached HEAD — checkout a branch first",
 	);
+	if (branch !== "main") {
+		console.error(`❌ Must release from main (on ${branch}).`);
+		process.exit(1);
+	}
 
 	// gh auth
 	const ghResult = await run("gh", ["auth", "status"]);
@@ -536,7 +540,7 @@ async function main(): Promise<void> {
 
 	if (isDryRun) {
 		console.log("   [dry-run] Would perform the above actions");
-		console.log("   [dry-run] Then: bun run build && npx wrangler deploy");
+		console.log("   [dry-run] Deploy is GitHub CD, not laptop wrangler");
 		console.log(`\n✅ Dry run complete for v${newVersion}`);
 		process.exit(0);
 	}
@@ -605,28 +609,7 @@ async function main(): Promise<void> {
 		}
 	}
 
-	// --- Phase 6: Build & deploy ---
-	console.log("\n🛠️  Phase 6: Build & deploy\n");
-
-	console.log("   🔄 Running bun run build...");
-	const buildResult = await run("bun", ["run", "build"], { inherit: true });
-	if (buildResult.code !== 0) {
-		console.error("❌ Build failed — deploy skipped");
-		console.error(`   Recovery: bun run build && npx wrangler deploy`);
-		process.exit(1);
-	}
-	console.log("   ✅ Build complete");
-
-	console.log("   🔄 Deploying to Cloudflare Workers...");
-	const deployResult = await run("npx", ["wrangler", "deploy"], {
-		inherit: true,
-	});
-	if (deployResult.code !== 0) {
-		console.error("❌ wrangler deploy failed");
-		console.error("   Recovery: npx wrangler deploy");
-		process.exit(1);
-	}
-	console.log("   ✅ Deployed");
+	console.log("   ⏳ Deploy is GitHub CD (tag push + CI-green main). Do not wrangler deploy.");
 
 	// Summary
 	console.log(`\n${"=".repeat(50)}`);
