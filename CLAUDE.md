@@ -94,7 +94,7 @@ Today: pre-commit typecheck / lint-staged / gitleaks `--staged` / `gate:routes` 
 
 ## Operations / Release
 
-- Entry: `bun run release` (patch default). Syncs `package.json` + `APP_VERSION` + CHANGELOG, push `main`, then push tag. Who: GitHub write + `production` Environment + `gh`.
+- Entry: `bun run release` from `main` (patch default). Syncs `package.json` + `APP_VERSION` + CHANGELOG, push `main`, then push tag. Who: GitHub write + `production` Environment + `gh`.
 - Tag push deploys immediately (no CI wait). `main` CD waits CI-green. Do not laptop-`wrangler deploy`.
 - Live-check: `GET https://dove.hexly.ai/api/live`.
 
