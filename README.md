@@ -4,7 +4,7 @@
 
 <p align="center"><strong>Self-hosted email relay service</strong><br>Webhook 触发 · 模板管理 · 配额控制 · 完整日志</p>
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflare&logoColor=white)](https://workers.cloudflare.com/)
 [![Tests](https://img.shields.io/badge/tests-289%20passed-brightgreen)](https://github.com/nocoo/dove)
 [![License](https://img.shields.io/github/license/nocoo/dove)](LICENSE)
@@ -42,13 +42,13 @@ Dove 是一个自托管的邮件中继服务，运行在 Cloudflare Workers 上�
 | 语言 | [TypeScript](https://www.typescriptlang.org/) (strict mode) |
 | 数据库 | [Cloudflare D1](https://developers.cloudflare.com/d1/) (native binding) |
 | 会话存储 | [Cloudflare KV](https://developers.cloudflare.com/kv/) |
-| 认证 | Google OAuth + KV sessions + email whitelist |
+| 认证 | Cloudflare Access JWT（localhost / `DEV_MODE` 旁路）+ Webhook Bearer |
 | 前端 | React 19 SPA ([Vite](https://vite.dev/) + React Router) |
 | UI | [Tailwind CSS v4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) |
 | 图表 | [Recharts](https://recharts.org/) |
 | 校验 | [Zod v4](https://zod.dev/) |
 | 邮件 | [Resend](https://resend.com/) API / Cloudflare Email Routing |
-| 部署 | `wrangler deploy` (single command) |
+| 部署 | GitHub CD `release.yml`（不要本机 `wrangler deploy`） |
 
 ## 开发
 
