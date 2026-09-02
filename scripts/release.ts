@@ -131,6 +131,52 @@ async function runOrDie(cmd: string, args: string[], errorMsg: string): Promise<
 	return result.stdout.trim();
 }
 
+async function waitForCiGreen(sha: string): Promise<void> {
+	console.log(`   🔄 Waiting for CI on ${sha.slice(0, 7)}...`);
+	const deadline = Date.now() + 20 * 60 * 1000;
+	while (Date.now() < deadline) {
+		const listed = await run("gh", [
+			"run",
+			"list",
+			"--commit",
+			sha,
+			"--workflow",
+			"CI",
+			"--json",
+			"databaseId,status,conclusion",
+			"--limit",
+			"1",
+		]);
+		if (listed.code !== 0) {
+			console.error("❌ gh run list failed");
+			if (listed.stderr.trim()) console.error(listed.stderr.trim());
+			process.exit(1);
+		}
+		const rows = JSON.parse(listed.stdout.trim() || "[]") as Array<{
+			databaseId: number;
+			status: string;
+			conclusion: string | null;
+		}>;
+		const row = rows[0];
+		if (!row) {
+			await Bun.sleep(5000);
+			continue;
+		}
+		if (row.status === "completed") {
+			if (row.conclusion === "success") {
+				console.log("   ✅ CI green");
+				return;
+			}
+			console.error(`❌ CI ${row.conclusion} (run ${row.databaseId})`);
+			process.exit(1);
+		}
+		console.log(`   … CI ${row.status} (run ${row.databaseId})`);
+		await Bun.sleep(10_000);
+	}
+	console.error("❌ Timed out waiting for CI");
+	process.exit(1);
+}
+
 // ---------------------------------------------------------------------------
 // Version helpers
 // ---------------------------------------------------------------------------
@@ -384,9 +430,9 @@ async function main(): Promise<void> {
 
 	// gh auth
 	const ghResult = await run("gh", ["auth", "status"]);
-	const ghAuthed = ghResult.code === 0;
-	if (!ghAuthed) {
-		console.log("⚠️  gh CLI not authenticated — will skip GitHub release");
+	if (ghResult.code !== 0) {
+		console.error("❌ gh CLI required to wait for CI before pushing the release tag.");
+		process.exit(1);
 	}
 
 	// Current version & bump
@@ -531,11 +577,10 @@ async function main(): Promise<void> {
 
 	console.log("   The following actions will be performed:");
 	console.log("     • git push");
+	console.log("     • wait for CI green on this SHA");
 	console.log(`     • git tag -a v${newVersion} -m "v${newVersion}"`);
-	console.log("     • git push --tags");
-	if (ghAuthed) {
-		console.log(`     • gh release create v${newVersion} --title "v${newVersion}"`);
-	}
+	console.log(`     • git push origin v${newVersion}`);
+	console.log(`     • gh release create v${newVersion} --title "v${newVersion}"`);
 	console.log("");
 
 	if (isDryRun) {
@@ -553,11 +598,14 @@ async function main(): Promise<void> {
 		console.error("   Recovery commands:");
 		console.error("     git push");
 		console.error(`     git tag -a v${newVersion} -m "v${newVersion}"`);
-		console.error("     git push --tags");
+		console.error(`     git push origin v${newVersion}`);
 		console.error(`     gh release create v${newVersion} --title "v${newVersion}" --notes "..."`);
 		process.exit(1);
 	}
 	console.log("   ✅ Pushed");
+
+	const sha = await runOrDie("git", ["rev-parse", "HEAD"], "Failed to read HEAD SHA");
+	await waitForCiGreen(sha);
 
 	// Tag
 	console.log(`   🔄 Creating tag v${newVersion}...`);
@@ -570,46 +618,40 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
-	// Push tags
-	console.log("   🔄 Pushing tags...");
-	const pushTagResult = await run("git", ["push", "--tags"], {
+	console.log(`   🔄 Pushing tag v${newVersion}...`);
+	const pushTagResult = await run("git", ["push", "origin", `v${newVersion}`], {
 		inherit: true,
 	});
 	if (pushTagResult.code !== 0) {
-		console.error("❌ git push --tags failed");
-		console.error("   Recovery: git push --tags");
+		console.error(`❌ git push origin v${newVersion} failed`);
+		console.error(`   Recovery: git push origin v${newVersion}`);
 		process.exit(1);
 	}
 	console.log(`   ✅ Tag v${newVersion} pushed`);
 
-	// GitHub Release
-	if (ghAuthed) {
-		console.log(`   🔄 Creating GitHub release v${newVersion}...`);
-		const releaseResult = await run("gh", [
-			"release",
-			"create",
-			`v${newVersion}`,
-			"--title",
-			`v${newVersion}`,
-			"--notes",
-			changelogSection,
-		]);
+	console.log(`   🔄 Creating GitHub release v${newVersion}...`);
+	const releaseResult = await run("gh", [
+		"release",
+		"create",
+		`v${newVersion}`,
+		"--title",
+		`v${newVersion}`,
+		"--notes",
+		changelogSection,
+	]);
 
-		if (releaseResult.code !== 0) {
-			console.error("⚠️  GitHub release creation failed (tag is pushed)");
-			console.error(
-				`   Create manually: gh release create v${newVersion} --title "v${newVersion}"`,
-			);
-		} else {
-			const releaseUrl = releaseResult.stdout.trim();
-			console.log("   ✅ GitHub release created");
-			if (releaseUrl) {
-				console.log(`   🔗 ${releaseUrl}`);
-			}
+	if (releaseResult.code !== 0) {
+		console.error("⚠️  GitHub release creation failed (tag is pushed)");
+		console.error(`   Create manually: gh release create v${newVersion} --title "v${newVersion}"`);
+	} else {
+		const releaseUrl = releaseResult.stdout.trim();
+		console.log("   ✅ GitHub release created");
+		if (releaseUrl) {
+			console.log(`   🔗 ${releaseUrl}`);
 		}
 	}
 
-	console.log("   ⏳ Deploy is GitHub CD (tag push + CI-green main). Do not wrangler deploy.");
+	console.log("   ⏳ Deploy is GitHub CD. Do not wrangler deploy.");
 
 	// Summary
 	console.log(`\n${"=".repeat(50)}`);
@@ -617,12 +659,10 @@ async function main(): Promise<void> {
 	console.log(`   📋 Commit:  chore: bump version to ${newVersion}`);
 	console.log(`   🏷️  Tag:     v${newVersion}`);
 	console.log(`   📦 Files:   ${VERSION_TARGETS.length} updated`);
-	if (ghAuthed) {
-		const repoUrl = await run("gh", ["repo", "view", "--json", "url", "-q", ".url"]);
-		const repo = repoUrl.stdout.trim();
-		if (repo) {
-			console.log(`   🔗 Release: ${repo}/releases/tag/v${newVersion}`);
-		}
+	const repoUrl = await run("gh", ["repo", "view", "--json", "url", "-q", ".url"]);
+	const repo = repoUrl.stdout.trim();
+	if (repo) {
+		console.log(`   🔗 Release: ${repo}/releases/tag/v${newVersion}`);
 	}
 	console.log("=".repeat(50));
 }
