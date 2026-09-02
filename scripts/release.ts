@@ -597,6 +597,7 @@ async function main(): Promise<void> {
 		console.error("❌ git push failed");
 		console.error("   Recovery commands:");
 		console.error("     git push");
+		console.error("     # wait until CI is green on this SHA, then:");
 		console.error(`     git tag -a v${newVersion} -m "v${newVersion}"`);
 		console.error(`     git push origin v${newVersion}`);
 		console.error(`     gh release create v${newVersion} --title "v${newVersion}" --notes "..."`);
