@@ -16,11 +16,14 @@ interface ProviderRow {
 
 let providerId: string;
 
+// A timestamp and module-local counter collide when separate L2 processes
+// start in the same millisecond. Scope every run to a UUID instead.
+const fixtureRunId = crypto.randomUUID();
 let domainCounter = 0;
 const baseProvider = () => ({
   name: `E2E Provider ${Date.now()}`,
   type: "resend" as const,
-  domain: `e2e-${Date.now()}-${++domainCounter}.example.com`,
+  domain: `e2e-${fixtureRunId}-${++domainCounter}.example.com`,
   config: { api_key: "re_test_" + Date.now() },
 });
 
