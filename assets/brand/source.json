@@ -1,0 +1,37 @@
+{
+	"study": "dove/2026-09-07-03",
+	"finishing": "01",
+	"method": "retained-original",
+	"generationCalls": 0,
+	"nativeDimensions": [2048, 2048],
+	"original": {
+		"path": "source/original.png",
+		"sha256": "25be5b3506f84b454b9e5a9c469a353955e41fc16123aa6bf7a28088d74bd1aa",
+		"width": 2048,
+		"height": 2048,
+		"bytes": 4062349,
+		"repository": "https://github.com/nocoo/dove",
+		"repositoryRevision": "cb477a39d2fbb6bc561bcf5348cb5e830c83de29",
+		"sourcePath": "src/client/public/logo.png",
+		"sourceUrl": "https://github.com/nocoo/dove/blob/cb477a39d2fbb6bc561bcf5348cb5e830c83de29/src/client/public/logo.png"
+	},
+	"masters": {
+		"logo.png": {
+			"sha256": "25be5b3506f84b454b9e5a9c469a353955e41fc16123aa6bf7a28088d74bd1aa",
+			"width": 2048,
+			"height": 2048
+		},
+		"assets/brand/icon.png": {
+			"sha256": "fcafb6229474efe056d37bcee0b114acdf6c7d70da3a80c43609a5ca4af0e074",
+			"width": 2048,
+			"height": 2048
+		},
+		"assets/brand/icon-rounded.png": {
+			"sha256": "2d759d13fd984a8d89a5020a0afd85a460fbd6b444eb3ad8c0a2d6c44708fd06",
+			"width": 2048,
+			"height": 2048
+		}
+	},
+	"review": "https://hexly.ai/logos/dove",
+	"archive": "https://github.com/nocoo/hexly.ai/tree/main/artwork/logo-family/dove/2026-09-07-03"
+}
