@@ -9,12 +9,14 @@ on:
 
 jobs:
   quality:
-    uses: nocoo/base-ci/.github/workflows/quality.yml@3d2e9e55fdd60aa756df454ded53ef6d06d6653f
+    uses: nocoo/base-ci/.github/workflows/quality.yml@2857469cc5206e7a4988171a1282209617996a67
     with:
       runtime-version: "1.3.11"
       install-policy: "trusted"
       coverage-path: "coverage"
-      prepare-command: "bun run scripts/setup-ci-env.ts && bun run build"
+      prepare-command: |
+        bun run scripts/setup-ci-env.ts
+        bun run build
       test-command: "bun run test:coverage"
       typecheck-command: "bun run typecheck"
       osv-config: "osv-scanner.toml"
