@@ -25,4 +25,3 @@ jobs:
       l3: true
       l3-command: "bun run test:e2e:bdd"
       l3-browser: "chromium"
-    secrets: inherit
