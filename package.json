@@ -54,7 +54,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.13",
-		"@cloudflare/workers-types": "5.20260910.1",
+		"@cloudflare/workers-types": "5.20260911.1",
 		"@happy-dom/global-registrator": "^20.14.3",
 		"@playwright/test": "1.63.0",
 		"@tailwindcss/postcss": "^4.3.3",
