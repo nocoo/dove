@@ -1,3 +1,4 @@
+import { HeaderTooltip, HexlyLink } from "../../../components/layout/header-links";
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router";
@@ -121,14 +122,16 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
 						)}
 					>
 						<div className="absolute top-3 right-3 z-10">
-							<button
-								type="button"
-								onClick={() => setMobileOpen(false)}
-								aria-label="Close navigation"
-								className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-							>
-								<X className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-							</button>
+							<HeaderTooltip label="Close navigation">
+								<button
+									type="button"
+									onClick={() => setMobileOpen(false)}
+									aria-label="Close navigation"
+									className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+								>
+									<X className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
+								</button>
+							</HeaderTooltip>
 						</div>
 						<Sidebar />
 					</div>
@@ -139,27 +142,32 @@ function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
 				<header className="flex h-14 shrink-0 items-center justify-between px-4 md:px-6">
 					<div className="flex items-center gap-3">
 						{isMobile && (
-							<button
-								type="button"
-								onClick={() => setMobileOpen(true)}
-								aria-label="Open navigation"
-								className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-							>
-								<Menu className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
-							</button>
+							<HeaderTooltip label="Open navigation">
+								<button
+									type="button"
+									onClick={() => setMobileOpen(true)}
+									aria-label="Open navigation"
+									className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+								>
+									<Menu className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
+								</button>
+							</HeaderTooltip>
 						)}
 						<Breadcrumbs items={[{ label: "Home", href: "/" }, ...breadcrumbs]} />
 					</div>
 					<div className="flex items-center gap-1">
-						<a
-							href="https://github.com/nocoo/dove"
-							target="_blank"
-							rel="noopener noreferrer"
-							aria-label="GitHub repository"
-							className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-						>
-							<GithubIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
-						</a>
+						<HeaderTooltip label="GitHub repository">
+							<a
+								href="https://github.com/nocoo/dove"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="GitHub repository"
+								className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+							>
+								<GithubIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+							</a>
+						</HeaderTooltip>
+						<HexlyLink />
 						<ThemeToggle />
 					</div>
 				</header>
