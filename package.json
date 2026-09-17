@@ -53,8 +53,8 @@
 		"zod": "4.6.5"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.5.13",
-		"@cloudflare/workers-types": "5.20260915.1",
+		"@biomejs/biome": "2.5.14",
+		"@cloudflare/workers-types": "5.20260916.1",
 		"@happy-dom/global-registrator": "^20.14.5",
 		"@playwright/test": "1.63.0",
 		"@tailwindcss/postcss": "^4.3.3",
@@ -73,7 +73,7 @@
 		"typescript": "7.0.2",
 		"vite": "8.3.0",
 		"vitest": "5.0.1",
-		"wrangler": "4.132.0"
+		"wrangler": "4.133.0"
 	},
 	"overrides": {
 		"vite": "8.3.0",
