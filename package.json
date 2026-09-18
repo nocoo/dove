@@ -39,7 +39,7 @@
 		"entities": "8.1.0",
 		"hono": "4.13.8",
 		"jose": "6.2.12",
-		"lucide-react": "1.46.0",
+		"lucide-react": "1.47.0",
 		"marked": "18.0.13",
 		"nanoid": "6.0.1",
 		"postcss": "8.5.28",
