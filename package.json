@@ -39,7 +39,7 @@
 		"entities": "8.1.0",
 		"hono": "4.13.8",
 		"jose": "6.2.12",
-		"lucide-react": "1.46.0",
+		"lucide-react": "1.47.0",
 		"marked": "18.0.13",
 		"nanoid": "6.0.1",
 		"postcss": "8.5.28",
@@ -54,14 +54,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.14",
-		"@cloudflare/workers-types": "5.20260916.1",
+		"@cloudflare/workers-types": "5.20260917.1",
 		"@happy-dom/global-registrator": "^20.14.5",
 		"@playwright/test": "1.63.0",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@testing-library/react": "^16.3.3",
 		"@testing-library/user-event": "14.6.7",
 		"@types/bun": "1.4.2",
-		"@types/node": "26.5.1",
+		"@types/node": "26.6.1",
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
 		"@vitejs/plugin-react": "6.1.1",
@@ -73,7 +73,7 @@
 		"typescript": "7.0.2",
 		"vite": "8.3.0",
 		"vitest": "5.0.1",
-		"wrangler": "4.133.0"
+		"wrangler": "4.134.0"
 	},
 	"overrides": {
 		"vite": "8.3.0",
