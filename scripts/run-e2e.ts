@@ -4,7 +4,12 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { assertOwnedRun, assertTestMarker, validateTestEnvironment } from "./l2-isolation";
+import {
+	assertOwnedRun,
+	assertTestMarker,
+	stopOwnedProcessGroup,
+	validateTestEnvironment,
+} from "./l2-isolation";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
@@ -20,29 +25,6 @@ async function availablePort(): Promise<number> {
 		server.close((error) => (error ? reject(error) : accept())),
 	);
 	return address.port;
-}
-
-async function stop(server: ChildProcess): Promise<void> {
-	const pid = server.pid;
-	if (!pid) return;
-	const exited =
-		server.exitCode !== null || server.signalCode !== null
-			? Promise.resolve()
-			: new Promise<void>((accept) => server.once("exit", () => accept()));
-	const kill = (signal: NodeJS.Signals) => {
-		try {
-			process.kill(-pid, signal);
-		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
-		}
-	};
-	kill("SIGTERM");
-	const timer = setTimeout(() => kill("SIGKILL"), 5_000);
-	try {
-		await exited;
-	} finally {
-		clearTimeout(timer);
-	}
 }
 
 async function runCommand(
@@ -71,7 +53,7 @@ async function runCommand(
 	} finally {
 		clearTimeout(timer);
 		if (abort) signal.removeEventListener("abort", abort);
-		await stop(child);
+		await stopOwnedProcessGroup(child);
 	}
 }
 
@@ -100,64 +82,71 @@ async function main(): Promise<void> {
 	if (!entry.startsWith(`${ROOT}/`) || !assets.startsWith(`${ROOT}/`))
 		throw new Error("Test inputs must remain inside the owned checkout");
 	const parent = realpathSync(tmpdir());
-	const directory = mkdtempSync(join(parent, "dove-l2-"));
-	const runId = randomUUID();
-	writeFileSync(join(directory, "owner"), runId, { mode: 0o600, flag: "wx" });
-	assertOwnedRun(directory, parent, runId);
 	const port = await availablePort();
 	const origin = `http://127.0.0.1:${port}`;
-	const config = join(directory, "wrangler.json");
-	const persist = join(directory, "persist");
-	const database = `dove-l2-${runId}`;
-	const testValues = {
-		D1_WORKER_URL: origin,
-		D1_WORKER_API_KEY: "ci-placeholder",
-		EMAIL_DRY_RUN: "true",
-		RESEND_DRY_RUN: "true",
-		DEV_MODE: "true",
-		RESEND_API_KEY: "re_ci_placeholder_not_real",
-		RESEND_FROM_DOMAIN: "test.example.com",
-		DEV_USER: "test@example.test",
-		ENVIRONMENT: "test",
-	};
-	writeFileSync(
-		config,
-		JSON.stringify({
-			name: "dove-l2",
-			main: entry,
-			compatibility_date: original.compatibility_date,
-			assets: {
-				directory: assets,
-				binding: "ASSETS",
-				run_worker_first: ["/api/*"],
-				not_found_handling: "single-page-application",
-			},
-			d1_databases: [{ binding: "DB", database_name: database, database_id: runId, remote: false }],
-			vars: testValues,
-		}),
-		{ mode: 0o600, flag: "wx" },
-	);
-	const env = Object.fromEntries(
-		Object.entries(process.env).filter(([key]) =>
-			["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SystemRoot"].includes(key),
-		),
-	);
-	Object.assign(env, testValues, {
-		PORT: String(port),
-		DOVE_TEST_RUN_ID: runId,
-		XDG_CONFIG_HOME: join(directory, "config"),
-		WRANGLER_SEND_METRICS: "false",
-		CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
-	});
-	const wrangler = ["node", join(ROOT, "node_modules/wrangler/bin/wrangler.js")];
+	const runId = randomUUID();
+	const directory = mkdtempSync(join(parent, "dove-l2-"));
 	let server: ChildProcess | undefined;
 	let markerVerified = false;
+	let owned = false;
+	let databaseAttempted = false;
+	let failure: unknown;
 	const controller = new AbortController();
 	const interrupt = () => controller.abort();
 	process.once("SIGINT", interrupt);
 	process.once("SIGTERM", interrupt);
 	try {
+		writeFileSync(join(directory, "owner"), runId, { mode: 0o600, flag: "wx" });
 		assertOwnedRun(directory, parent, runId);
+		owned = true;
+		const config = join(directory, "wrangler.json");
+		const persist = join(directory, "persist");
+		const database = `dove-l2-${runId}`;
+		const testValues = {
+			D1_WORKER_URL: origin,
+			D1_WORKER_API_KEY: "ci-placeholder",
+			EMAIL_DRY_RUN: "true",
+			RESEND_DRY_RUN: "true",
+			DEV_MODE: "true",
+			RESEND_API_KEY: "re_ci_placeholder_not_real",
+			RESEND_FROM_DOMAIN: "test.example.com",
+			DEV_USER: "test@example.test",
+			ENVIRONMENT: "test",
+		};
+		writeFileSync(
+			config,
+			JSON.stringify({
+				name: "dove-l2",
+				main: entry,
+				compatibility_date: original.compatibility_date,
+				assets: {
+					directory: assets,
+					binding: "ASSETS",
+					run_worker_first: ["/api/*"],
+					not_found_handling: "single-page-application",
+				},
+				d1_databases: [
+					{ binding: "DB", database_name: database, database_id: runId, remote: false },
+				],
+				vars: testValues,
+			}),
+			{ mode: 0o600, flag: "wx" },
+		);
+		const env = Object.fromEntries(
+			Object.entries(process.env).filter(([key]) =>
+				["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SystemRoot"].includes(key),
+			),
+		);
+		Object.assign(env, testValues, {
+			PORT: String(port),
+			DOVE_TEST_RUN_ID: runId,
+			XDG_CONFIG_HOME: join(directory, "config"),
+			WRANGLER_SEND_METRICS: "false",
+			CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
+		});
+		const wrangler = ["node", join(ROOT, "node_modules/wrangler/bin/wrangler.js")];
+		assertOwnedRun(directory, parent, runId);
+		databaseAttempted = true;
 		await runCommand(
 			[
 				...wrangler,
@@ -240,10 +229,12 @@ async function main(): Promise<void> {
 			).json(),
 			runId,
 		);
+	} catch (error) {
+		failure = error;
 	} finally {
 		process.removeListener("SIGINT", interrupt);
 		process.removeListener("SIGTERM", interrupt);
-		let cleanupVerified = false;
+		let cleanupVerified = !databaseAttempted;
 		if (markerVerified && server?.exitCode === null && server.signalCode === null) {
 			try {
 				const response = await fetch(`${origin}/api/db/init/marker`, {
@@ -255,11 +246,30 @@ async function main(): Promise<void> {
 				console.error("Marker verification failed before cleanup; preserving state");
 			}
 		}
-		if (server) await stop(server);
-		assertOwnedRun(directory, parent, runId);
-		if (cleanupVerified) rmSync(directory, { recursive: true });
-		else console.error(`Unverified test state preserved for inspection: ${directory}`);
+		if (server) {
+			try {
+				await stopOwnedProcessGroup(server);
+			} catch (error) {
+				console.error(`Owned process group cleanup failed; state preserved: ${directory}`);
+				failure ??= error;
+				cleanupVerified = false;
+			}
+		}
+		if (owned && cleanupVerified) {
+			try {
+				assertOwnedRun(directory, parent, runId);
+				rmSync(directory, { recursive: true });
+			} catch (error) {
+				failure ??= error;
+				console.error(`Owned directory cleanup failed; inspect ${directory}`);
+			}
+		} else {
+			failure ??= new Error("Test state could not be verified for cleanup");
+			console.error(`Unverified test state preserved for inspection: ${directory}`);
+		}
 	}
+	if (controller.signal.aborted) failure ??= new Error("L2 execution interrupted");
+	if (failure !== undefined) throw failure;
 }
 
 await main();

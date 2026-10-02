@@ -1,3 +1,4 @@
+import type { ChildProcess } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
@@ -59,4 +60,40 @@ export function assertTestMarker(value: unknown, runId: string): void {
 		value.runId !== runId
 	)
 		throw new Error("The responding database does not belong to this test run");
+}
+
+export async function stopOwnedProcessGroup(server: ChildProcess): Promise<void> {
+	const pid = server.pid;
+	if (!pid) return;
+	const exited =
+		server.exitCode !== null || server.signalCode !== null
+			? Promise.resolve()
+			: new Promise<void>((accept) => server.once("exit", () => accept()));
+	const kill = (signal: NodeJS.Signals) => {
+		try {
+			process.kill(-pid, signal);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+		}
+	};
+	const alive = () => {
+		try {
+			process.kill(-pid, 0);
+			return true;
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+			throw error;
+		}
+	};
+	const waitUntil = async (deadline: number) => {
+		while (alive() && Date.now() < deadline) await new Promise((accept) => setTimeout(accept, 25));
+	};
+	kill("SIGTERM");
+	await waitUntil(Date.now() + 5_000);
+	if (alive()) {
+		kill("SIGKILL");
+		await waitUntil(Date.now() + 2_000);
+	}
+	if (alive()) throw new Error("Owned process group did not exit; preserve its test state");
+	await exited;
 }
