@@ -73,7 +73,7 @@
 		"typescript": "7.0.2",
 		"vite": "8.3.1",
 		"vitest": "5.0.3",
-		"wrangler": "4.136.3"
+		"wrangler": "4.145.0"
 	},
 	"overrides": {
 		"vite": "8.3.1",
@@ -81,7 +81,7 @@
 		"brace-expansion": "^5.0.6",
 		"ws": "^8.20.1",
 		"esbuild": "^0.28.1",
-		"undici": "^7.29.0",
+		"undici": "7.29.1",
 		"sharp": "0.35.4"
 	}
 }
