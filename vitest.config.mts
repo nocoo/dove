@@ -11,7 +11,10 @@ export default defineConfig({
 		exclude: ["node_modules/**", "e2e/**"],
 		testTimeout: 10_000,
 		alias: {
-			"cloudflare:email": path.resolve(__dirname, "./src/__tests__/mocks/cloudflare-email.ts"),
+			"cloudflare:email": path.resolve(
+				import.meta.dirname,
+				"./src/__tests__/mocks/cloudflare-email.ts",
+			),
 		},
 		coverage: {
 			provider: "v8",
@@ -62,7 +65,7 @@ export default defineConfig({
 	},
 	resolve: {
 		alias: {
-			"@": path.resolve(__dirname, "./src"),
+			"@": path.resolve(import.meta.dirname, "./src"),
 		},
 	},
 });

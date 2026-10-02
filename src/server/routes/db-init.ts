@@ -120,10 +120,10 @@ CREATE TABLE IF NOT EXISTS rate_limit_locks (
 );
 
 CREATE TABLE IF NOT EXISTS _test_marker (
-  id TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 );
-INSERT OR IGNORE INTO _test_marker(id, created_at) VALUES ('e2e-test-db', datetime('now'));
+INSERT OR IGNORE INTO _test_marker(key, value) VALUES ('env', 'test');
 `;
 
 dbInit.post("/", async (c) => {
@@ -156,22 +156,26 @@ dbInit.post("/", async (c) => {
 });
 
 dbInit.get("/marker", async (c) => {
-	const host = c.req.header("host") ?? new URL(c.req.url).host;
-	const isLocal =
-		c.env.DEV_MODE === "true" ||
-		host.startsWith("localhost") ||
-		host.startsWith("127.0.0.1") ||
-		host.startsWith("[::1]");
-	if (!isLocal) {
+	const hostname = new URL(c.req.url).hostname;
+	if (
+		!(
+			["localhost", "127.0.0.1", "[::1]"].includes(hostname) &&
+			c.env.DEV_MODE === "true" &&
+			c.env.EMAIL_DRY_RUN === "true" &&
+			c.env.RESEND_DRY_RUN === "true"
+		)
+	) {
 		return c.json({ error: "Only available in local development" }, 403);
 	}
 	try {
-		const row = await c.env.DB.prepare("SELECT id FROM _test_marker LIMIT 1").first<{
-			id: string;
+		const rows = await c.env.DB.prepare("SELECT key, value FROM _test_marker").all<{
+			key: string;
+			value: string;
 		}>();
-		return c.json({ marker: row?.id ?? null });
-	} catch (err) {
-		return c.json({ marker: null, error: err instanceof Error ? err.message : String(err) });
+		const marker = Object.fromEntries(rows.results.map(({ key, value }) => [key, value]));
+		return c.json({ environment: marker.env ?? null, runId: marker.run_id ?? null });
+	} catch {
+		return c.json({ environment: null, runId: null }, 503);
 	}
 });
 

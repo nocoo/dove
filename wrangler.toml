@@ -40,5 +40,5 @@ name = "EMAIL"
 binding = "DB"
 database_name = "dove-db-test"
 database_id = "1adca6ff-076f-45ff-a4d6-a1fdae9397ea"
-
+remote = false
 

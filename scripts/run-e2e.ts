@@ -1,305 +1,277 @@
-/**
- * L2: API E2E test runner with full server lifecycle.
- *
- * Steps:
- *   1. Load .env.test — hard fail if missing
- *   2. Inequality check — test URL !== production URL
- *   3. Spawn `wrangler dev --port 17034` with E2E env
- *   4. Wait for server ready (poll /api/live)
- *   5. Run `bun test e2e/api/`
- *   6. Kill server
- *   7. Exit with test exit code
- *
- * Usage:
- *   bun run scripts/run-e2e.ts
- */
-
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import type { Subprocess } from "bun";
+import { type ChildProcess, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import {
+	assertOwnedRun,
+	assertTestMarker,
+	stopOwnedProcessGroup,
+	validateTestEnvironment,
+} from "./l2-isolation";
 
 const ROOT = resolve(import.meta.dirname, "..");
-const E2E_PORT = 17034;
-const POLL_INTERVAL_MS = 500;
-const MAX_WAIT_MS = 60_000;
 
-// ---------------------------------------------------------------------------
-// Step 1: Load .env.test
-// ---------------------------------------------------------------------------
-
-function loadEnvFile(path: string): Map<string, string> {
-	const content = readFileSync(path, "utf-8");
-	const vars = new Map<string, string>();
-	for (const line of content.split("\n")) {
-		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#")) continue;
-		const eqIdx = trimmed.indexOf("=");
-		if (eqIdx === -1) continue;
-		const key = trimmed.slice(0, eqIdx).trim();
-		const value = trimmed.slice(eqIdx + 1).trim();
-		vars.set(key, value);
-	}
-	return vars;
-}
-
-function loadTestEnv(): Map<string, string> {
-	const envPath = resolve(ROOT, ".env.test");
-	try {
-		return loadEnvFile(envPath);
-	} catch {
-		console.error("FATAL: .env.test not found.");
-		console.error("  L2 E2E requires a test Worker. See docs/02-quality-upgrade.md Step 3.");
-		process.exit(1);
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Step 2: Inequality + naming check
-// ---------------------------------------------------------------------------
-
-function checkInequality(testUrl: string): void {
-	// Hard requirement: the test Worker URL must self-identify as a test
-	// instance. Accept either a local wrangler dev instance (localhost/127.*/[::1])
-	// started by this script with --env test, or a remote host whose name
-	// contains "test". This prevents a misconfigured .env.test from pointing at
-	// the production worker even if .env.local is absent.
-	const { hostname, host: testHost } = new URL(testUrl);
-	const isLocal = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
-	if (!isLocal && !/test/i.test(testHost)) {
-		console.error(`FATAL: D1_WORKER_URL host (${testHost}) must contain "test" (or be localhost).`);
-		console.error(
-			"  E2E refuses to run against a Worker that doesn't self-identify as a test instance.",
-		);
-		process.exit(1);
-	}
-
-	try {
-		const prodVars = loadEnvFile(resolve(ROOT, ".env.local"));
-		const prodUrl = prodVars.get("D1_WORKER_URL");
-		if (prodUrl && testUrl === prodUrl) {
-			console.error("FATAL: D1_WORKER_URL in .env.test matches .env.local!");
-			console.error(`  Both point to: ${testUrl}`);
-			process.exit(1);
-		}
-		if (prodUrl) {
-			console.log(`  Inequality check: ${testUrl} !== ${prodUrl}`);
-		}
-	} catch {
-		console.log("  WARN: .env.local not found, skipping inequality check (OK in CI).");
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Step 3: Spawn dev server
-// ---------------------------------------------------------------------------
-
-function spawnDevServer(envVars: Map<string, string>): Subprocess {
-	const env: Record<string, string> = { ...process.env } as Record<string, string>;
-
-	for (const [key, value] of envVars) {
-		env[key] = value;
-	}
-	env.PORT = String(E2E_PORT);
-
-	console.log(`\nStep 3: Starting wrangler dev on port ${E2E_PORT}...`);
-
-	const proc = Bun.spawn(
-		[
-			"npx",
-			"wrangler",
-			"dev",
-			"--env",
-			"test",
-			"--env-file",
-			".env.test",
-			"--port",
-			String(E2E_PORT),
-		],
-		{
-			cwd: ROOT,
-			env,
-			stdout: "inherit",
-			stderr: "inherit",
-		},
-	);
-
-	return proc;
-}
-
-// ---------------------------------------------------------------------------
-// Step 4: Wait for server ready
-// ---------------------------------------------------------------------------
-
-async function waitForServer(): Promise<void> {
-	const url = `http://localhost:${E2E_PORT}/api/live`;
-	const start = Date.now();
-
-	console.log(`Step 4: Waiting for server at ${url}...`);
-
-	while (Date.now() - start < MAX_WAIT_MS) {
-		try {
-			const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
-			if (response.ok) {
-				const body = (await response.json()) as {
-					status: string;
-					database?: { connected?: boolean };
-				};
-				if (body.status === "ok" && body.database?.connected === true) {
-					console.log(`  Server ready (${Date.now() - start}ms)`);
-					return;
-				}
-				console.log(`  Server responded but not ready: ${JSON.stringify(body)}`);
-			}
-		} catch {
-			// Server not up yet
-		}
-		await Bun.sleep(POLL_INTERVAL_MS);
-	}
-
-	console.error(`FATAL: Server did not start within ${MAX_WAIT_MS}ms`);
-	process.exit(1);
-}
-
-// ---------------------------------------------------------------------------
-// Step 4b: Initialize D1 schema (idempotent)
-// ---------------------------------------------------------------------------
-
-async function initSchema(): Promise<void> {
-	console.log("Step 4b: Initializing D1 schema...");
-	const start = Date.now();
-	try {
-		const res = await fetch(`http://localhost:${E2E_PORT}/api/db/init`, {
-			method: "POST",
-			signal: AbortSignal.timeout(30_000),
-		});
-		const body = (await res.json()) as { ok?: boolean; statements?: number };
-		if (res.ok && body.ok) {
-			console.log(`  Schema initialized (${Date.now() - start}ms, ${body.statements} statements)`);
-		} else {
-			console.error(`  WARN: Schema init returned ${res.status}: ${JSON.stringify(body)}`);
-		}
-	} catch (err) {
-		console.error(`  FATAL: Schema init failed (${Date.now() - start}ms): ${err}`);
-		process.exit(1);
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Step 4c: Warm up D1 connection
-// ---------------------------------------------------------------------------
-
-async function warmupD1(): Promise<void> {
-	console.log("Step 4c: Warming up D1 connection...");
-	const start = Date.now();
-	try {
-		const res = await fetch(`http://localhost:${E2E_PORT}/api/projects`, {
-			signal: AbortSignal.timeout(15_000),
-		});
-		await res.text();
-		console.log(`  D1 warm (${Date.now() - start}ms, status=${res.status})`);
-	} catch (err) {
-		console.log(`  WARN: D1 warmup call failed (${Date.now() - start}ms): ${err}`);
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Step 4d: Verify the bound D1 is the test database (_test_marker row).
-// ---------------------------------------------------------------------------
-
-async function verifyTestMarker(): Promise<void> {
-	console.log("Step 4d: Verifying _test_marker (refuse to run against prod D1)...");
-	try {
-		const res = await fetch(`http://localhost:${E2E_PORT}/api/db/init/marker`, {
-			signal: AbortSignal.timeout(10_000),
-		});
-		const body = (await res.json()) as { marker?: string | null };
-		if (body.marker !== "e2e-test-db") {
-			console.error(`FATAL: _test_marker missing or wrong (got ${JSON.stringify(body.marker)}).`);
-			console.error("  This D1 was NOT initialized as a test database.");
-			console.error("  If this is unexpected, your worker may be bound to the production D1.");
-			process.exit(1);
-		}
-		console.log("  _test_marker = e2e-test-db ✓");
-	} catch (err) {
-		console.error(`FATAL: _test_marker check failed: ${err}`);
-		process.exit(1);
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Step 5: Run tests
-// ---------------------------------------------------------------------------
-
-async function runTests(): Promise<number> {
-	console.log("\nStep 5: Running E2E tests...\n");
-
-	const proc = Bun.spawn(["bun", "test", "--timeout", "15000", "e2e/api/"], {
-		cwd: ROOT,
-		stdout: "inherit",
-		stderr: "inherit",
+async function availablePort(): Promise<number> {
+	const server = createServer();
+	await new Promise<void>((accept, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", accept);
 	});
-
-	return proc.exited;
+	const address = server.address();
+	if (!address || typeof address === "string") throw new Error("No local port was allocated");
+	await new Promise<void>((accept, reject) =>
+		server.close((error) => (error ? reject(error) : accept())),
+	);
+	return address.port;
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+async function runCommand(
+	argv: string[],
+	cwd: string,
+	env: NodeJS.ProcessEnv,
+	signal: AbortSignal,
+	timeout: number,
+): Promise<void> {
+	const [binary, ...args] = argv;
+	if (!binary) throw new Error("Missing local command");
+	signal.throwIfAborted();
+	const child = spawn(binary, args, { cwd, env, stdio: "inherit", detached: true });
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	let abort: (() => void) | undefined;
+	try {
+		await new Promise<void>((accept, reject) => {
+			child.once("error", reject);
+			child.once("exit", (code) =>
+				code === 0 ? accept() : reject(new Error(`Local command failed: ${code}`)),
+			);
+			timer = setTimeout(() => reject(new Error("Local command timed out")), timeout);
+			abort = () => reject(new Error("L2 execution interrupted"));
+			signal.addEventListener("abort", abort, { once: true });
+		});
+	} finally {
+		clearTimeout(timer);
+		if (abort) signal.removeEventListener("abort", abort);
+		await stopOwnedProcessGroup(child);
+	}
+}
 
 async function main(): Promise<void> {
-	console.log("=== L2: API E2E Test Runner ===\n");
-
-	// Step 1: Load .env.test
-	console.log("Step 1: Loading .env.test...");
-	const envVars = loadTestEnv();
-	const testUrl = envVars.get("D1_WORKER_URL");
-	const testApiKey = envVars.get("D1_WORKER_API_KEY");
-
-	if (!testUrl || !testApiKey) {
-		console.error("FATAL: .env.test must define D1_WORKER_URL and D1_WORKER_API_KEY");
-		process.exit(1);
-	}
-	console.log(`  D1_WORKER_URL = ${testUrl}`);
-
-	// Step 2: Inequality check
-	console.log("\nStep 2: Checking URL inequality...");
-	checkInequality(testUrl);
-
-	// Step 3: Spawn dev server
-	const server = spawnDevServer(envVars);
-
-	let testExitCode = 1;
-
+	const values = Object.fromEntries(
+		readFileSync(join(ROOT, ".env.test"), "utf8")
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line && !line.startsWith("#"))
+			.map((line) => {
+				const index = line.indexOf("=");
+				return [line.slice(0, index), line.slice(index + 1)];
+			}),
+	);
+	validateTestEnvironment(values, process.env);
+	const original = Bun.TOML.parse(readFileSync(join(ROOT, "wrangler.toml"), "utf8")) as {
+		main: string;
+		compatibility_date: string;
+		env?: { test?: { d1_databases?: { binding: string; remote?: boolean }[] } };
+	};
+	const bindings = original.env?.test?.d1_databases;
+	if (bindings?.length !== 1 || bindings[0]?.binding !== "DB" || bindings[0].remote !== false)
+		throw new Error("The test environment must explicitly declare one local DB binding");
+	const entry = realpathSync(resolve(ROOT, original.main));
+	const assets = realpathSync(resolve(ROOT, "dist/client"));
+	if (!entry.startsWith(`${ROOT}/`) || !assets.startsWith(`${ROOT}/`))
+		throw new Error("Test inputs must remain inside the owned checkout");
+	const parent = realpathSync(tmpdir());
+	const port = await availablePort();
+	const origin = `http://127.0.0.1:${port}`;
+	const runId = randomUUID();
+	const directory = mkdtempSync(join(parent, "dove-l2-"));
+	let server: ChildProcess | undefined;
+	let markerVerified = false;
+	let owned = false;
+	let databaseAttempted = false;
+	let failure: unknown;
+	const controller = new AbortController();
+	const interrupt = () => controller.abort();
+	process.once("SIGINT", interrupt);
+	process.once("SIGTERM", interrupt);
 	try {
-		// Step 4: Wait for ready
-		await waitForServer();
-
-		// Step 4b: Initialize D1 schema (idempotent, required for local D1)
-		await initSchema();
-
-		// Step 4c: Warm up D1
-		await warmupD1();
-
-		// Step 4d: Refuse to run if the bound D1 is not the test database
-		await verifyTestMarker();
-
-		// Step 5: Run tests
-		testExitCode = await runTests();
+		writeFileSync(join(directory, "owner"), runId, { mode: 0o600, flag: "wx" });
+		assertOwnedRun(directory, parent, runId);
+		owned = true;
+		const config = join(directory, "wrangler.json");
+		const persist = join(directory, "persist");
+		const database = `dove-l2-${runId}`;
+		const testValues = {
+			D1_WORKER_URL: origin,
+			D1_WORKER_API_KEY: "ci-placeholder",
+			EMAIL_DRY_RUN: "true",
+			RESEND_DRY_RUN: "true",
+			DEV_MODE: "true",
+			RESEND_API_KEY: "re_ci_placeholder_not_real",
+			RESEND_FROM_DOMAIN: "test.example.com",
+			DEV_USER: "test@example.test",
+			ENVIRONMENT: "test",
+		};
+		writeFileSync(
+			config,
+			JSON.stringify({
+				name: "dove-l2",
+				main: entry,
+				compatibility_date: original.compatibility_date,
+				assets: {
+					directory: assets,
+					binding: "ASSETS",
+					run_worker_first: ["/api/*"],
+					not_found_handling: "single-page-application",
+				},
+				d1_databases: [
+					{ binding: "DB", database_name: database, database_id: runId, remote: false },
+				],
+				vars: testValues,
+			}),
+			{ mode: 0o600, flag: "wx" },
+		);
+		const env = Object.fromEntries(
+			Object.entries(process.env).filter(([key]) =>
+				["PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "SystemRoot"].includes(key),
+			),
+		);
+		Object.assign(env, testValues, {
+			PORT: String(port),
+			DOVE_TEST_RUN_ID: runId,
+			XDG_CONFIG_HOME: join(directory, "config"),
+			WRANGLER_SEND_METRICS: "false",
+			CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
+		});
+		const wrangler = ["node", join(ROOT, "node_modules/wrangler/bin/wrangler.js")];
+		assertOwnedRun(directory, parent, runId);
+		databaseAttempted = true;
+		await runCommand(
+			[
+				...wrangler,
+				"d1",
+				"execute",
+				database,
+				"--local",
+				"--config",
+				config,
+				"--persist-to",
+				persist,
+				"--command",
+				`CREATE TABLE _test_marker (key TEXT PRIMARY KEY, value TEXT NOT NULL); INSERT INTO _test_marker VALUES ('env','test'),('run_id','${runId}');`,
+			],
+			directory,
+			env,
+			controller.signal,
+			60_000,
+		);
+		server = spawn(
+			"node",
+			[
+				...wrangler.slice(1),
+				"dev",
+				"--local",
+				"--config",
+				config,
+				"--persist-to",
+				persist,
+				"--ip",
+				"127.0.0.1",
+				"--port",
+				String(port),
+				"--inspector-port",
+				"0",
+			],
+			{ cwd: directory, env, stdio: "inherit", detached: true },
+		);
+		let startError: Error | undefined;
+		server.on("error", (error) => {
+			startError = error;
+		});
+		const deadline = Date.now() + 60_000;
+		while (Date.now() < deadline) {
+			controller.signal.throwIfAborted();
+			if (startError || server.exitCode !== null || server.signalCode !== null)
+				throw startError ?? new Error("Owned Wrangler exited before readiness");
+			let response: Response;
+			try {
+				response = await fetch(`${origin}/api/db/init/marker`, {
+					signal: AbortSignal.any([controller.signal, AbortSignal.timeout(2_000)]),
+				});
+			} catch {
+				await Bun.sleep(300);
+				continue;
+			}
+			if (!response.ok) throw new Error(`Marker endpoint rejected the run: ${response.status}`);
+			assertTestMarker(await response.json(), runId);
+			markerVerified = true;
+			break;
+		}
+		if (!markerVerified) throw new Error("Timed out waiting for the owned database marker");
+		console.info(`Owned L2 ready at ${origin}; isolated state: ${persist}`);
+		const initialized = await fetch(`${origin}/api/db/init`, {
+			method: "POST",
+			signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]),
+		});
+		if (!initialized.ok || ((await initialized.json()) as { ok?: boolean }).ok !== true)
+			throw new Error("Schema initialization failed");
+		await runCommand(
+			["bun", "test", "--timeout", "15000", "e2e/api/"],
+			ROOT,
+			env,
+			controller.signal,
+			180_000,
+		);
+		assertTestMarker(
+			await (
+				await fetch(`${origin}/api/db/init/marker`, {
+					signal: AbortSignal.any([controller.signal, AbortSignal.timeout(2_000)]),
+				})
+			).json(),
+			runId,
+		);
+	} catch (error) {
+		failure = error;
 	} finally {
-		// Step 6: Kill server
-		console.log("\nStep 6: Stopping dev server...");
-		server.kill();
-		await server.exited;
-		console.log("  Server stopped.");
+		process.removeListener("SIGINT", interrupt);
+		process.removeListener("SIGTERM", interrupt);
+		let cleanupVerified = !databaseAttempted;
+		if (markerVerified && server?.exitCode === null && server.signalCode === null) {
+			try {
+				const response = await fetch(`${origin}/api/db/init/marker`, {
+					signal: AbortSignal.timeout(2_000),
+				});
+				assertTestMarker(await response.json(), runId);
+				cleanupVerified = true;
+			} catch {
+				console.error("Marker verification failed before cleanup; preserving state");
+			}
+		}
+		if (server) {
+			try {
+				await stopOwnedProcessGroup(server);
+			} catch (error) {
+				console.error(`Owned process group cleanup failed; state preserved: ${directory}`);
+				failure ??= error;
+				cleanupVerified = false;
+			}
+		}
+		if (owned && cleanupVerified) {
+			try {
+				assertOwnedRun(directory, parent, runId);
+				rmSync(directory, { recursive: true });
+			} catch (error) {
+				failure ??= error;
+				console.error(`Owned directory cleanup failed; inspect ${directory}`);
+			}
+		} else {
+			failure ??= new Error("Test state could not be verified for cleanup");
+			console.error(`Unverified test state preserved for inspection: ${directory}`);
+		}
 	}
-
-	// Step 7: Exit
-	if (testExitCode !== 0) {
-		console.error("\n=== E2E tests FAILED ===\n");
-		process.exit(1);
-	}
-
-	console.log("\n=== E2E tests PASSED ===\n");
+	if (controller.signal.aborted) failure ??= new Error("L2 execution interrupted");
+	if (failure !== undefined) throw failure;
 }
 
-void main();
+await main();
