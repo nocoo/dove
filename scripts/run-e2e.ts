@@ -197,7 +197,7 @@ async function main(): Promise<void> {
 			let response: Response;
 			try {
 				response = await fetch(`${origin}/api/db/init/marker`, {
-					signal: AbortSignal.timeout(2_000),
+					signal: AbortSignal.any([controller.signal, AbortSignal.timeout(2_000)]),
 				});
 			} catch {
 				await Bun.sleep(300);
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
 		console.info(`Owned L2 ready at ${origin}; isolated state: ${persist}`);
 		const initialized = await fetch(`${origin}/api/db/init`, {
 			method: "POST",
-			signal: AbortSignal.timeout(30_000),
+			signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]),
 		});
 		if (!initialized.ok || ((await initialized.json()) as { ok?: boolean }).ok !== true)
 			throw new Error("Schema initialization failed");
@@ -225,7 +225,9 @@ async function main(): Promise<void> {
 		);
 		assertTestMarker(
 			await (
-				await fetch(`${origin}/api/db/init/marker`, { signal: AbortSignal.timeout(2_000) })
+				await fetch(`${origin}/api/db/init/marker`, {
+					signal: AbortSignal.any([controller.signal, AbortSignal.timeout(2_000)]),
+				})
 			).json(),
 			runId,
 		);
