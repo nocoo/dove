@@ -23,8 +23,9 @@ describe("GET /api/db/init/marker", () => {
   test("returns the test-db marker after schema init", async () => {
     const response = await get("/api/db/init/marker");
     expect(response.status).toBe(200);
-    const body = await parseJson<{ marker: string | null }>(response);
-    expect(body.marker).toBe("e2e-test-db");
+    const body = await parseJson<{ environment: string | null; runId: string | null }>(response);
+    expect(body.environment).toBe("test");
+    expect(body.runId).toBe(process.env.DOVE_TEST_RUN_ID);
+    expect(body.runId).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
-

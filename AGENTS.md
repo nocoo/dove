@@ -8,7 +8,7 @@ Direction: [README.md](README.md); numbered documents under `docs/archive/` desc
 
 - This file is the only project handbook; nested files do not compete with it. Do not create a `CLAUDE.md` alias or copy.
 - This file is the contract; hooks, CI and configuration enforce it. Raise weaker enforcement instead of lowering this contract.
-- Human docs: [README.md](README.md) and [CHANGELOG.md](CHANGELOG.md). Version: `package.json` and `src/server/lib/version.ts` `APP_VERSION`, synchronized for release. Enforcement: `.husky/`, CI/release workflows, `vitest.config.ts`, `scripts/`. Local secrets: ignored `.env.local` / `.env.test`; CI creates safe placeholders with `scripts/setup-ci-env.ts`. Machine rules/accidents: global `AGENTS.md` and `rules/`; [Retrospective.md](Retrospective.md).
+- Human docs: [README.md](README.md) and [CHANGELOG.md](CHANGELOG.md). Version: `package.json` and `src/server/lib/version.ts` `APP_VERSION`, synchronized for release. Enforcement: `.husky/`, CI/release workflows, `vitest.config.mts`, `scripts/`. Local secrets: ignored `.env.local` / `.env.test`; CI creates safe placeholders with `scripts/setup-ci-env.ts`. Machine rules/accidents: global `AGENTS.md` and `rules/`; [Retrospective.md](Retrospective.md).
 
 ## Project invariants
 
@@ -49,7 +49,7 @@ Test configuration needs `D1_WORKER_URL`, `D1_WORKER_API_KEY`, `EMAIL_DRY_RUN`, 
 | L2 API | Real local HTTP over 100% of endpoint/method combinations | planned | Push/CI run `scripts/run-e2e.ts`; static route mapping does not prove every behavior/method assertion |
 | L3 UI | Critical dashboard workflows in Chromium with dry-run delivery | enforced | CI runs Playwright; page mapping is additional structural evidence |
 | G2 security | Dependency and secret scans; missing scanner fails | enforced | Commit staged Gitleaks, push OSV, CI shared scanners; local push does not independently scan its commit range for secrets |
-| D1 isolation | Per-run local stores, guards before fixtures/reset/cleanup and verified marker | planned | Test config uses local SQLite but no `--persist-to`; URL guard still accepts remote names containing test, and marker validation occurs after schema writes |
+| D1 isolation | Per-run local stores, guards before fixtures/reset/cleanup and verified marker | planned | L2 allocates a per-run local configuration, persistence and port, rejects production-capable inputs, and verifies a random database ownership marker before schema/fixture writes. L3 still needs equivalent per-run isolation |
 | Build | Actual Vite assets in `dist/client` | enforced | CI prepare command and CD build |
 | Docs / release | Public behavior, schema and synchronized version reviewed | manual | README/changelog and maintainer release checks |
 
@@ -65,10 +65,10 @@ Install restores Husky. Hooks are check-only; never use `--no-verify` on commits
 | Lane | Port / store | Boundary |
 |---|---|---|
 | Daily dev | 7034, default `dove-db` | Remote production binding; never an automated test target |
-| L2 | 17034, `--env test --env-file .env.test` | Local SQLite; default persistence is shared across runs |
+| L2 | Allocated loopback port, owned temporary config and `--persist-to` | Fresh local SQLite, fake credentials and both dry-run flags |
 | L3 | 27034, same local test environment | Browser server may be reused outside CI; separate per-run persistence remains required |
 
-Required harnesses reject remote bindings/URLs and production credential fallback, allocate fresh local state separate from development and the other lane, and assert test context before mutation. Initialize `_test_marker(key,value)` with `env=test` in verified local state, then check it before reset/cleanup. The current marker value `e2e-test-db` and post-initialization check do not satisfy that whole contract.
+Required harnesses reject remote bindings/URLs and production credential fallback, allocate fresh local state separate from development and the other lane, and assert test context before mutation. Initialize `_test_marker(key,value)` with `env=test` in verified local state, then check it before reset/cleanup. L2 bootstraps `env=test` and a random `run_id` in owned local state before read-only HTTP verification and schema initialization. L3 remains a separate isolation gap.
 
 ## Operations / release
 
