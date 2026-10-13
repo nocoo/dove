@@ -42,7 +42,7 @@
 		"lucide-react": "1.55.0",
 		"marked": "18.1.1",
 		"nanoid": "6.0.2",
-		"postcss": "8.5.28",
+		"postcss": "8.5.30",
 		"radix-ui": "^1.6.7",
 		"react": "19.3.0",
 		"react-dom": "19.3.0",
@@ -77,7 +77,7 @@
 	},
 	"overrides": {
 		"vite": "8.3.1",
-		"postcss": "^8.5.28",
+		"postcss": "^8.5.30",
 		"brace-expansion": "^5.0.6",
 		"ws": "^8.20.1",
 		"esbuild": "^0.28.1",
