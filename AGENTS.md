@@ -58,7 +58,7 @@ Test configuration needs `D1_WORKER_URL`, `D1_WORKER_API_KEY`, `EMAIL_DRY_RUN`, 
 | pre-commit | Working-tree typecheck, staged lint/secrets, route/page maps and coverage in parallel | Unified L1 on an index snapshot, <30s |
 | pre-push | Local API E2E and dependency scan in parallel | Full L2+G2 on stdin push refs, <3min |
 
-Install restores Husky. Hooks are check-only; never use `--no-verify` on commits or branch pushes. CI pins `base-ci/quality.yml` at `ad43150de3a2be2fa464b5cd2f921dc4fa9f8f0f` and runs L1/G1/G2/L2/L3.
+Install restores Husky. Hooks are check-only; never use `--no-verify` on commits or branch pushes. CI pins `base-ci/quality.yml` at `ac635753a869cb85fad1f52aae4ccbd6119f3cae` and runs L1/G1/G2/L2/L3.
 
 ## Resources and isolation
 
