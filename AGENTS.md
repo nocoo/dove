@@ -43,30 +43,30 @@ Test configuration needs `D1_WORKER_URL`, `D1_WORKER_API_KEY`, `EMAIL_DRY_RUN`, 
 
 6DQ keeps its name with unified L1, L2/L3, G2 and D1; the owner merged former G1 into L1 on 2026-09-21. Statuses: `enforced`, `planned`, `manual`, `N/A`.
 
-| Dimension | Required proof | Status | Current enforcement / gap |
-|---|---|---|---|
-| L1 pre-commit quality | Statements/functions/lines ≥99%, branches ≥96%; no `.skip`/`.only`; strict types and check-only lint, zero errors/warnings | planned | Enforced static subchecks: commit typecheck/staged Biome and CI static checks. Commit/CI enforce the stronger four-metric thresholds on server/shared code; complete skip/focus enforcement is missing and gates run on the working tree, so index-snapshot/timing/rejection evidence is absent |
-| L2 API | Real local HTTP over 100% of endpoint/method combinations | planned | Push/CI run `scripts/run-e2e.ts`; static route mapping does not prove every behavior/method assertion |
-| L3 UI | Critical dashboard workflows in Chromium with dry-run delivery | enforced | CI runs Playwright; page mapping is additional structural evidence |
-| G2 security | Dependency and secret scans; missing scanner fails | enforced | Commit staged Gitleaks, push OSV, CI shared scanners; local push does not independently scan its commit range for secrets |
-| D1 isolation | Per-run local stores, guards before fixtures/reset/cleanup and verified marker | planned | L2 allocates a per-run local configuration, persistence and port, rejects production-capable inputs, and verifies a random database ownership marker before schema/fixture writes. L3 still needs equivalent per-run isolation |
-| Build | Actual Vite assets in `dist/client` | enforced | CI prepare command and CD build |
-| Docs / release | Public behavior, schema and synchronized version reviewed | manual | README/changelog and maintainer release checks |
+| Dimension             | Required proof                                                                                                             | Status   | Current enforcement / gap                                                                                                                                                                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1 pre-commit quality | Statements/functions/lines ≥99%, branches ≥96%; no `.skip`/`.only`; strict types and check-only lint, zero errors/warnings | planned  | Enforced static subchecks: commit typecheck/staged Biome and CI static checks. Commit/CI enforce the stronger four-metric thresholds on server/shared code; complete skip/focus enforcement is missing and gates run on the working tree, so index-snapshot/timing/rejection evidence is absent |
+| L2 API                | Real local HTTP over 100% of endpoint/method combinations                                                                  | planned  | Push/CI run `scripts/run-e2e.ts`; static route mapping does not prove every behavior/method assertion                                                                                                                                                                                           |
+| L3 UI                 | Critical dashboard workflows in Chromium with dry-run delivery                                                             | enforced | CI runs Playwright; page mapping is additional structural evidence                                                                                                                                                                                                                              |
+| G2 security           | Dependency and secret scans; missing scanner fails                                                                         | enforced | Commit staged Gitleaks, push OSV, CI shared scanners; local push does not independently scan its commit range for secrets                                                                                                                                                                       |
+| D1 isolation          | Per-run local stores, guards before fixtures/reset/cleanup and verified marker                                             | planned  | L2 allocates a per-run local configuration, persistence and port, rejects production-capable inputs, and verifies a random database ownership marker before schema/fixture writes. L3 still needs equivalent per-run isolation                                                                  |
+| Build                 | Actual Vite assets in `dist/client`                                                                                        | enforced | CI prepare command and CD build                                                                                                                                                                                                                                                                 |
+| Docs / release        | Public behavior, schema and synchronized version reviewed                                                                  | manual   | README/changelog and maintainer release checks                                                                                                                                                                                                                                                  |
 
-| Hook | Current behavior | Required follow-up |
-|---|---|---|
+| Hook       | Current behavior                                                                      | Required follow-up                    |
+| ---------- | ------------------------------------------------------------------------------------- | ------------------------------------- |
 | pre-commit | Working-tree typecheck, staged lint/secrets, route/page maps and coverage in parallel | Unified L1 on an index snapshot, <30s |
-| pre-push | Local API E2E and dependency scan in parallel | Full L2+G2 on stdin push refs, <3min |
+| pre-push   | Local API E2E and dependency scan in parallel                                         | Full L2+G2 on stdin push refs, <3min  |
 
 Install restores Husky. Hooks are check-only; never use `--no-verify` on commits or branch pushes. CI pins `base-ci/quality.yml` at `ac635753a869cb85fad1f52aae4ccbd6119f3cae` and runs L1/G1/G2/L2/L3.
 
 ## Resources and isolation
 
-| Lane | Port / store | Boundary |
-|---|---|---|
-| Daily dev | 7034, default `dove-db` | Remote production binding; never an automated test target |
-| L2 | Allocated loopback port, owned temporary config and `--persist-to` | Fresh local SQLite, fake credentials and both dry-run flags |
-| L3 | 27034, same local test environment | Browser server may be reused outside CI; separate per-run persistence remains required |
+| Lane      | Port / store                                                       | Boundary                                                                               |
+| --------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Daily dev | 7034, default `dove-db`                                            | Remote production binding; never an automated test target                              |
+| L2        | Allocated loopback port, owned temporary config and `--persist-to` | Fresh local SQLite, fake credentials and both dry-run flags                            |
+| L3        | 27034, same local test environment                                 | Browser server may be reused outside CI; separate per-run persistence remains required |
 
 Required harnesses reject remote bindings/URLs and production credential fallback, allocate fresh local state separate from development and the other lane, and assert test context before mutation. Initialize `_test_marker(key,value)` with `env=test` in verified local state, then check it before reset/cleanup. L2 bootstraps `env=test` and a random `run_id` in owned local state before read-only HTTP verification and schema initialization. L3 remains a separate isolation gap.
 

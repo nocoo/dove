@@ -4,14 +4,14 @@
 
 把 dove 从 **Next.js 16 on Railway + 2 个外挂 Worker** 重写为 **纯 Cloudflare 原生应用**，利用 CF 平台能力优化基础设施层，同时 **严格保持现有 webhook 契约不变**。
 
-| CF 能力 | 用途 |
-|---|---|
-| **Workers** | 统一运行时：API + 静态资产 + 邮件发送 |
-| **D1** | 关系型数据（projects / recipients / templates / send_logs / webhook_logs） |
-| **KV** | 会话存储（替代 NextAuth session） |
-| **R2** | 模板资产 / 长期归档（可选） |
-| **Email Routing** | CF 原生 SMTP 发送（`env.EMAIL`） |
-| **Workers Static Assets** | SPA 静态托管（Vite 产物） |
+| CF 能力                   | 用途                                                                       |
+| ------------------------- | -------------------------------------------------------------------------- |
+| **Workers**               | 统一运行时：API + 静态资产 + 邮件发送                                      |
+| **D1**                    | 关系型数据（projects / recipients / templates / send_logs / webhook_logs） |
+| **KV**                    | 会话存储（替代 NextAuth session）                                          |
+| **R2**                    | 模板资产 / 长期归档（可选）                                                |
+| **Email Routing**         | CF 原生 SMTP 发送（`env.EMAIL`）                                           |
+| **Workers Static Assets** | SPA 静态托管（Vite 产物）                                                  |
 
 部署收敛到 `wrangler deploy` 一条命令。
 
@@ -44,14 +44,14 @@
 
 现状的痛点都来自"app 在 Railway、数据在 CF"这条边界：
 
-| 痛点 | 现在 | 重写后 |
-|---|---|---|
-| 数据库延迟 | Railway → HTTPS → `dove.worker.hexly.ai` → D1，每次查询经过北美往返 | Worker 内 `env.DB` 原生 binding，sub-millisecond |
-| 邮件发送 | Railway → HTTPS → `dove-email.worker.hexly.ai` → CF Email | 同进程直接 `env.EMAIL.send()` |
-| 部署 | Railway 镜像构建 + 2 套 wrangler env | 单 `wrangler deploy`（含 `[env.test]`） |
-| 冷启动 / 成本 | Railway 常驻 + 2 个 Worker | 全 Worker，按请求计费 |
-| 鉴权链 | NextAuth v5 + `proxy.ts` 自维护的 host/cookie 逻辑 | Hono OAuth + KV session |
-| 测试隔离 | 必须维护 prod/test 两套 worker URL 与 API_KEY | 回归到 wrangler `[env.test]` 原生模型 |
+| 痛点          | 现在                                                                | 重写后                                           |
+| ------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| 数据库延迟    | Railway → HTTPS → `dove.worker.hexly.ai` → D1，每次查询经过北美往返 | Worker 内 `env.DB` 原生 binding，sub-millisecond |
+| 邮件发送      | Railway → HTTPS → `dove-email.worker.hexly.ai` → CF Email           | 同进程直接 `env.EMAIL.send()`                    |
+| 部署          | Railway 镜像构建 + 2 套 wrangler env                                | 单 `wrangler deploy`（含 `[env.test]`）          |
+| 冷启动 / 成本 | Railway 常驻 + 2 个 Worker                                          | 全 Worker，按请求计费                            |
+| 鉴权链        | NextAuth v5 + `proxy.ts` 自维护的 host/cookie 逻辑                  | Hono OAuth + KV session                          |
+| 测试隔离      | 必须维护 prod/test 两套 worker URL 与 API_KEY                       | 回归到 wrangler `[env.test]` 原生模型            |
 
 **结论**：D1 proxy Worker（`worker/`）的存在唯一原因是"Railway 无法直接 binding D1"。一旦应用搬到 Worker，这一层就该被删除。
 
@@ -59,22 +59,22 @@
 
 ## Target Stack
 
-| 层 | 选型 | 备注 |
-|---|---|---|
-| **运行时** | Cloudflare Workers | `compatibility_date` 取最新 |
-| **框架** | Hono | Worker HTTP 框架，TS 一等公民 |
-| **前端** | Vite + React 19 + React Router v7 | SPA 形态，Workers Static Assets 服务 |
-| **UI** | Tailwind CSS v4 + shadcn/ui | 保持现有 basalt 风格 |
-| **图表** | Recharts | 不变 |
-| **校验** | Zod v4 | 不变 |
-| **鉴权** | `@hono/oauth-providers` (Google) + KV session | 替换 NextAuth v5 |
-| **关系数据** | D1 | projects / recipients / templates / send_logs / webhook_logs / email_providers |
-| **会话存储** | KV | session token → user info，TTL 7 天 |
-| **邮件发送** | Resend HTTP + CF Email Routing | 双 provider 架构保留 |
-| **模板渲染** | marked | 不变 |
-| **ID 生成** | nanoid | 不变 |
-| **部署** | `wrangler deploy` | 单 worker；`[env.test]` 给远程 smoke test |
-| **域名** | `dove.hexly.ai` | custom domain route |
+| 层           | 选型                                          | 备注                                                                           |
+| ------------ | --------------------------------------------- | ------------------------------------------------------------------------------ |
+| **运行时**   | Cloudflare Workers                            | `compatibility_date` 取最新                                                    |
+| **框架**     | Hono                                          | Worker HTTP 框架，TS 一等公民                                                  |
+| **前端**     | Vite + React 19 + React Router v7             | SPA 形态，Workers Static Assets 服务                                           |
+| **UI**       | Tailwind CSS v4 + shadcn/ui                   | 保持现有 basalt 风格                                                           |
+| **图表**     | Recharts                                      | 不变                                                                           |
+| **校验**     | Zod v4                                        | 不变                                                                           |
+| **鉴权**     | `@hono/oauth-providers` (Google) + KV session | 替换 NextAuth v5                                                               |
+| **关系数据** | D1                                            | projects / recipients / templates / send_logs / webhook_logs / email_providers |
+| **会话存储** | KV                                            | session token → user info，TTL 7 天                                            |
+| **邮件发送** | Resend HTTP + CF Email Routing                | 双 provider 架构保留                                                           |
+| **模板渲染** | marked                                        | 不变                                                                           |
+| **ID 生成**  | nanoid                                        | 不变                                                                           |
+| **部署**     | `wrangler deploy`                             | 单 worker；`[env.test]` 给远程 smoke test                                      |
+| **域名**     | `dove.hexly.ai`                               | custom domain route                                                            |
 
 > **不选 OpenNext for Cloudflare**：走 Hono + Vite SPA 路线，更薄的栈。
 
@@ -283,11 +283,11 @@ src/client/  ──(vite build)──►  dist/client/
 
 Dove 有两个认证域，对应两类调用方：
 
-| Scope | Mechanism | Who uses it | Routes |
-|-------|-----------|-------------|--------|
-| **Browser** | Google OAuth → KV session cookie | Dashboard 用户 | `GET/POST /api/projects`, `/api/templates`, `/api/stats`, etc. |
-| **Webhook** | Bearer token (`webhook_token`) | 外部项目 | `POST /api/webhook/:projectId/send`, `GET /api/webhook/:projectId/templates` |
-| **Public** | None | Anyone | `GET /api/live`, `GET /api/auth/*` |
+| Scope       | Mechanism                        | Who uses it    | Routes                                                                       |
+| ----------- | -------------------------------- | -------------- | ---------------------------------------------------------------------------- |
+| **Browser** | Google OAuth → KV session cookie | Dashboard 用户 | `GET/POST /api/projects`, `/api/templates`, `/api/stats`, etc.               |
+| **Webhook** | Bearer token (`webhook_token`)   | 外部项目       | `POST /api/webhook/:projectId/send`, `GET /api/webhook/:projectId/templates` |
+| **Public**  | None                             | Anyone         | `GET /api/live`, `GET /api/auth/*`                                           |
 
 ### Middleware chain
 
@@ -421,16 +421,16 @@ Webhook API 的 Bearer token 校验。仅在 `/api/webhook/:projectId/*` 路由�
 
 ## Security Boundaries
 
-| Boundary | Enforcement | Fail mode |
-|----------|-------------|-----------|
-| Browser → dashboard API | KV session cookie + email whitelist | 401 (no session) / 403 (not whitelisted) |
-| External → webhook API | Bearer token bound to URL `:projectId` | 401 (no token) / 403 (wrong token) / 404 (project not found) |
-| Cross-project token replay | authBearer looks up by projectId, then compares token | 403 (token belongs to different project) |
-| Cookie on webhook routes | authSession skips `/api/webhook/*` | Cookie ignored — no CSRF vector |
-| Missing `ALLOWED_EMAILS` | Fail-closed check in authSession | 500 (not silent pass-through) |
-| `webhook_token` visibility | `sanitize.ts` strips from API responses | Token never exposed to browser |
-| SPA client-side routes | `not_found_handling = "single-page-application"` | Returns index.html (React Router handles) |
-| Session expiry | KV `expirationTtl` (7 days) + cookie `Max-Age` | Auto-expired, user re-authenticates |
+| Boundary                   | Enforcement                                           | Fail mode                                                    |
+| -------------------------- | ----------------------------------------------------- | ------------------------------------------------------------ |
+| Browser → dashboard API    | KV session cookie + email whitelist                   | 401 (no session) / 403 (not whitelisted)                     |
+| External → webhook API     | Bearer token bound to URL `:projectId`                | 401 (no token) / 403 (wrong token) / 404 (project not found) |
+| Cross-project token replay | authBearer looks up by projectId, then compares token | 403 (token belongs to different project)                     |
+| Cookie on webhook routes   | authSession skips `/api/webhook/*`                    | Cookie ignored — no CSRF vector                              |
+| Missing `ALLOWED_EMAILS`   | Fail-closed check in authSession                      | 500 (not silent pass-through)                                |
+| `webhook_token` visibility | `sanitize.ts` strips from API responses               | Token never exposed to browser                               |
+| SPA client-side routes     | `not_found_handling = "single-page-application"`      | Returns index.html (React Router handles)                    |
+| Session expiry             | KV`expirationTtl` (7 days) + cookie `Max-Age`         | Auto-expired, user re-authenticates                          |
 
 ---
 
@@ -486,36 +486,36 @@ export class CloudflareProvider implements EmailProvider {
 import type { SendEmail } from "cloudflare:email";
 
 export class CloudflareProvider implements EmailProvider {
-  constructor(
-    private readonly emailBinding: SendEmail,
-    private readonly idempotencyDb: D1Database,  // 用于 Layer 2 幂等
-  ) {}
+	constructor(
+		private readonly emailBinding: SendEmail,
+		private readonly idempotencyDb: D1Database, // 用于 Layer 2 幂等
+	) {}
 
-  async send(params: SendParams): Promise<SendResult> {
-    // Layer 2 幂等检查 (原 worker-email 的逻辑)
-    const existing = await this.checkIdempotency(params.idempotencyKey);
-    if (existing) return existing;
+	async send(params: SendParams): Promise<SendResult> {
+		// Layer 2 幂等检查 (原 worker-email 的逻辑)
+		const existing = await this.checkIdempotency(params.idempotencyKey);
+		if (existing) return existing;
 
-    // 直接调用 CF Email binding
-    const message = createMimeMessage(params);
-    await this.emailBinding.send(message);
+		// 直接调用 CF Email binding
+		const message = createMimeMessage(params);
+		await this.emailBinding.send(message);
 
-    // 写入幂等记录
-    const id = await this.recordSent(params.idempotencyKey);
-    return { id };
-  }
+		// 写入幂等记录
+		const id = await this.recordSent(params.idempotencyKey);
+		return { id };
+	}
 }
 ```
 
 ### 关键迁移点
 
-| 组件 | 现有 | 重写后 |
-|---|---|---|
-| `email_providers.config` schema | `{ worker_url, api_key }` | `{ type: "cloudflare" }`（不再需要 URL/key，binding 在 wrangler.toml） |
-| Provider 工厂 | `new CloudflareProvider(config.worker_url, config.api_key)` | `new CloudflareProvider(c.env.EMAIL, c.env.DB)` |
-| Provider 构造 | 无状态，可复用 | **需要 request-scoped env**，每次请求从 `c.env` 获取 |
-| Layer 2 幂等 | `worker-email/` 里的 D1 表 `cf_email_idempotency` | 合并进主 Worker，同一个 `env.DB` |
-| 现有 DB 记录 | `email_providers` 表有 `config: { worker_url, api_key }` 的记录 | 需要迁移脚本更新 config 字段，或保持兼容（忽略旧字段） |
+| 组件                            | 现有                                                            | 重写后                                                                 |
+| ------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `email_providers.config` schema | `{ worker_url, api_key }`                                       | `{ type: "cloudflare" }`（不再需要 URL/key，binding 在 wrangler.toml） |
+| Provider 工厂                   | `new CloudflareProvider(config.worker_url, config.api_key)`     | `new CloudflareProvider(c.env.EMAIL, c.env.DB)`                        |
+| Provider 构造                   | 无状态，可复用                                                  | **需要 request-scoped env**，每次请求从 `c.env` 获取                   |
+| Layer 2 幂等                    | `worker-email/` 里的 D1 表 `cf_email_idempotency`               | 合并进主 Worker，同一个 `env.DB`                                       |
+| 现有 DB 记录                    | `email_providers` 表有 `config: { worker_url, api_key }` 的记录 | 需要迁移脚本更新 config 字段，或保持兼容（忽略旧字段）                 |
 
 ### Health Check 语义变更
 
@@ -523,13 +523,13 @@ export class CloudflareProvider implements EmailProvider {
 
 **重写后健康检查策略：三层探测**
 
-| Provider | 层级 | 探测方式 | 结果 |
-|---|---|---|---|
-| **Resend** | L1 config | `parseProviderConfig()` | `configValid` |
-| **Resend** | L2 reachable | skip（避免消耗 API quota） | `reachable: null` |
-| **Cloudflare** | L1 config | `parseProviderConfig()` | `configValid` |
-| **Cloudflare** | L2 reachable | `env.EMAIL.send()` 发送 probe 邮件到 verified 地址 | `reachable: boolean` |
-| **Both** | L3 runtime | 最近 N 次发送的 success rate（从 `send_logs` 查询） | `lastSendHealth` |
+| Provider       | 层级         | 探测方式                                            | 结果                 |
+| -------------- | ------------ | --------------------------------------------------- | -------------------- |
+| **Resend**     | L1 config    | `parseProviderConfig()`                             | `configValid`        |
+| **Resend**     | L2 reachable | skip（避免消耗 API quota）                          | `reachable: null`    |
+| **Cloudflare** | L1 config    | `parseProviderConfig()`                             | `configValid`        |
+| **Cloudflare** | L2 reachable | `env.EMAIL.send()` 发送 probe 邮件到 verified 地址  | `reachable: boolean` |
+| **Both**       | L3 runtime   | 最近 N 次发送的 success rate（从 `send_logs` 查询） | `lastSendHealth`     |
 
 **Cloudflare L2 探测实现**：
 
@@ -537,24 +537,24 @@ export class CloudflareProvider implements EmailProvider {
 // 发送一封最小化的探测邮件到 provider 配置的 domain 下的固定地址
 // 例如：health-probe@{domain} → 验证 domain 可用 + sender 已认证
 async function probeCloudflareHealth(
-  emailBinding: SendEmail,
-  domain: string,
+	emailBinding: SendEmail,
+	domain: string,
 ): Promise<{ reachable: boolean; reachableError: string | null }> {
-  try {
-    const message = createMimeMessage({
-      from: `health-probe@${domain}`,
-      to: `health-probe@${domain}`,  // 发给自己，最小副作用
-      subject: "Dove health probe",
-      html: "This is an automated health check.",
-    });
-    await emailBinding.send(message);
-    return { reachable: true, reachableError: null };
-  } catch (e) {
-    return {
-      reachable: false,
-      reachableError: e instanceof Error ? e.message : "CF Email probe failed",
-    };
-  }
+	try {
+		const message = createMimeMessage({
+			from: `health-probe@${domain}`,
+			to: `health-probe@${domain}`, // 发给自己，最小副作用
+			subject: "Dove health probe",
+			html: "This is an automated health check.",
+		});
+		await emailBinding.send(message);
+		return { reachable: true, reachableError: null };
+	} catch (e) {
+		return {
+			reachable: false,
+			reachableError: e instanceof Error ? e.message : "CF Email probe failed",
+		};
+	}
 }
 ```
 
@@ -566,13 +566,16 @@ async function probeCloudflareHealth(
 
 ```typescript
 // 查最近 24h 该 provider 的发送结果
-const recent = await query<{ status: string; cnt: number }>(db,
-  `SELECT status, COUNT(*) as cnt FROM send_logs
+const recent = await query<{ status: string; cnt: number }>(
+	db,
+	`SELECT status, COUNT(*) as cnt FROM send_logs
    WHERE provider_id = ? AND created_at > datetime('now', '-24 hours')
-   GROUP BY status`, [providerId]);
+   GROUP BY status`,
+	[providerId],
+);
 
-const sent = recent.find(r => r.status === 'sent')?.cnt ?? 0;
-const failed = recent.find(r => r.status === 'failed')?.cnt ?? 0;
+const sent = recent.find((r) => r.status === "sent")?.cnt ?? 0;
+const failed = recent.find((r) => r.status === "failed")?.cnt ?? 0;
 const total = sent + failed;
 
 // 无发送记录 → unknown；全部失败 → unhealthy；>50% 失败 → degraded
@@ -625,15 +628,15 @@ const total = sent + failed;
 ```typescript
 // 重写后的 createProvider
 export async function createProvider(
-  config: ProviderConfig,
-  env: Env,  // 新增：request-scoped env
+	config: ProviderConfig,
+	env: Env, // 新增：request-scoped env
 ): Promise<EmailProvider> {
-  switch (config.type) {
-    case "resend":
-      return new ResendProvider(config.api_key);
-    case "cloudflare":
-      return new CloudflareProvider(env.EMAIL, env.DB);
-  }
+	switch (config.type) {
+		case "resend":
+			return new ResendProvider(config.api_key);
+		case "cloudflare":
+			return new CloudflareProvider(env.EMAIL, env.DB);
+	}
 }
 ```
 
@@ -835,10 +838,10 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 
 ## Worker Naming
 
-| Worker | 环境 | 域名 | KV Namespace |
-|---|---|---|---|
-| `dove` | 生产 | `dove.hexly.ai` | `dove` |
-| `dove` + `[env.test]` | 远程 smoke test（手动） | `dove-test.hexly.ai` | `dove-test` |
+| Worker                | 环境                    | 域名                 | KV Namespace |
+| --------------------- | ----------------------- | -------------------- | ------------ |
+| `dove`                | 生产                    | `dove.hexly.ai`      | `dove`       |
+| `dove` + `[env.test]` | 远程 smoke test（手动） | `dove-test.hexly.ai` | `dove-test`  |
 
 重写完成后删除：
 - `dove.worker.hexly.ai`（D1 proxy Worker）
@@ -855,15 +858,16 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 在开始代码工作前，手动完成以下配置：
 
 1. ✅ **创建 KV namespaces**
+
    ```bash
    wrangler kv namespace create dove
    # id: c621cd9894154497a8ffa82a0cd32beb
-   
-   wrangler kv namespace create dove-test
+      wrangler kv namespace create dove-test
    # id: 322833e8ef9d424fad5690a88a405efd
    ```
 
 2. ⏳ **Google Console 添加新 OAuth callback URLs**（部署时添加）
+
    ```
    https://dove.hexly.ai/api/auth/google/callback
    https://dove-test.hexly.ai/api/auth/google/callback
@@ -904,7 +908,11 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 **C006** ✅ `src/server/lib/db/d1.ts`：D1 native binding 薄包装
 ```typescript
 export async function query<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T[]>;
-export async function queryOne<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T | null>;
+export async function queryOne<T>(
+	db: D1Database,
+	sql: string,
+	params?: unknown[],
+): Promise<T | null>;
 export async function execute(db: D1Database, sql: string, params?: unknown[]): Promise<D1Result>;
 ```
 
@@ -1126,6 +1134,7 @@ bun run build
 wrangler d1 migrations apply dove-db-test --remote --env test
 wrangler deploy --env test
 ```
+
 - `curl https://dove-test.hexly.ai/api/live`
 - 登录测试（Google OAuth）— 需要 Google Console 预先添加 `dove-test.hexly.ai` callback URL
 - 发送测试邮件
@@ -1191,10 +1200,10 @@ cd worker-email && wrangler delete
 
 ### 两个环境，两个用途
 
-| 环境 | 用途 | D1 | Auth |
-|------|------|-----|------|
-| `wrangler dev`（localhost） | L2/L3 自动化测试 | miniflare 本地 D1（`.wrangler/state/`） | localhost 检测 → bypass |
-| `wrangler deploy --env test`（remote） | 部署后手动 smoke test | `dove-db-test`（远程） | 完整 OAuth + KV session |
+| 环境                                   | 用途                  | D1                                      | Auth                    |
+| -------------------------------------- | --------------------- | --------------------------------------- | ----------------------- |
+| `wrangler dev`（localhost）            | L2/L3 自动化测试      | miniflare 本地 D1（`.wrangler/state/`） | localhost 检测 → bypass |
+| `wrangler deploy --env test`（remote） | 部署后手动 smoke test | `dove-db-test`（远程）                  | 完整 OAuth + KV session |
 
 **关键区分**：L2/L3 自动化测试**只用 localhost**，不触碰远程资源。`[env.test]` 仅用于部署后手动验证（登录、发送邮件等）。这避免了"测试需要远程 secrets"和"测试结果依赖网络"两个问题。
 
@@ -1219,18 +1228,18 @@ id = "322833e8ef9d424fad5690a88a405efd"
 
 ### Resource Separation
 
-| Resource | Production | Test |
-|----------|-----------|------|
-| D1 Database | `dove-db` (2a8b6614) | `dove-db-test` (1adca6ff) |
-| KV Namespace | `dove` (c621cd98) | `dove-test` (322833e8) |
-| Worker domain | `dove.hexly.ai` | `dove-test.hexly.ai` |
+| Resource      | Production           | Test                      |
+| ------------- | -------------------- | ------------------------- |
+| D1 Database   | `dove-db` (2a8b6614) | `dove-db-test` (1adca6ff) |
+| KV Namespace  | `dove` (c621cd98)    | `dove-test` (322833e8)    |
+| Worker domain | `dove.hexly.ai`      | `dove-test.hexly.ai`      |
 
 ### Test Layer Architecture
 
-| Layer | How D1 works | How auth works |
-|-------|-------------|----------------|
-| **L1 Unit** | Mock D1 (in-memory stubs) | N/A (pure logic only) |
-| **L2 API E2E** | Miniflare local D1 (`--persist-to .wrangler/e2e`) | Localhost → auth bypassed |
+| Layer              | How D1 works                                            | How auth works            |
+| ------------------ | ------------------------------------------------------- | ------------------------- |
+| **L1 Unit**        | Mock D1 (in-memory stubs)                               | N/A (pure logic only)     |
+| **L2 API E2E**     | Miniflare local D1 (`--persist-to .wrangler/e2e`)       | Localhost → auth bypassed |
 | **L3 Browser E2E** | Wrangler dev local D1 (`--persist-to .wrangler/e2e-pw`) | Localhost → auth bypassed |
 
 ### L2 Architecture
@@ -1270,33 +1279,33 @@ Playwright (Chromium)
 
 ### Port Convention
 
-| Purpose | Port |
-|---------|------|
-| Dev server / Production-like | 7034 |
-| L2 API E2E | 17034 |
-| L3 Playwright E2E | 27034 |
+| Purpose                      | Port  |
+| ---------------------------- | ----- |
+| Dev server / Production-like | 7034  |
+| L2 API E2E                   | 17034 |
+| L3 Playwright E2E            | 27034 |
 
 ### Hook Execution Model
 
 **pre-commit**: G1 + L1（并行）
 
-| Stage | Command | What |
-|-------|---------|------|
-| `typecheck` | `bun run typecheck` | G1: TypeScript type checking |
-| `lint` | `bun run lint:staged` | G1: ESLint on staged files |
-| `unit_cov` | `bun run test:coverage` | L1: Unit tests with 90% coverage gate |
+| Stage       | Command                 | What                                  |
+| ----------- | ----------------------- | ------------------------------------- |
+| `typecheck` | `bun run typecheck`     | G1: TypeScript type checking          |
+| `lint`      | `bun run lint:staged`   | G1: ESLint on staged files            |
+| `unit_cov`  | `bun run test:coverage` | L1: Unit tests with 90% coverage gate |
 
 **pre-push**: L2 ‖ G2（并行）
 
-| Stage | Command | What |
-|-------|---------|------|
-| `l2_e2e` | `bun run test:e2e:api` | L2: Full API E2E |
+| Stage      | Command                 | What                       |
+| ---------- | ----------------------- | -------------------------- |
+| `l2_e2e`   | `bun run test:e2e:api`  | L2: Full API E2E           |
 | `security` | `bun run gate:security` | G2: osv-scanner + gitleaks |
 
 **on-demand**: L3
 
-| Stage | Command | What |
-|-------|---------|------|
+| Stage   | Command                | What                       |
+| ------- | ---------------------- | -------------------------- |
 | `l3_pw` | `bun run test:e2e:bdd` | L3: Playwright browser E2E |
 
 ---
@@ -1305,39 +1314,39 @@ Playwright (Chromium)
 
 **必须逐字节兼容**：
 
-| 契约 | 保持方式 |
-|---|---|
-| 请求体 `{ template, to, idempotency_key?, variables? }` | `template` 是 slug，不是 ID |
-| 成功响应 `{ id, resend_id, provider_message_id, provider_type, status: "sent" }` | 同步发送，不改 202 |
-| Provider 失败 502 `{ error: { code: "resend_failed"\|"cloudflare_failed", message } }` | 区分 provider 类型 |
-| 幂等语义：`status='sending'` 时返回 409 `send_in_progress` | send_logs 先写 `sending`，发送前检查 |
-| 幂等语义：payload hash 不匹配返回 **422** `idempotency_payload_mismatch` | 同现有逻辑（422 不是 409） |
-| 配额超限 429 `{ error: { code: "quota_daily_exceeded", message } }` | SQL COUNT 逻辑不变 |
-| `GET /api/webhook-logs` 分页 | D1 表 + limit/offset 保留 |
-| 所有错误码字符串 | 逐字保留 |
+| 契约                                                                                   | 保持方式                             |
+| -------------------------------------------------------------------------------------- | ------------------------------------ |
+| 请求体 `{ template, to, idempotency_key?, variables? }`                                | `template` 是 slug，不是 ID          |
+| 成功响应 `{ id, resend_id, provider_message_id, provider_type, status: "sent" }`       | 同步发送，不改 202                   |
+| Provider 失败 502 `{ error: { code: "resend_failed"\|"cloudflare_failed", message } }` | 区分 provider 类型                   |
+| 幂等语义：`status='sending'` 时返回 409 `send_in_progress`                             | send_logs 先写 `sending`，发送前检查 |
+| 幂等语义：payload hash 不匹配返回 **422** `idempotency_payload_mismatch`               | 同现有逻辑（422 不是 409）           |
+| 配额超限 429 `{ error: { code: "quota_daily_exceeded", message } }`                    | SQL COUNT 逻辑不变                   |
+| `GET /api/webhook-logs` 分页                                                           | D1 表 + limit/offset 保留            |
+| 所有错误码字符串                                                                       | 逐字保留                             |
 
 ---
 
 ## Risks & Mitigations
 
-| 风险 | 影响 | 缓解 |
-|---|---|---|
-| OAuth 回调 URL 变更 | 登录失败 | cutover 前添加新 callback URL |
-| KV session vs NextAuth | 会话失效 | 用户重新登录（可接受） |
-| `env.EMAIL.send()` 行为差异 | CF 路径发送失败 | 上线前 smoke test |
-| Worker CPU 限制 | 大模板失败 | marked 同步计算，远低于 50ms |
-| 重写期间业务漂移 | branch 冲突 | main 冻结新功能 |
+| 风险                        | 影响            | 缓解                          |
+| --------------------------- | --------------- | ----------------------------- |
+| OAuth 回调 URL 变更         | 登录失败        | cutover 前添加新 callback URL |
+| KV session vs NextAuth      | 会话失效        | 用户重新登录（可接受）        |
+| `env.EMAIL.send()` 行为差异 | CF 路径发送失败 | 上线前 smoke test             |
+| Worker CPU 限制             | 大模板失败      | marked 同步计算，远低于 50ms  |
+| 重写期间业务漂移            | branch 冲突     | main 冻结新功能               |
 
 ---
 
 ## Cost Estimation
 
-| 资源 | 估算用量 | 月成本 |
-|---|---|---|
-| Workers requests | ~100k/月 | Free tier |
-| D1 reads/writes | ~500k reads, ~10k writes | ~$0.50 |
-| KV reads/writes | ~200k reads, ~20k writes | ~$0.50 |
-| **Total** | | **< $5/月** |
+| 资源             | 估算用量                 | 月成本      |
+| ---------------- | ------------------------ | ----------- |
+| Workers requests | ~100k/月                 | Free tier   |
+| D1 reads/writes  | ~500k reads, ~10k writes | ~$0.50      |
+| KV reads/writes  | ~200k reads, ~20k writes | ~$0.50      |
+| **Total**        |                          | **< $5/月** |
 
 ---
 
@@ -1358,11 +1367,11 @@ Playwright (Chromium)
 
 以下 CF 功能**不在本次重写范围内**，可作为 Phase 2 独立项目：
 
-| 功能 | 潜在用途 | 为什么不在 Phase 1 |
-|---|---|---|
-| **Queues** | 异步邮件管道 | 会改变 webhook 契约（同步 → 异步） |
-| **Durable Objects** | 强一致配额 | 现有 soft limit 模型是业务决策，DO 会改变语义 |
-| **Analytics Engine** | 高吞吐日志 | 会改变 webhook_logs API 契约（分页 → 聚合） |
+| 功能                 | 潜在用途     | 为什么不在 Phase 1                            |
+| -------------------- | ------------ | --------------------------------------------- |
+| **Queues**           | 异步邮件管道 | 会改变 webhook 契约（同步 → 异步）            |
+| **Durable Objects**  | 强一致配额   | 现有 soft limit 模型是业务决策，DO 会改变语义 |
+| **Analytics Engine** | 高吞吐日志   | 会改变 webhook_logs API 契约（分页 → 聚合）   |
 
 这些功能如果要引入，需要**先与调用方协商 API 变更**，不能作为"等价迁移"的一部分。
 

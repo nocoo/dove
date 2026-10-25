@@ -72,14 +72,14 @@ Localhost automatically uses the development identity. The UI is served from `di
 
 For local sending exercises, leave the project's provider unselected and use the placeholder Resend configuration. The current dry-run switches apply only to this legacy path. Selected Resend providers and Cloudflare providers are not protected by these switches. Template test sends have the same limitation.
 
-| Path / command | Purpose |
-| --- | --- |
-| `src/server/` | Hono API, Access verification, D1 queries, and sending flow |
-| `src/client/` | Vite / React dashboard |
-| `src/lib/` | Shared types, email templates, and provider implementations |
-| `bun run build` | Build the dashboard into `dist/client` |
-| `bun run typecheck` | TypeScript checks |
-| `bun run lint` | Biome checks |
+| Path / command      | Purpose                                                     |
+| ------------------- | ----------------------------------------------------------- |
+| `src/server/`       | Hono API, Access verification, D1 queries, and sending flow |
+| `src/client/`       | Vite / React dashboard                                      |
+| `src/lib/`          | Shared types, email templates, and provider implementations |
+| `bun run build`     | Build the dashboard into `dist/client`                      |
+| `bun run typecheck` | TypeScript checks                                           |
+| `bun run lint`      | Biome checks                                                |
 
 After CI succeeds on `main`, the GitHub Release workflow builds and deploys the Worker automatically. Version tags have a deployment path as well. See the [development and deployment guide](04-development.md) for D1, Access, and email prerequisites. This repository deploys through GitHub CD.
 
@@ -106,17 +106,17 @@ The HTTP runner starts its own Worker on port 17034, initializes local D1, and v
 
 ## Stack
 
-| Technology | Purpose |
-| --- | --- |
-| TypeScript, Bun | Application code, dependencies, and development scripts |
-| Cloudflare Workers, Hono | API runtime, routing, and static asset hosting |
-| Cloudflare D1 | Projects, templates, providers, logs, and rate-limit state |
-| React, Vite, React Router | Dashboard and frontend build |
-| Tailwind CSS, shadcn/ui, Recharts | Components, styling, and charts |
-| Cloudflare Access, jose | Dashboard authentication and JWT verification |
-| Zod, Marked | Request / variable validation and Markdown email rendering |
-| Resend, Cloudflare Email Routing | Email sending |
-| Vitest, Playwright | Server and browser tests |
+| Technology                        | Purpose                                                    |
+| --------------------------------- | ---------------------------------------------------------- |
+| TypeScript, Bun                   | Application code, dependencies, and development scripts    |
+| Cloudflare Workers, Hono          | API runtime, routing, and static asset hosting             |
+| Cloudflare D1                     | Projects, templates, providers, logs, and rate-limit state |
+| React, Vite, React Router         | Dashboard and frontend build                               |
+| Tailwind CSS, shadcn/ui, Recharts | Components, styling, and charts                            |
+| Cloudflare Access, jose           | Dashboard authentication and JWT verification              |
+| Zod, Marked                       | Request / variable validation and Markdown email rendering |
+| Resend, Cloudflare Email Routing  | Email sending                                              |
+| Vitest, Playwright                | Server and browser tests                                   |
 
 ## Documentation
 

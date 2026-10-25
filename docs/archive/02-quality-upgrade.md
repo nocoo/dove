@@ -16,14 +16,14 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ## Current State Assessment
 
-| Dimension | Status | Detail |
-|-----------|--------|--------|
-| **L1** Unit Tests | ✅ Green | 123 tests, 92%+ coverage, pre-commit enforced |
-| **G1** Static Analysis | ✅ Green | `tseslint.configs.strict` + `--max-warnings=0` + `tsc strict:true`, pre-commit |
-| **L2** API E2E | 🟡 Mocked | 69 tests but D1 fully mocked via `mock.module`, route handlers called in-process (not real HTTP) |
-| **G2** Security | 🟡 Soft | osv-scanner + gitleaks run, but silently pass if tools not installed |
-| **L3** BDD E2E | 🔴 Missing | Playwright dep installed, script defined, but zero test files / no config / no runner |
-| **D1** Test Isolation | 🟡 Configured | `dove-db-test` exists in `wrangler.toml [env.test]`, but no test ever connects to it. No `_test_marker`. |
+| Dimension              | Status        | Detail                                                                                                   |
+| ---------------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
+| **L1** Unit Tests      | ✅ Green      | 123 tests, 92%+ coverage, pre-commit enforced                                                            |
+| **G1** Static Analysis | ✅ Green      | `tseslint.configs.strict` + `--max-warnings=0` + `tsc strict:true`, pre-commit                           |
+| **L2** API E2E         | 🟡 Mocked     | 69 tests but D1 fully mocked via `mock.module`, route handlers called in-process (not real HTTP)         |
+| **G2** Security        | 🟡 Soft       | osv-scanner + gitleaks run, but silently pass if tools not installed                                     |
+| **L3** BDD E2E         | 🔴 Missing    | Playwright dep installed, script defined, but zero test files / no config / no runner                    |
+| **D1** Test Isolation  | 🟡 Configured | `dove-db-test` exists in `wrangler.toml [env.test]`, but no test ever connects to it. No `_test_marker`. |
 
 **Current Tier: B+** (L1 ✅ + G1 ✅, but D1 not exercised → cannot reach A)
 
@@ -31,14 +31,14 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 
 ## Target State
 
-| Dimension | Target | Detail |
-|-----------|--------|--------|
-| **L1** | ✅ Keep | No changes needed |
-| **G1** | ✅ Keep | No changes needed |
-| **L2** | ✅ True HTTP | Real HTTP calls to running dev server on port 17034, connecting to `dove-db-test` via **separate test Worker** |
-| **G2** | ✅ Hard fail | Remove soft-skip: fail if osv-scanner or gitleaks not installed |
-| **L3** | ✅ Playwright | Bypassed-auth app-flow coverage (navigation, CRUD, data rendering) — **not** real Google OAuth |
-| **D1** | ✅ Full isolation | `_test_marker` table, separate test Worker deployment, E2E connect to `dove-db-test` |
+| Dimension | Target            | Detail                                                                                                         |
+| --------- | ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **L1**    | ✅ Keep           | No changes needed                                                                                              |
+| **G1**    | ✅ Keep           | No changes needed                                                                                              |
+| **L2**    | ✅ True HTTP      | Real HTTP calls to running dev server on port 17034, connecting to `dove-db-test` via **separate test Worker** |
+| **G2**    | ✅ Hard fail      | Remove soft-skip: fail if osv-scanner or gitleaks not installed                                                |
+| **L3**    | ✅ Playwright     | Bypassed-auth app-flow coverage (navigation, CRUD, data rendering) — **not** real Google OAuth                 |
+| **D1**    | ✅ Full isolation | `_test_marker` table, separate test Worker deployment, E2E connect to `dove-db-test`                           |
 
 **Target Tier: S** (6/6 green)
 
@@ -270,23 +270,23 @@ const response = await fetch(`${BASE}/api/projects`);
 **`playwright.config.ts`**:
 ```typescript
 export default defineConfig({
-  testDir: './e2e/bdd',
-  baseURL: 'http://localhost:27034',
-  use: { headless: true },
-  retries: process.env.CI ? 2 : 0,
-  webServer: {
-    // Playwright webServer is a separate shell process — process.env from
-    // globalSetup does NOT propagate. Must inject via command env prefix.
-    // ${VAR:?msg} is bash fail-closed: shell aborts if var is unset.
-    command: [
-      'D1_WORKER_URL=${D1_WORKER_URL_TEST:?not set}',
-      'D1_WORKER_API_KEY=${D1_WORKER_API_KEY_TEST:?not set}',
-      'E2E_SKIP_AUTH=true',
-      'next dev --port 27034',
-    ].join(' '),
-    port: 27034,
-    reuseExistingServer: !process.env.CI,
-  },
+	testDir: "./e2e/bdd",
+	baseURL: "http://localhost:27034",
+	use: { headless: true },
+	retries: process.env.CI ? 2 : 0,
+	webServer: {
+		// Playwright webServer is a separate shell process — process.env from
+		// globalSetup does NOT propagate. Must inject via command env prefix.
+		// ${VAR:?msg} is bash fail-closed: shell aborts if var is unset.
+		command: [
+			"D1_WORKER_URL=${D1_WORKER_URL_TEST:?not set}",
+			"D1_WORKER_API_KEY=${D1_WORKER_API_KEY_TEST:?not set}",
+			"E2E_SKIP_AUTH=true",
+			"next dev --port 27034",
+		].join(" "),
+		port: 27034,
+		reuseExistingServer: !process.env.CI,
+	},
 });
 ```
 
@@ -326,61 +326,61 @@ export default defineConfig({
 
 After all steps complete, verify the full matrix:
 
-| Check | Command | Expected | Result |
-|-------|---------|----------|--------|
-| L1 | `bun run test:coverage` | 123+ tests, ≥90% coverage | ✅ 130 tests, 92.96% funcs / 96.83% lines |
-| G1 | `bun run typecheck && bun run lint` | 0 errors, 0 warnings | ✅ Pass |
-| L2 | `bun run test:e2e:api` | Server starts on 17034, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass |
-| G2 | `bun run gate:security` | osv-scanner + gitleaks both run and pass (hard fail if missing) | ✅ Pass |
-| L3 | `bun run test:e2e:bdd` | Playwright runs core flows on 27034 | ✅ 13 tests pass |
-| D1 | Verified by L2 | `_test_marker` check passes before tests, all queries hit dove-db-test | ✅ Verified |
-| pre-commit | `git commit` | G1 + L1 sequential (<30s) | ✅ Pass |
-| pre-push | `git push` | L2 ‖ G2 parallel (<3min) | Pending push |
+| Check      | Command                             | Expected                                                                  | Result                                    |
+| ---------- | ----------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------- |
+| L1         | `bun run test:coverage`             | 123+ tests, ≥90% coverage                                                 | ✅ 130 tests, 92.96% funcs / 96.83% lines |
+| G1         | `bun run typecheck && bun run lint` | 0 errors, 0 warnings                                                      | ✅ Pass                                   |
+| L2         | `bun run test:e2e:api`              | Server starts on 17034, all tests pass via real HTTP against dove-db-test | ✅ 58 tests pass                          |
+| G2         | `bun run gate:security`             | osv-scanner + gitleaks both run and pass (hard fail if missing)           | ✅ Pass                                   |
+| L3         | `bun run test:e2e:bdd`              | Playwright runs core flows on 27034                                       | ✅ 13 tests pass                          |
+| D1         | Verified by L2                      | `_test_marker` check passes before tests, all queries hit dove-db-test    | ✅ Verified                               |
+| pre-commit | `git commit`                        | G1 + L1 sequential (<30s)                                                 | ✅ Pass                                   |
+| pre-push   | `git push`                          | L2 ‖ G2 parallel (<3min)                                                  | Pending push                              |
 
 ---
 
 ## Commit Sequence Summary
 
-| # | Commit | Dimension |
-|---|--------|-----------|
-| 1 | `fix(G2): fail hard when security tools are not installed` | G2 |
-| 2 | `fix: guard E2E auth bypass with NODE_ENV !== production` | Security |
-| 3 | `feat(D1): deploy test Worker and add _test_marker verification` | D1 |
-| 4 | `feat(L2): add .env.test and E2E server lifecycle in run-e2e.ts` | L2 |
-| 5 | `refactor(L2): rewrite e2e/api/helpers.ts for real HTTP` | L2 |
-| 6 | `refactor(L2): rewrite e2e/api health + db-init tests` | L2 |
-| 7 | `refactor(L2): rewrite e2e/api projects + recipients tests` | L2 |
-| 8 | `refactor(L2): rewrite e2e/api templates + logs-stats tests` | L2 |
-| 9 | `refactor(L2): rewrite e2e/api webhook test` | L2 |
-| 10 | `feat(L3): add Playwright config` | L3 |
-| 11 | `feat(L3): add dashboard and navigation BDD specs` | L3 |
-| 12 | `feat(L3): add project CRUD BDD spec` | L3 |
-| 13 | `feat(L3): add template CRUD BDD spec` | L3 |
-| 14 | `feat(L3): add logs viewer BDD specs` | L3 |
-| 15 | `chore: wire test:e2e:bdd to Playwright CLI` | L3 |
+| #   | Commit                                                           | Dimension |
+| --- | ---------------------------------------------------------------- | --------- |
+| 1   | `fix(G2): fail hard when security tools are not installed`       | G2        |
+| 2   | `fix: guard E2E auth bypass with NODE_ENV !== production`        | Security  |
+| 3   | `feat(D1): deploy test Worker and add _test_marker verification` | D1        |
+| 4   | `feat(L2): add .env.test and E2E server lifecycle in run-e2e.ts` | L2        |
+| 5   | `refactor(L2): rewrite e2e/api/helpers.ts for real HTTP`         | L2        |
+| 6   | `refactor(L2): rewrite e2e/api health + db-init tests`           | L2        |
+| 7   | `refactor(L2): rewrite e2e/api projects + recipients tests`      | L2        |
+| 8   | `refactor(L2): rewrite e2e/api templates + logs-stats tests`     | L2        |
+| 9   | `refactor(L2): rewrite e2e/api webhook test`                     | L2        |
+| 10  | `feat(L3): add Playwright config`                                | L3        |
+| 11  | `feat(L3): add dashboard and navigation BDD specs`               | L3        |
+| 12  | `feat(L3): add project CRUD BDD spec`                            | L3        |
+| 13  | `feat(L3): add template CRUD BDD spec`                           | L3        |
+| 14  | `feat(L3): add logs viewer BDD specs`                            | L3        |
+| 15  | `chore: wire test:e2e:bdd to Playwright CLI`                     | L3        |
 
 ---
 
 ## Risk Assessment
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Test Worker deployment fails | L2 blocks | Run `scripts/deploy-test-worker.sh` locally first; verify via `verify-test-db.ts` |
-| Test Worker API key mismatch | L2 breaks | Separate `wrangler secret put API_KEY --env test`; `.env.test` uses matching key |
-| `E2E_SKIP_AUTH` leaking to production | Security | **Step 2 adds `NODE_ENV !== 'production'` guard** in `src/proxy.ts`; even if env var is set, bypass is dead in production |
-| Playwright flaky on CI | L3 unreliable | Use `retries: 2` in playwright.config, keep tests deterministic |
-| E2E test data polluting test DB | D1 | Add cleanup in test afterAll hooks; `_test_marker` guarantees we're on test DB |
-| Port conflict (7034 vs 17034/27034) | E2E breaks | Scripts use `next dev --port N` directly, never `bun run dev` |
-| `.next/dev/lock` stale lock | E2E server won't start | `run-e2e.ts` cleans `.next/dev/lock` before spawn (backy lesson) |
+| Risk                                  | Impact                 | Mitigation                                                                                                                |
+| ------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Test Worker deployment fails          | L2 blocks              | Run `scripts/deploy-test-worker.sh` locally first; verify via `verify-test-db.ts`                                         |
+| Test Worker API key mismatch          | L2 breaks              | Separate `wrangler secret put API_KEY --env test`; `.env.test` uses matching key                                          |
+| `E2E_SKIP_AUTH` leaking to production | Security               | **Step 2 adds `NODE_ENV !== 'production'` guard** in `src/proxy.ts`; even if env var is set, bypass is dead in production |
+| Playwright flaky on CI                | L3 unreliable          | Use `retries: 2` in playwright.config, keep tests deterministic                                                           |
+| E2E test data polluting test DB       | D1                     | Add cleanup in test afterAll hooks; `_test_marker` guarantees we're on test DB                                            |
+| Port conflict (7034 vs 17034/27034)   | E2E breaks             | Scripts use `next dev --port N` directly, never `bun run dev`                                                             |
+| `.next/dev/lock` stale lock           | E2E server won't start | `run-e2e.ts` cleans `.next/dev/lock` before spawn (backy lesson)                                                          |
 
 ### Gate Level Policy
 
 Both L2 and L3 are **hard gates** when test infrastructure is missing:
 
-| Gate | Missing test credentials | Missing `_test_marker` |
-|------|--------------------------|------------------------|
+| Gate                            | Missing test credentials                             | Missing `_test_marker`                           |
+| ------------------------------- | ---------------------------------------------------- | ------------------------------------------------ |
 | **L2** (pre-push, `run-e2e.ts`) | **Hard fail**: exit 1 (test Worker must be deployed) | **Hard fail**: refuse to run (production safety) |
-| **L3** (on-demand, Playwright) | **Hard fail**: `${VAR:?}` aborts shell | **Hard fail**: refuse to run |
+| **L3** (on-demand, Playwright)  | **Hard fail**: `${VAR:?}` aborts shell               | **Hard fail**: refuse to run                     |
 
 Rationale: Tier S requires all 6 dimensions green. Allowing L2 to silently skip would reintroduce the same class of loophole being removed from G2 in Step 1. If test infrastructure is not deployed, `git push` should fail — this ensures the team deploys the test Worker before claiming L2 compliance.
 

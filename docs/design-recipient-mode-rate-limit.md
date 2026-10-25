@@ -2,22 +2,24 @@
 
 ## 1. Requirements Summary
 
-| # | Requirement | Status |
-|---|---|---|
-| R1 | Project Settings UI: toggle between "Whitelist" (default) and "Any recipient" mode | Backend exists, UI missing |
-| R2 | "Any recipient" mode skips whitelist, accepts any valid email | Already implemented in webhook.ts |
-| R3 | Per-address rate limit: same (project, email) cannot send more than 1x per 5 min | New feature |
-| R4 | Daily/monthly quota applies to ALL recipients regardless of mode | Already implemented |
+| #   | Requirement                                                                        | Status                            |
+| --- | ---------------------------------------------------------------------------------- | --------------------------------- |
+| R1  | Project Settings UI: toggle between "Whitelist" (default) and "Any recipient" mode | Backend exists, UI missing        |
+| R2  | "Any recipient" mode skips whitelist, accepts any valid email                      | Already implemented in webhook.ts |
+| R3  | Per-address rate limit: same (project, email) cannot send more than 1x per 5 min   | New feature                       |
+| R4  | Daily/monthly quota applies to ALL recipients regardless of mode                   | Already implemented               |
 
 ## 2. Existing Infrastructure
 
 ### What Already Works
+
 - `allow_unknown_recipients` boolean on Project (DB column + API + type)
 - Webhook send flow has two modes based on this flag (webhook.ts L204–227)
 - API accepts `allow_unknown_recipients` in project create/update schemas
 - Daily/monthly quota via `checkQuota()` counting from `send_logs.sent_at`
 
 ### What's Missing
+
 - **Frontend toggle** in project detail page for `allow_unknown_recipients`
 - **Per-address rate limit** — no rate limiting by recipient email exists
 - **Lock table** for atomic rate-limit enforcement
@@ -66,22 +68,22 @@ This gives strict atomic enforcement. **Recommended approach.**
 **New function (`src/server/lib/email/rate-limit.ts`):**
 ```typescript
 export interface RateLimitCheck {
-  allowed: boolean;
-  retry_after_seconds?: number;
+	allowed: boolean;
+	retry_after_seconds?: number;
 }
 
 export async function acquireAddressLock(
-  db: D1Database,
-  projectId: string,
-  toEmail: string,
-  windowMinutes?: number,
-): Promise<RateLimitCheck>
+	db: D1Database,
+	projectId: string,
+	toEmail: string,
+	windowMinutes?: number,
+): Promise<RateLimitCheck>;
 
 export async function releaseAddressLock(
-  db: D1Database,
-  projectId: string,
-  toEmail: string,
-): Promise<void>
+	db: D1Database,
+	projectId: string,
+	toEmail: string,
+): Promise<void>;
 ```
 
 **Webhook integration (webhook.ts):**
@@ -101,8 +103,8 @@ In the **Recipients card** of project detail page (`src/client/routes/projects/$
 **Type change:**
 ```typescript
 interface Project {
-  // ... existing fields ...
-  allow_unknown_recipients: boolean; // ADD THIS
+	// ... existing fields ...
+	allow_unknown_recipients: boolean; // ADD THIS
 }
 ```
 
@@ -144,33 +146,34 @@ Expired locks accumulate over time. Options:
 
 ## 4. File Changes
 
-| File | Change |
-|---|---|
-| `src/server/lib/email/rate-limit.ts` | New: `acquireAddressLock()`, `releaseAddressLock()` |
-| `src/server/routes/webhook.ts` | Add rate-limit acquire between Step 5 and Step 6; release on failure |
-| `src/server/routes/db-init.ts` | Add `rate_limit_locks` table to SCHEMA_SQL |
-| `src/server/schema.sql` | Add `rate_limit_locks` table documentation |
-| `src/client/routes/projects/$id.tsx` | Add `allow_unknown_recipients` to Project type, add toggle UI |
-| `migrations/2026-05-02-rate-limit-locks.sql` | New migration |
-| `src/server/__tests__/rate-limit.test.ts` | New: lock acquire/release unit tests |
-| `src/server/__tests__/isolated/routes-webhook.test.ts` | Add rate-limit E2E cases |
-| `e2e/api/webhook.test.ts` | Add rate-limit integration cases |
+| File                                                   | Change                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `src/server/lib/email/rate-limit.ts`                   | New: `acquireAddressLock()`, `releaseAddressLock()`                  |
+| `src/server/routes/webhook.ts`                         | Add rate-limit acquire between Step 5 and Step 6; release on failure |
+| `src/server/routes/db-init.ts`                         | Add `rate_limit_locks` table to SCHEMA_SQL                           |
+| `src/server/schema.sql`                                | Add `rate_limit_locks` table documentation                           |
+| `src/client/routes/projects/$id.tsx`                   | Add `allow_unknown_recipients` to Project type, add toggle UI        |
+| `migrations/2026-05-02-rate-limit-locks.sql`           | New migration                                                        |
+| `src/server/__tests__/rate-limit.test.ts`              | New: lock acquire/release unit tests                                 |
+| `src/server/__tests__/isolated/routes-webhook.test.ts` | Add rate-limit E2E cases                                             |
+| `e2e/api/webhook.test.ts`                              | Add rate-limit integration cases                                     |
 
 ## 5. Decisions (Confirmed)
 
-| Decision | Choice |
-|---|---|
-| Rate limit scope | Per (project_id, to_email) |
-| Rate limit applies to | Both whitelist and any-recipient mode |
-| Response format | `Retry-After` header + JSON `retry_after_seconds` |
-| Failure handling | Release lock on provider failure, keep on success |
-| Concurrency model | Strict — acquire-before-send with atomic INSERT/UPDATE |
-| Frontend toggle | Independent save, not part of form dirty state |
+| Decision               | Choice                                                            |
+| ---------------------- | ----------------------------------------------------------------- |
+| Rate limit scope       | Per (project_id, to_email)                                        |
+| Rate limit applies to  | Both whitelist and any-recipient mode                             |
+| Response format        | `Retry-After` header + JSON `retry_after_seconds`                 |
+| Failure handling       | Release lock on provider failure, keep on success                 |
+| Concurrency model      | Strict — acquire-before-send with atomic INSERT/UPDATE            |
+| Frontend toggle        | Independent save, not part of form dirty state                    |
 | Whitelist preservation | Switching to "any recipient" preserves existing whitelist entries |
 
 ## 6. Test Plan
 
 ### Unit Tests (`rate-limit.test.ts`)
+
 - `acquireAddressLock()` — succeeds when no lock exists
 - `acquireAddressLock()` — succeeds when lock is expired
 - `acquireAddressLock()` — fails when lock is active → returns retry_after_seconds
@@ -179,12 +182,14 @@ Expired locks accumulate over time. Options:
 - Different projects, same email: independent locks
 
 ### Webhook Integration Tests
+
 - Send once → 200, send again immediately → 429 with rate_limit_address
 - Send fails → lock released → retry immediately succeeds
 - `to` as recipient ID → rate limit uses resolved `recipient.email`
 - Both whitelist mode and any-recipient mode enforce rate limit
 
 ### E2E Tests
+
 - Send to same address twice within 5min → second returns 429
 - Send to different addresses → both succeed
 - Same address in different projects → both succeed
