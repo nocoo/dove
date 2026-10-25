@@ -15,7 +15,7 @@ Dove currently supports only Resend as the email sending provider. This design i
 ### Non-Goals
 
 - Migration tooling (handled separately)
-- UI changes (deferred to implementation phase) — *delivered in C11–C14*
+- UI changes (deferred to implementation phase) — _delivered in C11–C14_
 
 ---
 
@@ -78,15 +78,15 @@ CREATE TABLE IF NOT EXISTS email_providers (
 **Resend:**
 ```json
 {
-  "api_key": "re_xxxx..."
+	"api_key": "re_xxxx..."
 }
 ```
 
 **Cloudflare:**
 ```json
 {
-  "worker_url": "https://dove-email.worker.example.com",
-  "api_key": "secret-key-for-worker-auth"
+	"worker_url": "https://dove-email.worker.example.com",
+	"api_key": "secret-key-for-worker-auth"
 }
 ```
 
@@ -100,10 +100,10 @@ ALTER TABLE projects ADD COLUMN provider_id TEXT REFERENCES email_providers(id);
 
 **Behavior Rules:**
 
-| `provider_id` State | Behavior |
-|---------------------|----------|
-| Valid ID | Use the referenced provider |
-| `NULL` | **Fallback to legacy mode**: use `RESEND_API_KEY` and `RESEND_FROM_DOMAIN` env vars |
+| `provider_id` State | Behavior                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| Valid ID            | Use the referenced provider                                                         |
+| `NULL`              | **Fallback to legacy mode**: use `RESEND_API_KEY` and `RESEND_FROM_DOMAIN` env vars |
 
 > **Rationale:** The `NULL` fallback ensures backward compatibility during rollout. Existing projects continue working without migration. New projects created via API will default to `NULL` (legacy mode) unless explicitly assigned a provider.
 
@@ -156,58 +156,58 @@ send_logs
 // src/lib/email/provider.ts
 
 export interface SendParams {
-  from: string;           // Full "Name <email@domain>" format
-  to: string;             // Recipient email
-  subject: string;        // Rendered subject
-  html: string;           // Rendered HTML body
-  idempotencyKey: string; // REQUIRED: Provider must use for dedup
+	from: string; // Full "Name <email@domain>" format
+	to: string; // Recipient email
+	subject: string; // Rendered subject
+	html: string; // Rendered HTML body
+	idempotencyKey: string; // REQUIRED: Provider must use for dedup
 }
 
 export interface SendResult {
-  id: string;             // Provider-specific message ID
+	id: string; // Provider-specific message ID
 }
 
 export interface EmailProvider {
-  readonly type: "resend" | "cloudflare";
+	readonly type: "resend" | "cloudflare";
 
-  /**
-   * Send an email through this provider.
-   *
-   * IDEMPOTENCY CONTRACT (layered):
-   *
-   * Layer 1 (authoritative): The Next.js webhook route enforces idempotency via
-   * `send_logs` UNIQUE(project_id, idempotency_key). A caller-side retry with
-   * the same idempotency_key returns the cached send_log without invoking the
-   * provider again. This is the PRIMARY guarantee.
-   *
-   * Layer 2 (best-effort): Provider SHOULD use idempotencyKey to dedupe when
-   * possible. This catches edge cases where Next.js retries after an ambiguous
-   * network failure (Next.js marked send_log as "failed" but the provider
-   * actually succeeded). Because send_log.id is stable across retries, the
-   * provider receives the same idempotencyKey.
-   *
-   * Provider Layer 2 guarantees:
-   * - Resend: Uses Idempotency-Key header (provider-enforced, 24h window)
-   * - Cloudflare: Uses D1 UNIQUE constraint for atomic check-and-insert (see Worker design)
-   *
-   * NOTE: Layer 2 is best-effort with a finite dedup window. Beyond that window,
-   * Layer 1's UNIQUE constraint on send_logs remains the unconditional guarantee.
-   *
-   * Throws on failure (after retries).
-   */
-  send(params: SendParams): Promise<SendResult>;
+	/**
+	 * Send an email through this provider.
+	 *
+	 * IDEMPOTENCY CONTRACT (layered):
+	 *
+	 * Layer 1 (authoritative): The Next.js webhook route enforces idempotency via
+	 * `send_logs` UNIQUE(project_id, idempotency_key). A caller-side retry with
+	 * the same idempotency_key returns the cached send_log without invoking the
+	 * provider again. This is the PRIMARY guarantee.
+	 *
+	 * Layer 2 (best-effort): Provider SHOULD use idempotencyKey to dedupe when
+	 * possible. This catches edge cases where Next.js retries after an ambiguous
+	 * network failure (Next.js marked send_log as "failed" but the provider
+	 * actually succeeded). Because send_log.id is stable across retries, the
+	 * provider receives the same idempotencyKey.
+	 *
+	 * Provider Layer 2 guarantees:
+	 * - Resend: Uses Idempotency-Key header (provider-enforced, 24h window)
+	 * - Cloudflare: Uses D1 UNIQUE constraint for atomic check-and-insert (see Worker design)
+	 *
+	 * NOTE: Layer 2 is best-effort with a finite dedup window. Beyond that window,
+	 * Layer 1's UNIQUE constraint on send_logs remains the unconditional guarantee.
+	 *
+	 * Throws on failure (after retries).
+	 */
+	send(params: SendParams): Promise<SendResult>;
 
-  /**
-   * Check if provider supports dry-run mode.
-   * When enabled, provider validates params but does not send.
-   */
-  supportsDryRun(): boolean;
+	/**
+	 * Check if provider supports dry-run mode.
+	 * When enabled, provider validates params but does not send.
+	 */
+	supportsDryRun(): boolean;
 
-  /**
-   * Enable/disable dry-run mode.
-   * Used by tests to exercise full pipeline without actual sends.
-   */
-  setDryRun(enabled: boolean): void;
+	/**
+	 * Enable/disable dry-run mode.
+	 * Used by tests to exercise full pipeline without actual sends.
+	 */
+	setDryRun(enabled: boolean): void;
 }
 ```
 
@@ -217,18 +217,18 @@ export interface EmailProvider {
 // src/lib/email/provider.ts
 
 export type ProviderConfig =
-  | { type: "resend"; api_key: string }
-  | { type: "cloudflare"; worker_url: string; api_key: string };
+	| { type: "resend"; api_key: string }
+	| { type: "cloudflare"; worker_url: string; api_key: string };
 
 export function createProvider(config: ProviderConfig): EmailProvider {
-  switch (config.type) {
-    case "resend":
-      return new ResendProvider(config.api_key);
-    case "cloudflare":
-      return new CloudflareProvider(config.worker_url, config.api_key);
-    default:
-      throw new Error(`Unknown provider type: ${(config as never).type}`);
-  }
+	switch (config.type) {
+		case "resend":
+			return new ResendProvider(config.api_key);
+		case "cloudflare":
+			return new CloudflareProvider(config.worker_url, config.api_key);
+		default:
+			throw new Error(`Unknown provider type: ${(config as never).type}`);
+	}
 }
 
 /**
@@ -236,11 +236,11 @@ export function createProvider(config: ProviderConfig): EmailProvider {
  * Used when project.provider_id is NULL.
  */
 export function createLegacyProvider(): EmailProvider {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY not configured");
-  }
-  return new ResendProvider(apiKey);
+	const apiKey = process.env.RESEND_API_KEY;
+	if (!apiKey) {
+		throw new Error("RESEND_API_KEY not configured");
+	}
+	return new ResendProvider(apiKey);
 }
 
 /**
@@ -248,14 +248,14 @@ export function createLegacyProvider(): EmailProvider {
  * For legacy mode, returns RESEND_FROM_DOMAIN env var.
  */
 export function getProviderDomain(provider: EmailProviderRecord | null): string {
-  if (provider) {
-    return provider.domain;
-  }
-  const domain = process.env.RESEND_FROM_DOMAIN;
-  if (!domain) {
-    throw new Error("RESEND_FROM_DOMAIN not configured");
-  }
-  return domain;
+	if (provider) {
+		return provider.domain;
+	}
+	const domain = process.env.RESEND_FROM_DOMAIN;
+	if (!domain) {
+		throw new Error("RESEND_FROM_DOMAIN not configured");
+	}
+	return domain;
 }
 ```
 
@@ -271,29 +271,29 @@ Refactored from current `src/lib/email/resend.ts`:
 // src/lib/email/providers/resend.ts
 
 export class ResendProvider implements EmailProvider {
-  readonly type = "resend" as const;
-  private dryRun = false;
+	readonly type = "resend" as const;
+	private dryRun = false;
 
-  constructor(private apiKey: string) {}
+	constructor(private apiKey: string) {}
 
-  supportsDryRun(): boolean {
-    return true;
-  }
+	supportsDryRun(): boolean {
+		return true;
+	}
 
-  setDryRun(enabled: boolean): void {
-    this.dryRun = enabled;
-  }
+	setDryRun(enabled: boolean): void {
+		this.dryRun = enabled;
+	}
 
-  async send(params: SendParams): Promise<SendResult> {
-    // Dry-run mode: validate params but skip Resend API call
-    if (this.dryRun || process.env.RESEND_DRY_RUN === "true") {
-      return { id: `dry_run_${crypto.randomUUID()}` };
-    }
+	async send(params: SendParams): Promise<SendResult> {
+		// Dry-run mode: validate params but skip Resend API call
+		if (this.dryRun || process.env.RESEND_DRY_RUN === "true") {
+			return { id: `dry_run_${crypto.randomUUID()}` };
+		}
 
-    // Existing retry logic, using this.apiKey instead of env var
-    // Resend's Idempotency-Key header provides Layer 2 dedup
-    // ... (same implementation as current sendEmail)
-  }
+		// Existing retry logic, using this.apiKey instead of env var
+		// Resend's Idempotency-Key header provides Layer 2 dedup
+		// ... (same implementation as current sendEmail)
+	}
 }
 ```
 
@@ -308,115 +308,115 @@ const CF_MAX_RETRIES = 3;
 const CF_RETRY_BASE_MS = 500;
 
 export class CloudflareProvider implements EmailProvider {
-  readonly type = "cloudflare" as const;
-  private dryRun = false;
+	readonly type = "cloudflare" as const;
+	private dryRun = false;
 
-  constructor(
-    private workerUrl: string,
-    private apiKey: string,
-  ) {}
+	constructor(
+		private workerUrl: string,
+		private apiKey: string,
+	) {}
 
-  supportsDryRun(): boolean {
-    return true;
-  }
+	supportsDryRun(): boolean {
+		return true;
+	}
 
-  setDryRun(enabled: boolean): void {
-    this.dryRun = enabled;
-  }
+	setDryRun(enabled: boolean): void {
+		this.dryRun = enabled;
+	}
 
-  async send(params: SendParams): Promise<SendResult> {
-    let lastError: Error | undefined;
+	async send(params: SendParams): Promise<SendResult> {
+		let lastError: Error | undefined;
 
-    for (let attempt = 0; attempt <= CF_MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        const delay = CF_RETRY_BASE_MS * 2 ** (attempt - 1);
-        await new Promise((r) => setTimeout(r, delay));
-      }
+		for (let attempt = 0; attempt <= CF_MAX_RETRIES; attempt++) {
+			if (attempt > 0) {
+				const delay = CF_RETRY_BASE_MS * 2 ** (attempt - 1);
+				await new Promise((r) => setTimeout(r, delay));
+			}
 
-      let response: Response;
-      try {
-        response = await fetch(`${this.workerUrl}/send`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-API-Key": this.apiKey,
-            "X-Idempotency-Key": params.idempotencyKey,  // Worker uses this for D1 dedup
-            ...(this.dryRun ? { "X-Dry-Run": "true" } : {}),
-          },
-          body: JSON.stringify({
-            from_name: extractName(params.from),
-            from_address: extractAddress(params.from),
-            to: params.to,
-            subject: params.subject,
-            html: params.html,
-          }),
-        });
-      } catch (err) {
-        // Network error — retryable
-        if (attempt < CF_MAX_RETRIES) {
-          lastError = err instanceof Error ? err : new Error("CF Worker network error");
-          continue;
-        }
-        throw err;
-      }
+			let response: Response;
+			try {
+				response = await fetch(`${this.workerUrl}/send`, {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-API-Key": this.apiKey,
+						"X-Idempotency-Key": params.idempotencyKey, // Worker uses this for D1 dedup
+						...(this.dryRun ? { "X-Dry-Run": "true" } : {}),
+					},
+					body: JSON.stringify({
+						from_name: extractName(params.from),
+						from_address: extractAddress(params.from),
+						to: params.to,
+						subject: params.subject,
+						html: params.html,
+					}),
+				});
+			} catch (err) {
+				// Network error — retryable
+				if (attempt < CF_MAX_RETRIES) {
+					lastError = err instanceof Error ? err : new Error("CF Worker network error");
+					continue;
+				}
+				throw err;
+			}
 
-      const data = await response.json() as {
-        status?: "sent" | "in_progress";
-        id?: string;
-        error?: string;
-      };
+			const data = (await response.json()) as {
+				status?: "sent" | "in_progress";
+				id?: string;
+				error?: string;
+			};
 
-      // 200 OK — newly sent
-      if (response.ok) {
-        if (!data.id) {
-          throw new Error("CF Worker returned 200 without id");
-        }
-        return { id: data.id };
-      }
+			// 200 OK — newly sent
+			if (response.ok) {
+				if (!data.id) {
+					throw new Error("CF Worker returned 200 without id");
+				}
+				return { id: data.id };
+			}
 
-      // 409 — Worker distinguishes between two cases via `status` field:
-      //   status="sent"        → cached success, return the id
-      //   status="in_progress" → concurrent send; wait and retry
-      if (response.status === 409) {
-        if (data.status === "sent" && data.id) {
-          return { id: data.id };
-        }
-        if (data.status === "in_progress") {
-          if (attempt < CF_MAX_RETRIES) {
-            lastError = new Error("CF Worker concurrent request");
-            await new Promise((r) => setTimeout(r, 1000));
-            continue;
-          }
-          throw new Error("CF Worker concurrent request did not resolve");
-        }
-        throw new Error(`CF Worker returned 409 without valid status: ${data.error ?? "unknown"}`);
-      }
+			// 409 — Worker distinguishes between two cases via `status` field:
+			//   status="sent"        → cached success, return the id
+			//   status="in_progress" → concurrent send; wait and retry
+			if (response.status === 409) {
+				if (data.status === "sent" && data.id) {
+					return { id: data.id };
+				}
+				if (data.status === "in_progress") {
+					if (attempt < CF_MAX_RETRIES) {
+						lastError = new Error("CF Worker concurrent request");
+						await new Promise((r) => setTimeout(r, 1000));
+						continue;
+					}
+					throw new Error("CF Worker concurrent request did not resolve");
+				}
+				throw new Error(`CF Worker returned 409 without valid status: ${data.error ?? "unknown"}`);
+			}
 
-      // 5xx — retryable
-      if (response.status >= 500) {
-        if (attempt < CF_MAX_RETRIES) {
-          lastError = new Error(`CF Worker error: ${response.status}`);
-          continue;
-        }
-        throw new Error(`CF Worker error: ${response.status} ${data.error ?? ""}`);
-      }
+			// 5xx — retryable
+			if (response.status >= 500) {
+				if (attempt < CF_MAX_RETRIES) {
+					lastError = new Error(`CF Worker error: ${response.status}`);
+					continue;
+				}
+				throw new Error(`CF Worker error: ${response.status} ${data.error ?? ""}`);
+			}
 
-      // 4xx — not retryable
-      throw new Error(`CF Worker error: ${response.status} ${data.error ?? ""}`);
-    }
+			// 4xx — not retryable
+			throw new Error(`CF Worker error: ${response.status} ${data.error ?? ""}`);
+		}
 
-    throw lastError ?? new Error("CF Worker failed after all retries");
-  }
+		throw lastError ?? new Error("CF Worker failed after all retries");
+	}
 }
 
 function extractName(from: string): string {
-  const match = from.match(/^(.+?)\s*<.+>$/);
-  return match ? match[1].trim() : "";
+	const match = from.match(/^(.+?)\s*<.+>$/);
+	return match ? match[1].trim() : "";
 }
 
 function extractAddress(from: string): string {
-  const match = from.match(/<(.+)>/);
-  return match ? match[1] : from;
+	const match = from.match(/<(.+)>/);
+	return match ? match[1] : from;
 }
 ```
 
@@ -590,196 +590,181 @@ import { EmailMessage } from "cloudflare:email";
 import { createMimeMessage } from "mimetext";
 
 interface Env {
-  EMAIL: SendEmail;               // CF Email binding
-  IDEMPOTENCY_DB: D1Database;     // D1 for dedup
-  API_KEY: string;                // Shared secret
+	EMAIL: SendEmail; // CF Email binding
+	IDEMPOTENCY_DB: D1Database; // D1 for dedup
+	API_KEY: string; // Shared secret
 }
 
 interface SendRequest {
-  from_name: string;
-  from_address: string;
-  to: string;
-  subject: string;
-  html: string;
+	from_name: string;
+	from_address: string;
+	to: string;
+	subject: string;
+	html: string;
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+	async fetch(request: Request, env: Env): Promise<Response> {
+		const url = new URL(request.url);
 
-    // Health check
-    if (request.method === "GET" && url.pathname === "/health") {
-      return Response.json({ ok: true });
-    }
+		// Health check
+		if (request.method === "GET" && url.pathname === "/health") {
+			return Response.json({ ok: true });
+		}
 
-    // Send email endpoint
-    if (request.method === "POST" && url.pathname === "/send") {
-      return handleSend(request, env);
-    }
+		// Send email endpoint
+		if (request.method === "POST" && url.pathname === "/send") {
+			return handleSend(request, env);
+		}
 
-    // Bootstrap the cf_email_idempotency table. See "Bootstrapping this table".
-    if (request.method === "POST" && url.pathname === "/init") {
-      return handleInit(request, env);
-    }
+		// Bootstrap the cf_email_idempotency table. See "Bootstrapping this table".
+		if (request.method === "POST" && url.pathname === "/init") {
+			return handleInit(request, env);
+		}
 
-    return Response.json({ error: "Not found" }, { status: 404 });
-  },
+		return Response.json({ error: "Not found" }, { status: 404 });
+	},
 } satisfies ExportedHandler<Env>;
 
 async function handleSend(request: Request, env: Env): Promise<Response> {
-  // Auth
-  const apiKey = request.headers.get("X-API-Key");
-  if (!apiKey || apiKey !== env.API_KEY) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+	// Auth
+	const apiKey = request.headers.get("X-API-Key");
+	if (!apiKey || apiKey !== env.API_KEY) {
+		return Response.json({ error: "Unauthorized" }, { status: 401 });
+	}
 
-  // Idempotency key (required)
-  const idempotencyKey = request.headers.get("X-Idempotency-Key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "Missing X-Idempotency-Key header" },
-      { status: 400 }
-    );
-  }
+	// Idempotency key (required)
+	const idempotencyKey = request.headers.get("X-Idempotency-Key");
+	if (!idempotencyKey) {
+		return Response.json({ error: "Missing X-Idempotency-Key header" }, { status: 400 });
+	}
 
-  // Dry-run mode
-  const dryRun = request.headers.get("X-Dry-Run") === "true";
+	// Dry-run mode
+	const dryRun = request.headers.get("X-Dry-Run") === "true";
 
-  // Parse body
-  let body: SendRequest;
-  try {
-    body = await request.json() as SendRequest;
-  } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+	// Parse body
+	let body: SendRequest;
+	try {
+		body = (await request.json()) as SendRequest;
+	} catch {
+		return Response.json({ error: "Invalid JSON" }, { status: 400 });
+	}
 
-  // Validate required fields
-  if (!body.from_address || !body.to || !body.subject || !body.html) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 });
-  }
+	// Validate required fields
+	if (!body.from_address || !body.to || !body.subject || !body.html) {
+		return Response.json({ error: "Missing required fields" }, { status: 400 });
+	}
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // ATOMIC IDEMPOTENCY CHECK-AND-INSERT (single D1 statement)
-  //
-  // INSERT OR IGNORE succeeds only if the key doesn't exist.
-  // meta.changes === 1 → we claimed the key, proceed to send
-  // meta.changes === 0 → someone else claimed it, read the existing record
-  // ─────────────────────────────────────────────────────────────────────────
-  const messageId = `cf_${crypto.randomUUID()}`;
-  const now = new Date().toISOString();
+	// ─────────────────────────────────────────────────────────────────────────
+	// ATOMIC IDEMPOTENCY CHECK-AND-INSERT (single D1 statement)
+	//
+	// INSERT OR IGNORE succeeds only if the key doesn't exist.
+	// meta.changes === 1 → we claimed the key, proceed to send
+	// meta.changes === 0 → someone else claimed it, read the existing record
+	// ─────────────────────────────────────────────────────────────────────────
+	const messageId = `cf_${crypto.randomUUID()}`;
+	const now = new Date().toISOString();
 
-  const insertResult = await env.IDEMPOTENCY_DB
-    .prepare(
-      `INSERT OR IGNORE INTO cf_email_idempotency
+	const insertResult = await env.IDEMPOTENCY_DB.prepare(
+		`INSERT OR IGNORE INTO cf_email_idempotency
          (key, message_id, status, created_at, updated_at)
-       VALUES (?, ?, 'sending', ?, ?)`
-    )
-    .bind(idempotencyKey, messageId, now, now)
-    .run();
+       VALUES (?, ?, 'sending', ?, ?)`,
+	)
+		.bind(idempotencyKey, messageId, now, now)
+		.run();
 
-  // We did NOT claim the key — someone already has a record
-  if ((insertResult.meta.changes ?? 0) === 0) {
-    const existing = await env.IDEMPOTENCY_DB
-      .prepare(
-        `SELECT message_id, status FROM cf_email_idempotency WHERE key = ?`
-      )
-      .bind(idempotencyKey)
-      .first<{ message_id: string; status: string }>();
+	// We did NOT claim the key — someone already has a record
+	if ((insertResult.meta.changes ?? 0) === 0) {
+		const existing = await env.IDEMPOTENCY_DB.prepare(
+			`SELECT message_id, status FROM cf_email_idempotency WHERE key = ?`,
+		)
+			.bind(idempotencyKey)
+			.first<{ message_id: string; status: string }>();
 
-    if (!existing) {
-      // Extremely rare: row was deleted between INSERT and SELECT
-      return Response.json({ error: "idempotency_state_unknown" }, { status: 500 });
-    }
+		if (!existing) {
+			// Extremely rare: row was deleted between INSERT and SELECT
+			return Response.json({ error: "idempotency_state_unknown" }, { status: 500 });
+		}
 
-    if (existing.status === "sent") {
-      // Cached success — return the id with an explicit discriminator
-      return Response.json(
-        { status: "sent", id: existing.message_id },
-        { status: 409 }
-      );
-    }
+		if (existing.status === "sent") {
+			// Cached success — return the id with an explicit discriminator
+			return Response.json({ status: "sent", id: existing.message_id }, { status: 409 });
+		}
 
-    if (existing.status === "sending") {
-      // Concurrent in-flight request
-      return Response.json(
-        { status: "in_progress", error: "Request already in progress" },
-        { status: 409 }
-      );
-    }
+		if (existing.status === "sending") {
+			// Concurrent in-flight request
+			return Response.json(
+				{ status: "in_progress", error: "Request already in progress" },
+				{ status: 409 },
+			);
+		}
 
-    // status === "failed" → reclaim for retry (update this row to 'sending')
-    const claim = await env.IDEMPOTENCY_DB
-      .prepare(
-        `UPDATE cf_email_idempotency
+		// status === "failed" → reclaim for retry (update this row to 'sending')
+		const claim = await env.IDEMPOTENCY_DB.prepare(
+			`UPDATE cf_email_idempotency
            SET message_id = ?, status = 'sending', error = NULL, updated_at = ?
-         WHERE key = ? AND status = 'failed'`
-      )
-      .bind(messageId, now, idempotencyKey)
-      .run();
+         WHERE key = ? AND status = 'failed'`,
+		)
+			.bind(messageId, now, idempotencyKey)
+			.run();
 
-    if ((claim.meta.changes ?? 0) === 0) {
-      // Another retry already grabbed it — treat as in_progress
-      return Response.json(
-        { status: "in_progress", error: "Retry contention" },
-        { status: 409 }
-      );
-    }
-    // fall through to send with our new messageId
-  }
+		if ((claim.meta.changes ?? 0) === 0) {
+			// Another retry already grabbed it — treat as in_progress
+			return Response.json({ status: "in_progress", error: "Retry contention" }, { status: 409 });
+		}
+		// fall through to send with our new messageId
+	}
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // DRY-RUN MODE — skip env.EMAIL.send() but still mark row as "sent"
-  // ─────────────────────────────────────────────────────────────────────────
-  if (dryRun) {
-    const dryRunId = `dry_run_${messageId}`;
-    await env.IDEMPOTENCY_DB
-      .prepare(
-        `UPDATE cf_email_idempotency
+	// ─────────────────────────────────────────────────────────────────────────
+	// DRY-RUN MODE — skip env.EMAIL.send() but still mark row as "sent"
+	// ─────────────────────────────────────────────────────────────────────────
+	if (dryRun) {
+		const dryRunId = `dry_run_${messageId}`;
+		await env.IDEMPOTENCY_DB.prepare(
+			`UPDATE cf_email_idempotency
            SET message_id = ?, status = 'sent', updated_at = ?
-         WHERE key = ?`
-      )
-      .bind(dryRunId, new Date().toISOString(), idempotencyKey)
-      .run();
-    return Response.json({ status: "sent", id: dryRunId });
-  }
+         WHERE key = ?`,
+		)
+			.bind(dryRunId, new Date().toISOString(), idempotencyKey)
+			.run();
+		return Response.json({ status: "sent", id: dryRunId });
+	}
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // SEND EMAIL
-  // ─────────────────────────────────────────────────────────────────────────
-  try {
-    const msg = createMimeMessage();
-    msg.setSender({ name: body.from_name || "", addr: body.from_address });
-    msg.setRecipient(body.to);
-    msg.setSubject(body.subject);
-    msg.addMessage({ contentType: "text/html", data: body.html });
+	// ─────────────────────────────────────────────────────────────────────────
+	// SEND EMAIL
+	// ─────────────────────────────────────────────────────────────────────────
+	try {
+		const msg = createMimeMessage();
+		msg.setSender({ name: body.from_name || "", addr: body.from_address });
+		msg.setRecipient(body.to);
+		msg.setSubject(body.subject);
+		msg.addMessage({ contentType: "text/html", data: body.html });
 
-    const message = new EmailMessage(body.from_address, body.to, msg.asRaw());
-    await env.EMAIL.send(message);
+		const message = new EmailMessage(body.from_address, body.to, msg.asRaw());
+		await env.EMAIL.send(message);
 
-    await env.IDEMPOTENCY_DB
-      .prepare(
-        `UPDATE cf_email_idempotency
+		await env.IDEMPOTENCY_DB.prepare(
+			`UPDATE cf_email_idempotency
            SET status = 'sent', updated_at = ?
-         WHERE key = ?`
-      )
-      .bind(new Date().toISOString(), idempotencyKey)
-      .run();
+         WHERE key = ?`,
+		)
+			.bind(new Date().toISOString(), idempotencyKey)
+			.run();
 
-    return Response.json({ status: "sent", id: messageId });
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
+		return Response.json({ status: "sent", id: messageId });
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : "Unknown error";
 
-    await env.IDEMPOTENCY_DB
-      .prepare(
-        `UPDATE cf_email_idempotency
+		await env.IDEMPOTENCY_DB.prepare(
+			`UPDATE cf_email_idempotency
            SET status = 'failed', error = ?, updated_at = ?
-         WHERE key = ?`
-      )
-      .bind(errorMessage, new Date().toISOString(), idempotencyKey)
-      .run();
+         WHERE key = ?`,
+		)
+			.bind(errorMessage, new Date().toISOString(), idempotencyKey)
+			.run();
 
-    return Response.json({ error: errorMessage }, { status: 500 });
-  }
+		return Response.json({ error: errorMessage }, { status: 500 });
+	}
 }
 ```
 
@@ -821,14 +806,14 @@ Client Request (X-Idempotency-Key: "abc123")
 
 Every response from `POST /send` has a consistent shape so the provider can distinguish cases:
 
-| HTTP | Body | Meaning |
-|------|------|---------|
-| 200 | `{ status: "sent", id }` | Newly sent — use `id` |
-| 409 | `{ status: "sent", id }` | Already sent previously (cached) — use `id` |
-| 409 | `{ status: "in_progress", error }` | Concurrent send; caller should retry/wait |
-| 400 | `{ error }` | Bad request (missing header, invalid body) |
-| 401 | `{ error }` | Bad API key |
-| 500 | `{ error }` | Send failed or internal error |
+| HTTP | Body                               | Meaning                                     |
+| ---- | ---------------------------------- | ------------------------------------------- |
+| 200  | `{ status: "sent", id }`           | Newly sent — use `id`                       |
+| 409  | `{ status: "sent", id }`           | Already sent previously (cached) — use `id` |
+| 409  | `{ status: "in_progress", error }` | Concurrent send; caller should retry/wait   |
+| 400  | `{ error }`                        | Bad request (missing header, invalid body)  |
+| 401  | `{ error }`                        | Bad API key                                 |
+| 500  | `{ error }`                        | Send failed or internal error               |
 
 ### Optional Cleanup (scheduled)
 
@@ -936,31 +921,31 @@ The `sanitizeProject()` function must be updated to include `provider_id`:
 // src/lib/sanitize.ts
 
 export interface SanitizedProject {
-  id: string;
-  name: string;
-  description: string | null;
-  email_prefix: string;
-  from_name: string;
-  quota_daily: number;
-  quota_monthly: number;
-  provider_id: string | null;  // NEW
-  created_at: string;
-  updated_at: string;
+	id: string;
+	name: string;
+	description: string | null;
+	email_prefix: string;
+	from_name: string;
+	quota_daily: number;
+	quota_monthly: number;
+	provider_id: string | null; // NEW
+	created_at: string;
+	updated_at: string;
 }
 
 export function sanitizeProject(project: Project): SanitizedProject {
-  return {
-    id: project.id,
-    name: project.name,
-    description: project.description,
-    email_prefix: project.email_prefix,
-    from_name: project.from_name,
-    quota_daily: project.quota_daily,
-    quota_monthly: project.quota_monthly,
-    provider_id: project.provider_id,  // NEW
-    created_at: project.created_at,
-    updated_at: project.updated_at,
-  };
+	return {
+		id: project.id,
+		name: project.name,
+		description: project.description,
+		email_prefix: project.email_prefix,
+		from_name: project.from_name,
+		quota_daily: project.quota_daily,
+		quota_monthly: project.quota_monthly,
+		provider_id: project.provider_id, // NEW
+		created_at: project.created_at,
+		updated_at: project.updated_at,
+	};
 }
 ```
 
@@ -970,26 +955,26 @@ export function sanitizeProject(project: Project): SanitizedProject {
 // src/lib/sanitize.ts
 
 export function sanitizeProvider(provider: EmailProviderRecord): SanitizedProvider {
-  const config = JSON.parse(provider.config);
+	const config = JSON.parse(provider.config);
 
-  // Mask sensitive fields
-  const maskedConfig: Record<string, string> = {};
-  if (config.api_key) {
-    maskedConfig.api_key = "••••••" + config.api_key.slice(-4);
-  }
-  if (config.worker_url) {
-    maskedConfig.worker_url = config.worker_url;  // URLs are not sensitive
-  }
+	// Mask sensitive fields
+	const maskedConfig: Record<string, string> = {};
+	if (config.api_key) {
+		maskedConfig.api_key = "••••••" + config.api_key.slice(-4);
+	}
+	if (config.worker_url) {
+		maskedConfig.worker_url = config.worker_url; // URLs are not sensitive
+	}
 
-  return {
-    id: provider.id,
-    name: provider.name,
-    type: provider.type,
-    domain: provider.domain,
-    config: maskedConfig,
-    created_at: provider.created_at,
-    updated_at: provider.updated_at,
-  };
+	return {
+		id: provider.id,
+		name: provider.name,
+		type: provider.type,
+		domain: provider.domain,
+		config: maskedConfig,
+		created_at: provider.created_at,
+		updated_at: provider.updated_at,
+	};
 }
 ```
 
@@ -1027,17 +1012,17 @@ export async function countProjectsByProvider(providerId: string): Promise<numbe
 
 ```typescript
 export interface Project {
-  id: string;
-  name: string;
-  description: string | null;
-  email_prefix: string;
-  from_name: string;
-  webhook_token: string;
-  quota_daily: number;
-  quota_monthly: number;
-  provider_id: string | null;  // NEW
-  created_at: string;
-  updated_at: string;
+	id: string;
+	name: string;
+	description: string | null;
+	email_prefix: string;
+	from_name: string;
+	webhook_token: string;
+	quota_daily: number;
+	quota_monthly: number;
+	provider_id: string | null; // NEW
+	created_at: string;
+	updated_at: string;
 }
 
 // createProject() accepts optional provider_id
@@ -1050,11 +1035,11 @@ export interface Project {
 export type ProviderType = "resend" | "cloudflare" | "legacy";
 
 export interface SendLog {
-  // ... existing fields ...
-  resend_id: string | null;           // UNCHANGED: retained for Resend backward compat
-  provider_id: string | null;         // NEW: references email_providers.id (NULL for legacy)
-  provider_type: ProviderType | null; // NEW: "resend" | "cloudflare" | "legacy"
-  provider_message_id: string | null; // NEW: provider-agnostic successor to resend_id
+	// ... existing fields ...
+	resend_id: string | null; // UNCHANGED: retained for Resend backward compat
+	provider_id: string | null; // NEW: references email_providers.id (NULL for legacy)
+	provider_type: ProviderType | null; // NEW: "resend" | "cloudflare" | "legacy"
+	provider_message_id: string | null; // NEW: provider-agnostic successor to resend_id
 }
 
 /**
@@ -1068,11 +1053,11 @@ export interface SendLog {
  * providerType ∈ {"resend","legacy"} to keep legacy SQL consumers working.
  */
 export async function markSendLogSent(
-  id: string,
-  data: {
-    providerMessageId: string;
-    providerType: ProviderType;
-  },
+	id: string,
+	data: {
+		providerMessageId: string;
+		providerType: ProviderType;
+	},
 ): Promise<void>;
 
 /**
@@ -1080,8 +1065,8 @@ export async function markSendLogSent(
  * so the row is already annotated even if the send fails.
  */
 export async function updateSendLogProvider(
-  id: string,
-  data: { provider_id: string | null; provider_type: ProviderType }
+	id: string,
+	data: { provider_id: string | null; provider_type: ProviderType },
 ): Promise<void>;
 ```
 
@@ -1089,29 +1074,29 @@ export async function updateSendLogProvider(
 
 ```typescript
 export async function markSendLogSent(
-  id: string,
-  data: { providerMessageId: string; providerType: ProviderType },
+	id: string,
+	data: { providerMessageId: string; providerType: ProviderType },
 ): Promise<void> {
-  const now = new Date().toISOString();
-  const writeResendId = data.providerType !== "cloudflare";
+	const now = new Date().toISOString();
+	const writeResendId = data.providerType !== "cloudflare";
 
-  await executeD1Query(
-    writeResendId
-      ? `UPDATE send_logs
+	await executeD1Query(
+		writeResendId
+			? `UPDATE send_logs
            SET status = 'sent',
                resend_id = ?,
                provider_message_id = ?,
                sent_at = ?
          WHERE id = ?`
-      : `UPDATE send_logs
+			: `UPDATE send_logs
            SET status = 'sent',
                provider_message_id = ?,
                sent_at = ?
          WHERE id = ?`,
-    writeResendId
-      ? [data.providerMessageId, data.providerMessageId, now, id]
-      : [data.providerMessageId, now, id],
-  );
+		writeResendId
+			? [data.providerMessageId, data.providerMessageId, now, id]
+			: [data.providerMessageId, now, id],
+	);
 }
 ```
 
@@ -1128,12 +1113,12 @@ const messageId = log.provider_message_id ?? log.resend_id ?? null;
 
 ### Provider Management
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/providers` | List all providers |
-| POST | `/api/providers` | Create provider |
-| GET | `/api/providers/[id]` | Get provider details |
-| PUT | `/api/providers/[id]` | Update provider |
+| Method | Path                  | Description                         |
+| ------ | --------------------- | ----------------------------------- |
+| GET    | `/api/providers`      | List all providers                  |
+| POST   | `/api/providers`      | Create provider                     |
+| GET    | `/api/providers/[id]` | Get provider details                |
+| PUT    | `/api/providers/[id]` | Update provider                     |
 | DELETE | `/api/providers/[id]` | Delete provider (blocked if in use) |
 
 ### Project Provider Assignment
@@ -1150,21 +1135,21 @@ const messageId = log.provider_message_id ?? log.resend_id ?? null;
 ```typescript
 // DELETE /api/providers/[id]
 async function deleteProvider(id: string): Promise<Response> {
-  const count = await countProjectsByProvider(id);
-  if (count > 0) {
-    return Response.json(
-      {
-        error: {
-          code: "provider_in_use",
-          message: `Cannot delete: ${count} project(s) still use this provider`,
-        },
-      },
-      { status: 409 }
-    );
-  }
+	const count = await countProjectsByProvider(id);
+	if (count > 0) {
+		return Response.json(
+			{
+				error: {
+					code: "provider_in_use",
+					message: `Cannot delete: ${count} project(s) still use this provider`,
+				},
+			},
+			{ status: 409 },
+		);
+	}
 
-  await deleteEmailProvider(id);
-  return Response.json({ success: true });
+	await deleteEmailProvider(id);
+	return Response.json({ success: true });
 }
 ```
 
@@ -1174,11 +1159,11 @@ async function deleteProvider(id: string): Promise<Response> {
 
 The current public contract is Resend-specific in three places:
 
-| Location | Current shape | Problem for CF sends |
-|----------|---------------|----------------------|
+| Location                                      | Current shape               | Problem for CF sends              |
+| --------------------------------------------- | --------------------------- | --------------------------------- |
 | `POST /api/webhook/[projectId]/send` response | `{ id, resend_id, status }` | `resend_id` is meaningless for CF |
-| `SendLog` row returned by admin APIs | `{ ..., resend_id }` | Same |
-| Send-log UI detail panel | Shows label "Resend ID" | Misleading for CF sends |
+| `SendLog` row returned by admin APIs          | `{ ..., resend_id }`        | Same                              |
+| Send-log UI detail panel                      | Shows label "Resend ID"     | Misleading for CF sends           |
 
 ### Decision: Dual-field transition
 
@@ -1210,11 +1195,11 @@ Admin API responses expose both fields on every row. Frontend code reads `provid
 
 Replace the single "Resend ID" label with a provider-aware display:
 
-| Row `provider_type` | UI label | Value shown |
-|---------------------|----------|-------------|
-| `"resend"` or `"legacy"` | "Resend ID" | `provider_message_id` (falls back to `resend_id`) |
-| `"cloudflare"` | "Cloudflare Message ID" | `provider_message_id` |
-| missing (pre-migration row) | "Provider Message ID" | `resend_id` |
+| Row `provider_type`         | UI label                | Value shown                                       |
+| --------------------------- | ----------------------- | ------------------------------------------------- |
+| `"resend"` or `"legacy"`    | "Resend ID"             | `provider_message_id` (falls back to `resend_id`) |
+| `"cloudflare"`              | "Cloudflare Message ID" | `provider_message_id`                             |
+| missing (pre-migration row) | "Provider Message ID"   | `resend_id`                                       |
 
 This is a UI-only change in `src/app/send-logs/page.tsx` around the currently-hardcoded "Resend ID" block.
 
@@ -1231,8 +1216,6 @@ This is a UI-only change in `src/app/send-logs/page.tsx` around the currently-ha
 Neither is in scope for this design.
 
 ---
-
-
 
 ```
 src/lib/
@@ -1298,16 +1281,10 @@ Solution: a small helper that reads `PRAGMA table_info(...)` and only issues the
  * Idempotent ADD COLUMN — checks table_info before altering.
  * Safe to call repeatedly; no-op if column exists.
  */
-async function ensureColumn(
-  table: string,
-  column: string,
-  definition: string,
-): Promise<void> {
-  const rows = await executeD1Query<{ name: string }>(
-    `PRAGMA table_info(${table})`,
-  );
-  if (rows.some((r) => r.name === column)) return;
-  await executeD1Query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+async function ensureColumn(table: string, column: string, definition: string): Promise<void> {
+	const rows = await executeD1Query<{ name: string }>(`PRAGMA table_info(${table})`);
+	if (rows.some((r) => r.name === column)) return;
+	await executeD1Query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 ```
 
@@ -1315,31 +1292,29 @@ Then extend `initializeSchema()`:
 
 ```typescript
 export async function initializeSchema(): Promise<void> {
-  // 1. Run all CREATE TABLE / CREATE INDEX statements (existing behavior)
-  const statements = SCHEMA_SQL.split(";")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const sql of statements) {
-    await executeD1Query(sql);
-  }
+	// 1. Run all CREATE TABLE / CREATE INDEX statements (existing behavior)
+	const statements = SCHEMA_SQL.split(";")
+		.map((s) => s.trim())
+		.filter(Boolean);
+	for (const sql of statements) {
+		await executeD1Query(sql);
+	}
 
-  await executeD1Query(PARTIAL_INDEX_SQL);
+	await executeD1Query(PARTIAL_INDEX_SQL);
 
-  // 2. Idempotent column additions for tables that existed before this feature
-  await ensureColumn("projects", "provider_id", "TEXT REFERENCES email_providers(id)");
-  await ensureColumn("send_logs", "provider_id", "TEXT");
-  await ensureColumn("send_logs", "provider_type", "TEXT");
-  await ensureColumn("send_logs", "provider_message_id", "TEXT");
+	// 2. Idempotent column additions for tables that existed before this feature
+	await ensureColumn("projects", "provider_id", "TEXT REFERENCES email_providers(id)");
+	await ensureColumn("send_logs", "provider_id", "TEXT");
+	await ensureColumn("send_logs", "provider_type", "TEXT");
+	await ensureColumn("send_logs", "provider_message_id", "TEXT");
 
-  // 3. One-time backfill for rows predating the new columns
-  //    Safe to run repeatedly — only updates NULLs.
-  await executeD1Query(
-    `UPDATE send_logs SET provider_type = 'legacy' WHERE provider_type IS NULL`,
-  );
-  await executeD1Query(
-    `UPDATE send_logs SET provider_message_id = resend_id
+	// 3. One-time backfill for rows predating the new columns
+	//    Safe to run repeatedly — only updates NULLs.
+	await executeD1Query(`UPDATE send_logs SET provider_type = 'legacy' WHERE provider_type IS NULL`);
+	await executeD1Query(
+		`UPDATE send_logs SET provider_message_id = resend_id
        WHERE provider_message_id IS NULL AND resend_id IS NOT NULL`,
-  );
+	);
 }
 ```
 
@@ -1391,9 +1366,9 @@ Update `src/__tests__/schema.test.ts`:
 
 ```typescript
 test("creates all 6 tables", async () => {
-  // ...
-  expect(allSql).toContain("CREATE TABLE IF NOT EXISTS email_providers");
-  // ... existing 5 tables
+	// ...
+	expect(allSql).toContain("CREATE TABLE IF NOT EXISTS email_providers");
+	// ... existing 5 tables
 });
 ```
 
@@ -1444,23 +1419,23 @@ Webhook wiring (extends Step 10 shown earlier):
 // src/app/api/webhook/[projectId]/send/route.ts
 
 const provider = providerRecord
-  ? createProvider(parseConfig(providerRecord))
-  : createLegacyProvider();
+	? createProvider(parseConfig(providerRecord))
+	: createLegacyProvider();
 
 // Provider-agnostic dry-run toggle applied at the webhook layer,
 // so CF and Resend behave identically under test.
 if (process.env.EMAIL_DRY_RUN === "true") {
-  provider.setDryRun(true);
+	provider.setDryRun(true);
 }
 ```
 
 #### Provider behavior when `setDryRun(true)`
 
-| Provider | Dry-Run Mechanism |
-|----------|-------------------|
-| ResendProvider | Skips `fetch()` to Resend API, returns `{ id: "dry_run_<uuid>" }` |
-| CloudflareProvider | Sends `X-Dry-Run: true` header to CF Worker |
-| CF Email Worker | Honors `X-Dry-Run` header: skips `env.EMAIL.send()`, still writes the idempotency row to D1 so retry semantics stay observable |
+| Provider           | Dry-Run Mechanism                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| ResendProvider     | Skips `fetch()` to Resend API, returns `{ id: "dry_run_<uuid>" }`                                                              |
+| CloudflareProvider | Sends `X-Dry-Run: true` header to CF Worker                                                                                    |
+| CF Email Worker    | Honors `X-Dry-Run` header: skips `env.EMAIL.send()`, still writes the idempotency row to D1 so retry semantics stay observable |
 
 Legacy env var compatibility:
 
@@ -1540,19 +1515,19 @@ Frontend sees only masked keys: `"••••••xxxx"` (last 4 chars)
 
 Atomic commits tracking the rollout of this design.
 
-| # | Commit | Status |
-|---|--------|--------|
-| C1 | Schema — add email_providers + columns + ensureColumn helper | ✅ done |
-| C2 | DB layer — email-providers.ts + projects.ts + send-logs.ts | ✅ done |
-| C3 | Provider layer — interface + Resend + Cloudflare + factory | ✅ done |
-| C4 | Sanitize layer — provider_id + sanitizeProvider | ✅ done |
-| C5 | Webhook /send — provider dispatch, dry-run toggle, new response | ✅ done |
-| C6 | Provider CRUD API — /api/providers | ✅ done |
-| C7 | Project API — accept provider_id | ✅ done |
-| C8 | worker-email — dedicated CF Email Worker | ✅ done |
-| C9 | API — GET /api/providers/[id]/health (config + reachability probe) | ✅ done |
+| #   | Commit                                                             | Status  |
+| --- | ------------------------------------------------------------------ | ------- |
+| C1  | Schema — add email_providers + columns + ensureColumn helper       | ✅ done |
+| C2  | DB layer — email-providers.ts + projects.ts + send-logs.ts         | ✅ done |
+| C3  | Provider layer — interface + Resend + Cloudflare + factory         | ✅ done |
+| C4  | Sanitize layer — provider_id + sanitizeProvider                    | ✅ done |
+| C5  | Webhook /send — provider dispatch, dry-run toggle, new response    | ✅ done |
+| C6  | Provider CRUD API — /api/providers                                 | ✅ done |
+| C7  | Project API — accept provider_id                                   | ✅ done |
+| C8  | worker-email — dedicated CF Email Worker                           | ✅ done |
+| C9  | API — GET /api/providers/[id]/health (config + reachability probe) | ✅ done |
 | C10 | API — POST /api/providers/[id]/test-send (admin canned test email) | ✅ done |
-| C11 | UI — /providers list page with health badges + sidebar nav | ✅ done |
-| C12 | UI — /providers/new + /providers/[id] create/edit pages | ✅ done |
-| C13 | UI — provider selector on project detail + new project pages | ✅ done |
-| C14 | UI — admin test-send button on provider edit page | ✅ done |
+| C11 | UI — /providers list page with health badges + sidebar nav         | ✅ done |
+| C12 | UI — /providers/new + /providers/[id] create/edit pages            | ✅ done |
+| C13 | UI — provider selector on project detail + new project pages       | ✅ done |
+| C14 | UI — admin test-send button on provider edit page                  | ✅ done |

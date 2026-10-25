@@ -4,12 +4,12 @@
 
 Vite 将 `src/client/` 的 React 管理界面构建到 `dist/client`。Cloudflare Workers Static Assets 提供页面，`/api/*` 先进入 `src/server/index.ts` 的 Hono API。数据直接读写 D1；发送请求在 Worker 内调用邮件服务商。
 
-| 入口 | 端口 | 数据库 |
-| --- | --- | --- |
-| 默认 `bun dev` | 7034 | `dove-db`，配置了 `remote = true`，连接生产数据 |
-| 本文的 `--env test` 本地开发 | 7034 | 本地 `dove-db-test` |
-| `bun run test:e2e:api` | 17034 | 同一 checkout 的本地 `dove-db-test` |
-| `bun run test:e2e:bdd` | 27034 | 同一 checkout 的本地 `dove-db-test` |
+| 入口                         | 端口  | 数据库                                          |
+| ---------------------------- | ----- | ----------------------------------------------- |
+| 默认 `bun dev`               | 7034  | `dove-db`，配置了 `remote = true`，连接生产数据 |
+| 本文的 `--env test` 本地开发 | 7034  | 本地 `dove-db-test`                             |
+| `bun run test:e2e:api`       | 17034 | 同一 checkout 的本地 `dove-db-test`             |
+| `bun run test:e2e:bdd`       | 27034 | 同一 checkout 的本地 `dove-db-test`             |
 
 端口不同不代表本地 D1 分离。测试环境只存放可丢弃的演练记录，开发和测试按顺序使用。保持 `--env test`，不要添加 `--persist-to`，也不要通过默认环境执行初始化、迁移或清空操作。
 
@@ -54,11 +54,11 @@ curl --fail-with-body http://localhost:7034/api/live
 
 ## 邮件配置与演练边界
 
-| 配置方式 | 发送所需内容 | dry-run 行为 |
-| --- | --- | --- |
-| 项目不选 Provider，使用旧版 Resend | `RESEND_API_KEY`、`RESEND_FROM_DOMAIN` | `EMAIL_DRY_RUN=true` 或 `RESEND_DRY_RUN=true` 时生成模拟消息 ID，不调用 Resend |
-| 项目选择 Resend Provider | 数据库服务商记录中的域名、`config.api_key` | 当前创建路径不应用环境变量 dry-run 开关，会尝试调用 Resend |
-| 项目选择 Cloudflare Provider | 服务商域名与可用的 `EMAIL` 发送绑定 | 当前实现不支持 dry-run |
+| 配置方式                           | 发送所需内容                               | dry-run 行为                                                                   |
+| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| 项目不选 Provider，使用旧版 Resend | `RESEND_API_KEY`、`RESEND_FROM_DOMAIN`     | `EMAIL_DRY_RUN=true` 或 `RESEND_DRY_RUN=true` 时生成模拟消息 ID，不调用 Resend |
+| 项目选择 Resend Provider           | 数据库服务商记录中的域名、`config.api_key` | 当前创建路径不应用环境变量 dry-run 开关，会尝试调用 Resend                     |
+| 项目选择 Cloudflare Provider       | 服务商域名与可用的 `EMAIL` 发送绑定        | 当前实现不支持 dry-run                                                         |
 
 本地演练选择第一种方式，不把项目关联到真实服务商。`env.test` 没有声明 `send_email` 绑定，因此也不能据此验证 Cloudflare 真实发送。
 

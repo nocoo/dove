@@ -4,13 +4,13 @@ The original animal is retained byte-for-byte. This Refined pass adds the presse
 
 ## Asset roles
 
-| Surface | Asset | Treatment |
-| --- | --- | --- |
-| README header | `assets/brand/icon-rounded.png` | Selected presentation at 128 px |
-| Expanded / collapsed sidebar | `src/client/public/logo-24.png` | Transparent original; both sidebar states |
-| App foreground / public original | `src/client/public/logo-80.png; src/client/public/logo.png` | Transparent derivatives and exact copy of canonical root logo.png |
-| Browser icons | `src/client/public/favicon.png; favicon.ico` | Transparent 32 px PNG and decoded 16/32 px ICO, linked by the Vite document |
-| Apple touch / Open Graph | `src/client/public/apple-touch-icon.png; opengraph-image.png` | Square 180 px touch icon; rounded presentation on the existing 1200 × 630 dark canvas |
+| Surface                          | Asset                                                         | Treatment                                                                             |
+| -------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| README header                    | `assets/brand/icon-rounded.png`                               | Selected presentation at 128 px                                                       |
+| Expanded / collapsed sidebar     | `src/client/public/logo-24.png`                               | Transparent original; both sidebar states                                             |
+| App foreground / public original | `src/client/public/logo-80.png; src/client/public/logo.png`   | Transparent derivatives and exact copy of canonical root logo.png                     |
+| Browser icons                    | `src/client/public/favicon.png; favicon.ico`                  | Transparent 32 px PNG and decoded 16/32 px ICO, linked by the Vite document           |
+| Apple touch / Open Graph         | `src/client/public/apple-touch-icon.png; opengraph-image.png` | Square 180 px touch icon; rounded presentation on the existing 1200 × 630 dark canvas |
 
 Root `logo.png` remains the canonical 2048 × 2048 transparent master. `icon.png` and `icon-rounded.png` in this directory are separate square and rounded presentations at the same native dimensions. Small UI marks use the foreground with no external glow, added background, or circular crop. Localized and package READMEs were checked for additional logo headers.
 

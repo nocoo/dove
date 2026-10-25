@@ -4,19 +4,19 @@ Dove is a self-hosted email relay service. Personal projects send emails via web
 
 ## Tech Stack
 
-| Layer | Choice | Notes |
-|---|---|---|
-| Runtime | Bun | Same as backy |
-| Framework | Next.js 16 (App Router) | Standalone output |
-| Language | TypeScript (strict) | `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` |
-| Database | Cloudflare D1 via Worker proxy | Worker binds D1 natively; Railway calls Worker over HTTPS |
-| DB Proxy | Cloudflare Worker | Thin SQL proxy with API key auth, deployed via Wrangler |
-| Auth | NextAuth v5 (Google OAuth) | Email whitelist via `ALLOWED_EMAILS` |
-| UI | Tailwind CSS v4 + shadcn/ui | Basalt design system (new-york variant) |
-| Validation | Zod v4 | Request body validation |
-| Email | Resend API | `POST https://api.resend.com/emails` |
-| IDs | nanoid | 21-char IDs, 48-char webhook tokens |
-| Deployment | Railway (app) + Cloudflare (worker) | App on Railway port 7034; Worker on CF edge |
+| Layer      | Choice                              | Notes                                                     |
+| ---------- | ----------------------------------- | --------------------------------------------------------- |
+| Runtime    | Bun                                 | Same as backy                                             |
+| Framework  | Next.js 16 (App Router)             | Standalone output                                         |
+| Language   | TypeScript (strict)                 | `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`  |
+| Database   | Cloudflare D1 via Worker proxy      | Worker binds D1 natively; Railway calls Worker over HTTPS |
+| DB Proxy   | Cloudflare Worker                   | Thin SQL proxy with API key auth, deployed via Wrangler   |
+| Auth       | NextAuth v5 (Google OAuth)          | Email whitelist via `ALLOWED_EMAILS`                      |
+| UI         | Tailwind CSS v4 + shadcn/ui         | Basalt design system (new-york variant)                   |
+| Validation | Zod v4                              | Request body validation                                   |
+| Email      | Resend API                          | `POST https://api.resend.com/emails`                      |
+| IDs        | nanoid                              | 21-char IDs, 48-char webhook tokens                       |
+| Deployment | Railway (app) + Cloudflare (worker) | App on Railway port 7034; Worker on CF edge               |
 
 ## System Architecture
 
@@ -75,18 +75,18 @@ External callers (personal projects):
 
 ### `projects`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | PK | nanoid |
-| `name` | TEXT | NOT NULL | Project display name |
-| `description` | TEXT | | Optional description |
-| `email_prefix` | TEXT | NOT NULL | Sender prefix, e.g. `noreply` |
-| `from_name` | TEXT | NOT NULL | Sender display name, e.g. `Backy Alerts` |
-| `webhook_token` | TEXT | NOT NULL, UNIQUE | 48-char nanoid for Bearer auth |
-| `quota_daily` | INTEGER | NOT NULL, DEFAULT 100 | Soft limit: max sends per day (best-effort) |
+| Column          | Type    | Constraints            | Description                                   |
+| --------------- | ------- | ---------------------- | --------------------------------------------- |
+| `id`            | TEXT    | PK                     | nanoid                                        |
+| `name`          | TEXT    | NOT NULL               | Project display name                          |
+| `description`   | TEXT    |                        | Optional description                          |
+| `email_prefix`  | TEXT    | NOT NULL               | Sender prefix, e.g. `noreply`                 |
+| `from_name`     | TEXT    | NOT NULL               | Sender display name, e.g. `Backy Alerts`      |
+| `webhook_token` | TEXT    | NOT NULL, UNIQUE       | 48-char nanoid for Bearer auth                |
+| `quota_daily`   | INTEGER | NOT NULL, DEFAULT 100  | Soft limit: max sends per day (best-effort)   |
 | `quota_monthly` | INTEGER | NOT NULL, DEFAULT 1000 | Soft limit: max sends per month (best-effort) |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
+| `created_at`    | TEXT    | NOT NULL               | ISO 8601                                      |
+| `updated_at`    | TEXT    | NOT NULL               | ISO 8601                                      |
 
 Sender address is constructed as: `{from_name} <{email_prefix}@{RESEND_FROM_DOMAIN}>`.
 For example, with `from_name = "Backy Alerts"`, `email_prefix = "noreply"`, `RESEND_FROM_DOMAIN = "mail.example.com"`:
@@ -94,13 +94,13 @@ For example, with `from_name = "Backy Alerts"`, `email_prefix = "noreply"`, `RES
 
 ### `recipients`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | PK | nanoid |
+| Column       | Type | Constraints                         | Description    |
+| ------------ | ---- | ----------------------------------- | -------------- |
+| `id`         | TEXT | PK                                  | nanoid         |
 | `project_id` | TEXT | NOT NULL, FK → projects(id) CASCADE | Owning project |
-| `name` | TEXT | NOT NULL | Display name |
-| `email` | TEXT | NOT NULL | Email address |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| `name`       | TEXT | NOT NULL                            | Display name   |
+| `email`      | TEXT | NOT NULL                            | Email address  |
+| `created_at` | TEXT | NOT NULL                            | ISO 8601       |
 
 UNIQUE constraint on `(project_id, email)` — no duplicate emails per project.
 
@@ -110,17 +110,17 @@ UNIQUE constraint on `(project_id, email)` — no duplicate emails per project.
 
 ### `templates`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | PK | nanoid |
-| `project_id` | TEXT | NOT NULL, FK → projects(id) CASCADE | Owning project |
-| `name` | TEXT | NOT NULL | Display name |
-| `slug` | TEXT | NOT NULL | URL-safe identifier (e.g. `welcome`) |
-| `subject` | TEXT | NOT NULL | Email subject, supports `{{var}}` |
-| `body_markdown` | TEXT | NOT NULL | Markdown body, supports `{{var}}` |
-| `variables` | TEXT | NOT NULL, DEFAULT '[]' | JSON array of variable declarations |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
-| `updated_at` | TEXT | NOT NULL | ISO 8601 |
+| Column          | Type | Constraints                         | Description                          |
+| --------------- | ---- | ----------------------------------- | ------------------------------------ |
+| `id`            | TEXT | PK                                  | nanoid                               |
+| `project_id`    | TEXT | NOT NULL, FK → projects(id) CASCADE | Owning project                       |
+| `name`          | TEXT | NOT NULL                            | Display name                         |
+| `slug`          | TEXT | NOT NULL                            | URL-safe identifier (e.g. `welcome`) |
+| `subject`       | TEXT | NOT NULL                            | Email subject, supports `{{var}}`    |
+| `body_markdown` | TEXT | NOT NULL                            | Markdown body, supports `{{var}}`    |
+| `variables`     | TEXT | NOT NULL, DEFAULT '[]'              | JSON array of variable declarations  |
+| `created_at`    | TEXT | NOT NULL                            | ISO 8601                             |
+| `updated_at`    | TEXT | NOT NULL                            | ISO 8601                             |
 
 UNIQUE constraint on `(project_id, slug)` — no duplicate slugs per project.
 
@@ -128,10 +128,10 @@ UNIQUE constraint on `(project_id, slug)` — no duplicate slugs per project.
 
 ```typescript
 interface TemplateVariable {
-  name: string;       // Variable name, used as {{name}} in template
-  type: "string" | "number" | "boolean";
-  required: boolean;
-  default?: string;   // Always stored as string; coerced to `type` at validation time
+	name: string; // Variable name, used as {{name}} in template
+	type: "string" | "number" | "boolean";
+	required: boolean;
+	default?: string; // Always stored as string; coerced to `type` at validation time
 }
 ```
 
@@ -146,29 +146,29 @@ Stored as JSON string in `variables` column. Example:
 
 ```json
 [
-  { "name": "username", "type": "string", "required": true },
-  { "name": "code", "type": "string", "required": true },
-  { "name": "expire_minutes", "type": "number", "required": false, "default": "30" }
+	{ "name": "username", "type": "string", "required": true },
+	{ "name": "code", "type": "string", "required": true },
+	{ "name": "expire_minutes", "type": "number", "required": false, "default": "30" }
 ]
 ```
 
 ### `send_logs`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | PK | nanoid |
-| `project_id` | TEXT | NOT NULL, FK → projects(id) CASCADE | |
-| `idempotency_key` | TEXT | | Caller-provided dedup key (nullable) |
-| `payload_hash` | TEXT | | SHA-256 of canonical request payload (set when idempotency_key is present) |
-| `template_id` | TEXT | FK → templates(id) ON DELETE SET NULL | Template used (set null when template deleted) |
-| `recipient_id` | TEXT | FK → recipients(id) ON DELETE SET NULL | Recipient record (set null when recipient deleted) |
-| `to_email` | TEXT | NOT NULL | Actual email address sent to (denormalized) |
-| `subject` | TEXT | NOT NULL | Rendered subject (denormalized) |
-| `status` | TEXT | NOT NULL | `sending` / `sent` / `failed` |
-| `resend_id` | TEXT | | Resend message UUID on success |
-| `error_message` | TEXT | | Error details on failure |
-| `created_at` | TEXT | NOT NULL | When the send_log was created (pre-log) |
-| `sent_at` | TEXT | | When Resend confirmed delivery (set on status → `sent`) |
+| Column            | Type | Constraints                            | Description                                                                |
+| ----------------- | ---- | -------------------------------------- | -------------------------------------------------------------------------- |
+| `id`              | TEXT | PK                                     | nanoid                                                                     |
+| `project_id`      | TEXT | NOT NULL, FK → projects(id) CASCADE    |                                                                            |
+| `idempotency_key` | TEXT |                                        | Caller-provided dedup key (nullable)                                       |
+| `payload_hash`    | TEXT |                                        | SHA-256 of canonical request payload (set when idempotency_key is present) |
+| `template_id`     | TEXT | FK → templates(id) ON DELETE SET NULL  | Template used (set null when template deleted)                             |
+| `recipient_id`    | TEXT | FK → recipients(id) ON DELETE SET NULL | Recipient record (set null when recipient deleted)                         |
+| `to_email`        | TEXT | NOT NULL                               | Actual email address sent to (denormalized)                                |
+| `subject`         | TEXT | NOT NULL                               | Rendered subject (denormalized)                                            |
+| `status`          | TEXT | NOT NULL                               | `sending` / `sent` / `failed`                                              |
+| `resend_id`       | TEXT |                                        | Resend message UUID on success                                             |
+| `error_message`   | TEXT |                                        | Error details on failure                                                   |
+| `created_at`      | TEXT | NOT NULL                               | When the send_log was created (pre-log)                                    |
+| `sent_at`         | TEXT |                                        | When Resend confirmed delivery (set on status → `sent`)                    |
 
 Denormalized `to_email` and `subject` ensure logs remain readable even if recipient/template is deleted.
 
@@ -176,19 +176,19 @@ UNIQUE index on `(project_id, idempotency_key)` WHERE `idempotency_key IS NOT NU
 
 ### `webhook_logs`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | TEXT | PK | nanoid |
-| `project_id` | TEXT | NOT NULL, FK → projects(id) CASCADE | |
-| `method` | TEXT | NOT NULL | HTTP method |
-| `path` | TEXT | NOT NULL | Request path |
-| `status_code` | INTEGER | NOT NULL | Response status code |
-| `error_code` | TEXT | | Structured error code |
-| `error_message` | TEXT | | Human-readable error |
-| `duration_ms` | INTEGER | | Request processing time |
-| `ip` | TEXT | | Client IP |
-| `user_agent` | TEXT | | Client User-Agent |
-| `created_at` | TEXT | NOT NULL | ISO 8601 |
+| Column          | Type    | Constraints                         | Description             |
+| --------------- | ------- | ----------------------------------- | ----------------------- |
+| `id`            | TEXT    | PK                                  | nanoid                  |
+| `project_id`    | TEXT    | NOT NULL, FK → projects(id) CASCADE |                         |
+| `method`        | TEXT    | NOT NULL                            | HTTP method             |
+| `path`          | TEXT    | NOT NULL                            | Request path            |
+| `status_code`   | INTEGER | NOT NULL                            | Response status code    |
+| `error_code`    | TEXT    |                                     | Structured error code   |
+| `error_message` | TEXT    |                                     | Human-readable error    |
+| `duration_ms`   | INTEGER |                                     | Request processing time |
+| `ip`            | TEXT    |                                     | Client IP               |
+| `user_agent`    | TEXT    |                                     | Client User-Agent       |
+| `created_at`    | TEXT    | NOT NULL                            | ISO 8601                |
 
 Webhook logs are **fire-and-forget observability logs** — written asynchronously (`void createWebhookLog(...)`, errors swallowed), never blocking the response. As a consequence:
 - Logs **may be lost** under D1 transient failures or process crashes
@@ -279,42 +279,42 @@ dove/
 
 ### Session-Authenticated APIs (Web UI)
 
-| Route | Methods | Description |
-|---|---|---|
-| `GET /api/projects` | GET | List all projects |
-| `POST /api/projects` | POST | Create project |
-| `GET /api/projects/[id]` | GET | Get project detail |
-| `PUT /api/projects/[id]` | PUT | Update project |
-| `DELETE /api/projects/[id]` | DELETE | Delete project (cascades) |
-| `POST /api/projects/[id]/token` | POST | Regenerate webhook token (returns **one-time plaintext**) |
-| `GET /api/recipients?projectId=` | GET | List recipients for project |
-| `POST /api/recipients` | POST | Add recipient |
-| `PUT /api/recipients/[id]` | PUT | Update recipient |
-| `DELETE /api/recipients/[id]` | DELETE | Remove recipient |
-| `GET /api/templates?projectId=` | GET | List templates for project |
-| `POST /api/templates` | POST | Create template |
-| `GET /api/templates/[id]` | GET | Get template detail |
-| `PUT /api/templates/[id]` | PUT | Update template |
-| `DELETE /api/templates/[id]` | DELETE | Delete template |
-| `POST /api/templates/[id]/preview` | POST | Render template with sample variables |
-| `GET /api/send-logs?projectId=` | GET | List send logs (paginated) |
-| `GET /api/webhook-logs?projectId=` | GET | List webhook logs (paginated) |
-| `GET /api/stats` | GET | Dashboard summary stats |
-| `GET /api/stats/charts` | GET | Chart data (sends over time) |
+| Route                              | Methods | Description                                               |
+| ---------------------------------- | ------- | --------------------------------------------------------- |
+| `GET /api/projects`                | GET     | List all projects                                         |
+| `POST /api/projects`               | POST    | Create project                                            |
+| `GET /api/projects/[id]`           | GET     | Get project detail                                        |
+| `PUT /api/projects/[id]`           | PUT     | Update project                                            |
+| `DELETE /api/projects/[id]`        | DELETE  | Delete project (cascades)                                 |
+| `POST /api/projects/[id]/token`    | POST    | Regenerate webhook token (returns **one-time plaintext**) |
+| `GET /api/recipients?projectId=`   | GET     | List recipients for project                               |
+| `POST /api/recipients`             | POST    | Add recipient                                             |
+| `PUT /api/recipients/[id]`         | PUT     | Update recipient                                          |
+| `DELETE /api/recipients/[id]`      | DELETE  | Remove recipient                                          |
+| `GET /api/templates?projectId=`    | GET     | List templates for project                                |
+| `POST /api/templates`              | POST    | Create template                                           |
+| `GET /api/templates/[id]`          | GET     | Get template detail                                       |
+| `PUT /api/templates/[id]`          | PUT     | Update template                                           |
+| `DELETE /api/templates/[id]`       | DELETE  | Delete template                                           |
+| `POST /api/templates/[id]/preview` | POST    | Render template with sample variables                     |
+| `GET /api/send-logs?projectId=`    | GET     | List send logs (paginated)                                |
+| `GET /api/webhook-logs?projectId=` | GET     | List webhook logs (paginated)                             |
+| `GET /api/stats`                   | GET     | Dashboard summary stats                                   |
+| `GET /api/stats/charts`            | GET     | Chart data (sends over time)                              |
 
 ### Webhook APIs (Bearer Token Auth)
 
-| Route | Method | Description |
-|---|---|---|
-| `HEAD /api/webhook/[projectId]` | HEAD | Health check (verify token) |
-| `POST /api/webhook/[projectId]/send` | POST | **Core: send email** |
-| `GET /api/webhook/[projectId]/templates` | GET | List available templates |
+| Route                                    | Method | Description                 |
+| ---------------------------------------- | ------ | --------------------------- |
+| `HEAD /api/webhook/[projectId]`          | HEAD   | Health check (verify token) |
+| `POST /api/webhook/[projectId]/send`     | POST   | **Core: send email**        |
+| `GET /api/webhook/[projectId]/templates` | GET    | List available templates    |
 
 ### Public APIs
 
-| Route | Method | Description |
-|---|---|---|
-| `GET /api/live` | GET | Health check (D1 ping + version) |
+| Route           | Method | Description                      |
+| --------------- | ------ | -------------------------------- |
+| `GET /api/live` | GET    | Health check (D1 ping + version) |
 
 ## Webhook Send Flow
 
@@ -386,28 +386,28 @@ When `idempotency_key` is omitted, Dove does not perform caller-level dedup — 
 
 ```json
 {
-  "id": "send_log_id",
-  "resend_id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
-  "status": "sent"
+	"id": "send_log_id",
+	"resend_id": "49a3999c-0ce1-4ea6-ab68-afcd6dc2e794",
+	"status": "sent"
 }
 ```
 
 ### Error Codes
 
-| Code | HTTP | Description |
-|---|---|---|
-| `auth_missing` | 401 | No Authorization header |
-| `auth_invalid` | 403 | Token mismatch or project not found |
-| `body_invalid` | 400 | Request body fails Zod validation |
-| `send_in_progress` | 409 | Duplicate idempotency_key with status `sending` |
-| `idempotency_payload_mismatch` | 422 | Same idempotency_key but different request payload |
-| `quota_daily_exceeded` | 429 | Daily send limit reached |
-| `quota_monthly_exceeded` | 429 | Monthly send limit reached |
-| `recipient_not_found` | 404 | `to` not in project's recipient whitelist (by ID or email) |
-| `template_not_found` | 404 | Template slug not found in project |
-| `variables_invalid` | 422 | Missing required vars or type mismatch |
-| `resend_failed` | 502 | Resend API returned error |
-| `internal_error` | 500 | Unexpected server error |
+| Code                           | HTTP | Description                                                |
+| ------------------------------ | ---- | ---------------------------------------------------------- |
+| `auth_missing`                 | 401  | No Authorization header                                    |
+| `auth_invalid`                 | 403  | Token mismatch or project not found                        |
+| `body_invalid`                 | 400  | Request body fails Zod validation                          |
+| `send_in_progress`             | 409  | Duplicate idempotency_key with status `sending`            |
+| `idempotency_payload_mismatch` | 422  | Same idempotency_key but different request payload         |
+| `quota_daily_exceeded`         | 429  | Daily send limit reached                                   |
+| `quota_monthly_exceeded`       | 429  | Monthly send limit reached                                 |
+| `recipient_not_found`          | 404  | `to` not in project's recipient whitelist (by ID or email) |
+| `template_not_found`           | 404  | Template slug not found in project                         |
+| `variables_invalid`            | 422  | Missing required vars or type mismatch                     |
+| `resend_failed`                | 502  | Resend API returned error                                  |
+| `internal_error`               | 500  | Unexpected server error                                    |
 
 ## Template Rendering
 
@@ -468,10 +468,10 @@ Only `sent` status counts toward quota. Failed sends do not consume quota.
 
 ### Default Limits
 
-| Quota | Default | Configurable |
-|---|---|---|
-| Daily | 100 | Per project, via UI |
-| Monthly | 1000 | Per project, via UI |
+| Quota   | Default | Configurable        |
+| ------- | ------- | ------------------- |
+| Daily   | 100     | Per project, via UI |
+| Monthly | 1000    | Per project, via UI |
 
 ## Resend Integration
 
@@ -479,34 +479,34 @@ Only `sent` status counts toward quota. Failed sends do not consume quota.
 
 ```typescript
 interface SendEmailParams {
-  from: string;        // "{from_name} <{prefix}@{RESEND_FROM_DOMAIN}>"
-  to: string;          // Recipient email
-  subject: string;     // Rendered subject
-  html: string;        // Rendered HTML
-  idempotencyKey: string;  // Unique key to prevent duplicate sends
+	from: string; // "{from_name} <{prefix}@{RESEND_FROM_DOMAIN}>"
+	to: string; // Recipient email
+	subject: string; // Rendered subject
+	html: string; // Rendered HTML
+	idempotencyKey: string; // Unique key to prevent duplicate sends
 }
 
 interface SendEmailResult {
-  id: string;          // Resend message UUID
+	id: string; // Resend message UUID
 }
 
-async function sendEmail(params: SendEmailParams): Promise<SendEmailResult>
+async function sendEmail(params: SendEmailParams): Promise<SendEmailResult>;
 ```
 
 - Direct `fetch()` call to `https://api.resend.com/emails`
 - Auth: `Authorization: Bearer ${RESEND_API_KEY}`
 - **Idempotency (two layers)**:
   - **Layer 1 — Caller dedup**: If the webhook request includes `idempotency_key`, Dove checks `(project_id, idempotency_key)` in `send_logs` before processing. Duplicate `sent` results are returned from cache; no Resend call is made.
-  - **Layer 2 — Resend dedup**: Every Resend API call includes `Idempotency-Key: ${send_log_id}`. Since the send_log record is created (with status `sending`) *before* calling Resend, retries within the same processing flow reuse the same key. Resend deduplicates within a 24-hour window, preventing duplicate delivery even if the first request succeeded but the response was lost.
+  - **Layer 2 — Resend dedup**: Every Resend API call includes `Idempotency-Key: ${send_log_id}`. Since the send_log record is created (with status `sending`) _before_ calling Resend, retries within the same processing flow reuse the same key. Resend deduplicates within a 24-hour window, preventing duplicate delivery even if the first request succeeded but the response was lost.
 - Retry: 3 attempts with exponential backoff (500ms → 1000ms → 2000ms) on 5xx only
 - No retry on 4xx (client errors are not transient)
 - On 409 `concurrent_idempotent_requests`: wait 1s and retry (original request still in flight)
 
 ### Environment Variables
 
-| Variable | Description | Example |
-|---|---|---|
-| `RESEND_API_KEY` | Resend API key | `re_xxxxxxxxx` |
+| Variable             | Description            | Example            |
+| -------------------- | ---------------------- | ------------------ |
+| `RESEND_API_KEY`     | Resend API key         | `re_xxxxxxxxx`     |
 | `RESEND_FROM_DOMAIN` | Verified sender domain | `mail.example.com` |
 
 ## D1 Worker Proxy
@@ -547,8 +547,8 @@ Content-Type: application/json
 
 ```json
 {
-  "success": false,
-  "error": "D1_ERROR: UNIQUE constraint failed: projects.webhook_token"
+	"success": false,
+	"error": "D1_ERROR: UNIQUE constraint failed: projects.webhook_token"
 }
 ```
 
@@ -556,19 +556,19 @@ Content-Type: application/json
 
 ```typescript
 interface Env {
-  DB: D1Database;       // D1 native binding
-  API_KEY: string;      // Shared secret (Cloudflare env var)
+	DB: D1Database; // D1 native binding
+	API_KEY: string; // Shared secret (Cloudflare env var)
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    // 1. Only POST /query
-    // 2. Validate X-API-Key header against env.API_KEY
-    // 3. Parse { sql, params } from body
-    // 4. Execute env.DB.prepare(sql).bind(...params).all()
-    // 5. Return { success, results, meta } or { success: false, error }
-  }
-}
+	async fetch(request: Request, env: Env): Promise<Response> {
+		// 1. Only POST /query
+		// 2. Validate X-API-Key header against env.API_KEY
+		// 3. Parse { sql, params } from body
+		// 4. Execute env.DB.prepare(sql).bind(...params).all()
+		// 5. Return { success, results, meta } or { success: false, error }
+	},
+};
 ```
 
 The worker is deliberately minimal — no routing framework, no ORM, no business logic. It is a pure SQL pass-through with auth.
@@ -578,7 +578,7 @@ The worker is deliberately minimal — no routing framework, no ORM, no business
 On the Railway side, the client replaces backy's direct D1 REST calls with calls to the Worker:
 
 ```typescript
-async function executeD1Query<T>(sql: string, params?: unknown[]): Promise<T[]>
+async function executeD1Query<T>(sql: string, params?: unknown[]): Promise<T[]>;
 ```
 
 - Calls `POST ${D1_WORKER_URL}/query` with `X-API-Key: ${D1_WORKER_API_KEY}`
@@ -641,54 +641,55 @@ This is the **only** opportunity to copy the token. Subsequent `GET /api/project
 
 **Dove App (Railway)**:
 
-| Variable | Required | Description |
-|---|---|---|
-| `D1_WORKER_URL` | Yes | Worker endpoint URL (e.g. `https://dove-worker.xxx.workers.dev`) |
-| `D1_WORKER_API_KEY` | Yes | Shared secret for Worker auth |
-| `RESEND_API_KEY` | Yes | Resend API key |
-| `RESEND_FROM_DOMAIN` | Yes | Verified sender domain |
-| `AUTH_SECRET` | Yes | NextAuth secret |
-| `AUTH_GOOGLE_ID` | Yes | Google OAuth client ID |
-| `AUTH_GOOGLE_SECRET` | Yes | Google OAuth client secret |
-| `ALLOWED_EMAILS` | Yes | Comma-separated allowed emails |
-| `ALLOWED_HOSTS` | No | x-forwarded-host allowlist |
-| `USE_SECURE_COOKIES` | No | Force secure cookies |
-| `E2E_SKIP_AUTH` | No | Skip auth in E2E tests |
-| `PORT` | No | Override default port (7034) |
+| Variable             | Required | Description                                                      |
+| -------------------- | -------- | ---------------------------------------------------------------- |
+| `D1_WORKER_URL`      | Yes      | Worker endpoint URL (e.g. `https://dove-worker.xxx.workers.dev`) |
+| `D1_WORKER_API_KEY`  | Yes      | Shared secret for Worker auth                                    |
+| `RESEND_API_KEY`     | Yes      | Resend API key                                                   |
+| `RESEND_FROM_DOMAIN` | Yes      | Verified sender domain                                           |
+| `AUTH_SECRET`        | Yes      | NextAuth secret                                                  |
+| `AUTH_GOOGLE_ID`     | Yes      | Google OAuth client ID                                           |
+| `AUTH_GOOGLE_SECRET` | Yes      | Google OAuth client secret                                       |
+| `ALLOWED_EMAILS`     | Yes      | Comma-separated allowed emails                                   |
+| `ALLOWED_HOSTS`      | No       | x-forwarded-host allowlist                                       |
+| `USE_SECURE_COOKIES` | No       | Force secure cookies                                             |
+| `E2E_SKIP_AUTH`      | No       | Skip auth in E2E tests                                           |
+| `PORT`               | No       | Override default port (7034)                                     |
 
 **Dove Worker (Cloudflare)**:
 
-| Variable | Required | Description |
-|---|---|---|
-| `API_KEY` | Yes | Shared secret (must match `D1_WORKER_API_KEY` on Railway side) |
-| D1 binding `DB` | Yes | Configured in `wrangler.toml`, not an env var |
+| Variable        | Required | Description                                                    |
+| --------------- | -------- | -------------------------------------------------------------- |
+| `API_KEY`       | Yes      | Shared secret (must match `D1_WORKER_API_KEY` on Railway side) |
+| D1 binding `DB` | Yes      | Configured in `wrangler.toml`, not an env var                  |
 
 ## Pages & UI
 
-| Page | Route | Description |
-|---|---|---|
-| Dashboard | `/` | Send stats, quota usage gauges, recent activity |
-| Projects | `/projects` | Project list with send counts, quota bars |
-| Project Detail | `/projects/[id]` | Settings, token management, recipients, templates |
-| Templates | `/templates` | Template list grouped by project |
+| Page            | Route             | Description                                               |
+| --------------- | ----------------- | --------------------------------------------------------- |
+| Dashboard       | `/`               | Send stats, quota usage gauges, recent activity           |
+| Projects        | `/projects`       | Project list with send counts, quota bars                 |
+| Project Detail  | `/projects/[id]`  | Settings, token management, recipients, templates         |
+| Templates       | `/templates`      | Template list grouped by project                          |
 | Template Editor | `/templates/[id]` | Markdown editor with live preview, variable schema editor |
-| Send Logs | `/send-logs` | Paginated table with status filter, search |
-| Webhook Logs | `/webhook-logs` | Paginated table, similar to backy |
-| Login | `/login` | Google OAuth sign-in |
+| Send Logs       | `/send-logs`      | Paginated table with status filter, search                |
+| Webhook Logs    | `/webhook-logs`   | Paginated table, similar to backy                         |
+| Login           | `/login`          | Google OAuth sign-in                                      |
 
 ## Port Convention
 
-| Purpose | Port |
-|---|---|
-| Dev | 7034 |
-| L2 E2E | 17034 |
-| L3 BDD | 27034 |
+| Purpose | Port  |
+| ------- | ----- |
+| Dev     | 7034  |
+| L2 E2E  | 17034 |
+| L3 BDD  | 27034 |
 
 ## Atomic Commits Plan
 
 The project will be built in these commit phases:
 
 ### Phase 1 — Scaffold
+
 1. ✅ Initialize project (package.json, tsconfig, next.config, eslint, Dockerfile, railway.json)
 2. ✅ Cloudflare Worker setup (worker/, wrangler.toml, D1 binding, API key auth)
 3. ✅ D1 proxy client (`src/lib/db/d1-client.ts` — calls Worker instead of D1 REST)
@@ -698,6 +699,7 @@ The project will be built in these commit phases:
 7. ✅ Create AppShell (sidebar, layout, theme toggle)
 
 ### Phase 2 — Data Layer
+
 8. ✅ Database schema (CREATE TABLE, migrations)
 9. ✅ Projects CRUD (`src/lib/db/projects.ts`)
 10. ✅ Recipients CRUD (`src/lib/db/recipients.ts`)
@@ -706,12 +708,14 @@ The project will be built in these commit phases:
 13. ✅ Webhook logs queries (`src/lib/db/webhook-logs.ts`)
 
 ### Phase 3 — Business Logic
+
 14. ✅ Template rendering engine (variable substitution + Markdown → HTML)
 15. ✅ Resend API client
 16. ✅ Quota checking
 17. ✅ Sanitization (strip webhook_token)
 
 ### Phase 4 — API Routes
+
 18. ✅ Project API routes (CRUD + token regeneration)
 19. ✅ Recipient API routes (CRUD)
 20. ✅ Template API routes (CRUD + preview)
@@ -721,6 +725,7 @@ The project will be built in these commit phases:
 24. ✅ Health check (`/api/live`), DB init (`/api/db/init` — non-production only, session auth)
 
 ### Phase 5 — UI
+
 25. ✅ Dashboard page (stats cards, quota gauges, charts)
 26. ✅ Projects page (list + detail with settings)
 27. ✅ Template editor page (Markdown editor + live preview + variable schema)
@@ -728,6 +733,7 @@ The project will be built in these commit phases:
 29. ✅ Webhook logs page (table)
 
 ### Phase 6 — Quality
+
 30. ✅ L1 unit tests (90%+ coverage)
 31. ✅ L2 API E2E tests
 32. ✅ G1 static analysis (tsc + eslint strict)
@@ -736,10 +742,10 @@ The project will be built in these commit phases:
 
 ## Testing Strategy
 
-| Layer | Scope | Trigger | Tools |
-|---|---|---|---|
-| L1 | Unit tests (lib/, components) | pre-commit | `bun test`, 90% coverage gate |
-| L2 | API E2E (all REST endpoints) | pre-push | Custom BDD framework |
-| L3 | Browser E2E (critical flows) | on-demand | Playwright |
-| G1 | Type check + lint | pre-commit | `tsc --noEmit` + ESLint strict |
-| G2 | Security scan | pre-push | osv-scanner + gitleaks |
+| Layer | Scope                         | Trigger    | Tools                          |
+| ----- | ----------------------------- | ---------- | ------------------------------ |
+| L1    | Unit tests (lib/, components) | pre-commit | `bun test`, 90% coverage gate  |
+| L2    | API E2E (all REST endpoints)  | pre-push   | Custom BDD framework           |
+| L3    | Browser E2E (critical flows)  | on-demand  | Playwright                     |
+| G1    | Type check + lint             | pre-commit | `tsc --noEmit` + ESLint strict |
+| G2    | Security scan                 | pre-push   | osv-scanner + gitleaks         |

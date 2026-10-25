@@ -72,14 +72,14 @@ localhost 自动使用开发身份。UI 由 `dist/client` 提供，修改前端�
 
 本地演练发送时，让项目保持未选择服务商，使用占位 Resend 配置。当前 dry-run 开关只作用于这个旧版路径；已选择的 Resend 服务商和 Cloudflare 服务商不受这些开关保护。模板试发也遵循这一限制。
 
-| 路径 / 命令 | 用途 |
-| --- | --- |
-| `src/server/` | Hono API、Access 验证、D1 查询与发送流程 |
-| `src/client/` | Vite / React 管理界面 |
-| `src/lib/` | 共享类型、邮件模板与服务商实现 |
-| `bun run build` | 将管理界面构建到 `dist/client` |
-| `bun run typecheck` | TypeScript 检查 |
-| `bun run lint` | Biome 检查 |
+| 路径 / 命令         | 用途                                     |
+| ------------------- | ---------------------------------------- |
+| `src/server/`       | Hono API、Access 验证、D1 查询与发送流程 |
+| `src/client/`       | Vite / React 管理界面                    |
+| `src/lib/`          | 共享类型、邮件模板与服务商实现           |
+| `bun run build`     | 将管理界面构建到 `dist/client`           |
+| `bun run typecheck` | TypeScript 检查                          |
+| `bun run lint`      | Biome 检查                               |
 
 `main` 的 CI 成功后，GitHub Release 工作流会自动构建并部署 Worker；版本标签也有部署入口。D1、Access 与邮件配置的准备见[开发与部署说明](docs/04-development.md)，仓库使用 GitHub CD 部署。
 
@@ -106,17 +106,17 @@ HTTP 测试自行启动端口 17034 的 Worker，初始化本地 D1 并验证测
 
 ## 技术栈
 
-| 技术 | 用途 |
-| --- | --- |
-| TypeScript、Bun | 应用代码、依赖与开发脚本 |
-| Cloudflare Workers、Hono | API 运行时、路由与静态资源托管 |
-| Cloudflare D1 | 项目、模板、服务商、日志与限频状态 |
-| React、Vite、React Router | 管理界面与前端构建 |
-| Tailwind CSS、shadcn/ui、Recharts | 界面组件、样式与图表 |
-| Cloudflare Access、jose | 管理界面身份验证与 JWT 校验 |
-| Zod、Marked | 请求 / 变量校验与 Markdown 邮件渲染 |
-| Resend、Cloudflare Email Routing | 邮件发送 |
-| Vitest、Playwright | 服务端测试与浏览器测试 |
+| 技术                              | 用途                                |
+| --------------------------------- | ----------------------------------- |
+| TypeScript、Bun                   | 应用代码、依赖与开发脚本            |
+| Cloudflare Workers、Hono          | API 运行时、路由与静态资源托管      |
+| Cloudflare D1                     | 项目、模板、服务商、日志与限频状态  |
+| React、Vite、React Router         | 管理界面与前端构建                  |
+| Tailwind CSS、shadcn/ui、Recharts | 界面组件、样式与图表                |
+| Cloudflare Access、jose           | 管理界面身份验证与 JWT 校验         |
+| Zod、Marked                       | 请求 / 变量校验与 Markdown 邮件渲染 |
+| Resend、Cloudflare Email Routing  | 邮件发送                            |
+| Vitest、Playwright                | 服务端测试与浏览器测试              |
 
 ## 文档
 
