@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS email_providers (
 #### Config JSON Schema
 
 **Resend:**
+
 ```json
 {
 	"api_key": "re_xxxx..."
@@ -83,6 +84,7 @@ CREATE TABLE IF NOT EXISTS email_providers (
 ```
 
 **Cloudflare:**
+
 ```json
 {
 	"worker_url": "https://dove-email.worker.example.com",
@@ -1210,6 +1212,7 @@ This is a UI-only change in `src/app/send-logs/page.tsx` around the currently-ha
 #### Removal timeline
 
 `resend_id` stays in the schema indefinitely (no forced drop). A later release MAY:
+
 - Stop writing `resend_id` for new Resend sends once no consumer reads it
 - Remove the column in a dedicated cleanup migration
 
@@ -1453,6 +1456,7 @@ No behavior change for the legacy Resend path — `RESEND_DRY_RUN` remains honor
 ### Code-Level Rollback
 
 The legacy fallback (`provider_id = NULL → use env vars`) ensures:
+
 - Existing projects continue working without any migration
 - New code can be deployed incrementally
 - If issues arise, simply don't create any `email_providers` records
@@ -1460,6 +1464,7 @@ The legacy fallback (`provider_id = NULL → use env vars`) ensures:
 ### Schema-Level Rollback
 
 All new columns are nullable and have no NOT NULL constraints:
+
 - `projects.provider_id` — `NULL` means legacy mode
 - `send_logs.provider_id` — `NULL` for historical logs
 - `send_logs.provider_type` — Backfilled to `"legacy"`
@@ -1467,6 +1472,7 @@ All new columns are nullable and have no NOT NULL constraints:
 ### Worker Rollback
 
 CF Email Worker is independent:
+
 - If Worker fails, only CF-configured projects are affected
 - Resend and legacy paths continue working
 - Can disable CF Worker without code changes (just don't create CF providers)

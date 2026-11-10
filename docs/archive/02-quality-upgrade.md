@@ -74,6 +74,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 **Problem**: The current auth bypass at `src/proxy.ts:7` checks only `process.env.E2E_SKIP_AUTH === "true"`. If this env var is accidentally set in production (e.g., copied from a test config), all auth is bypassed. There is no `NODE_ENV` guard.
 
 **Change**:
+
 ```diff
 - const SKIP_AUTH = process.env.E2E_SKIP_AUTH === "true";
 + const SKIP_AUTH =
@@ -92,6 +93,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 **ADR Decision**: **Option A is mandatory** — deploy a separate test Worker instance (`wrangler deploy --env test`). The production Worker has no request-level env switch and we will NOT add one. The client (`src/lib/db/d1-client.ts`) simply reads `D1_WORKER_URL` + `D1_WORKER_API_KEY` from env; pointing those at the test Worker URL is sufficient.
 
 **Files**:
+
 - `worker/wrangler.toml` — Add `[env.test]` route for `dove-test.worker.hexly.ai`
 - `src/lib/db/schema.ts` — Export `SCHEMA_SQL` and `PARTIAL_INDEX_SQL` (currently module-private `const`); add `_test_marker` CREATE TABLE to schema
 - `scripts/deploy-test-worker.ts` (NEW) — One-shot script: deploy test Worker + replay full schema + seed `_test_marker`
@@ -99,6 +101,7 @@ This document defines the precise upgrade path to **Tier S** (all 6 dimensions g
 - `scripts/run-e2e.ts` — Call verify-test-db before running tests
 
 **Schema export change** (`src/lib/db/schema.ts`):
+
 ```diff
 - const SCHEMA_SQL = `
 + export const SCHEMA_SQL = `
@@ -126,6 +129,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 ```
 
 **`scripts/deploy-test-worker.ts`** (TypeScript — can directly import schema constants):
+
 ```typescript
 // 1. cd worker/ && wrangler deploy --env test
 // 2. wrangler secret put API_KEY --env test (interactive, one-time)
@@ -147,6 +151,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 > **Why not use `POST /api/db/init`?** That route is behind the auth gate (`src/proxy.ts`). Sending SQL directly to the test Worker's `/query` endpoint is simpler, has no auth dependency, and is idempotent (all DDL uses `IF NOT EXISTS`).
 
 **`scripts/verify-test-db.ts`**:
+
 ```typescript
 // 1. Load .env.test for test Worker credentials
 // 2. Inequality check: D1_WORKER_URL (from .env.test) !== D1_WORKER_URL (from .env.local)
@@ -168,6 +173,7 @@ INSERT OR IGNORE INTO _test_marker (key, value) VALUES ('env', 'test');
 ### Step 4: Rewrite L2 — True HTTP E2E against running server ✅
 
 **Files**:
+
 - `scripts/run-e2e.ts` — Rewrite to auto-start/stop dev server on port 17034
 - `e2e/api/helpers.ts` — Replace mock infrastructure with real HTTP client
 - `e2e/api/*.test.ts` (7 files) — Rewrite to make real HTTP requests
@@ -186,6 +192,7 @@ AFTER (target):
 ```
 
 **`.env.test`** (test-only config):
+
 ```env
 # D1 Worker proxy — separate test Worker instance (NOT production Worker)
 # Deployed via: wrangler deploy --env test (see scripts/deploy-test-worker.sh)
@@ -202,6 +209,7 @@ PORT=17034
 > **Note**: `D1_WORKER_URL` points to the **test Worker** (`dove-test.worker.hexly.ai`), which is a completely separate Cloudflare Worker deployment bound to `dove-db-test`. No request-level env switching — isolation is at the deployment level.
 
 **`scripts/run-e2e.ts`** rewrite:
+
 1. Load `.env.test` into environment — **hard fail** if file missing or `D1_WORKER_URL` not set (L2 is a required gate for Tier S; missing infrastructure must block push, same as G2)
 2. **Inequality check**: assert `D1_WORKER_URL` from `.env.test` differs from `.env.local` (refuse if same — misconfiguration)
 3. **Verify test DB marker** (`scripts/verify-test-db.ts`) — hard fail if marker missing (production safety)
@@ -213,6 +221,7 @@ PORT=17034
 9. Exit with test exit code
 
 **`e2e/api/helpers.ts`** rewrite:
+
 - Remove all `mock.module()`, `setD1Handler()`, `getD1Handler()` infrastructure
 - Export `BASE = "http://localhost:17034"`
 - Export helper functions for real HTTP: `get()`, `post()`, `put()`, `del()`
@@ -220,6 +229,7 @@ PORT=17034
 - Export `cleanupTestData()` — deletes test data created during test run
 
 **Test files rewrite pattern**:
+
 ```typescript
 // BEFORE
 mock.module("@/lib/db/d1-client", () => ({ ... }));
@@ -231,11 +241,13 @@ const response = await fetch(`${BASE}/api/projects`);
 ```
 
 **Verification**:
+
 - `bun run test:e2e:api` starts server, runs tests, stops server
 - All 7 test files pass against real HTTP + real D1 (test instance)
 - No mock.module in any e2e test
 
 **Commits** (atomic):
+
 1. `feat(L2): add .env.test and E2E server lifecycle in run-e2e.ts`
 2. `refactor(L2): rewrite e2e/api/helpers.ts for real HTTP`
 3. `refactor(L2): rewrite e2e/api health + db-init tests for real HTTP`
@@ -248,6 +260,7 @@ const response = await fetch(`${BASE}/api/projects`);
 ### Step 5: Implement L3 — Playwright BDD E2E ✅
 
 **Files**:
+
 - `playwright.config.ts` (NEW) — Playwright configuration
 - `e2e/bdd/*.spec.ts` (NEW) — Core user flow specs
 
@@ -260,6 +273,7 @@ const response = await fetch(`${BASE}/api/projects`);
 - The `/login` page can be tested as a static render (verify it loads, shows Google button), but the actual OAuth redirect cannot be followed
 
 **Core flows to test** (all with auth bypassed):
+
 1. **Dashboard**: Visit `/` → verify stats cards render, chart loads, skeleton appears first
 2. **Project CRUD**: Navigate to `/projects` → create project → verify listed → view detail → delete
 3. **Template CRUD**: Navigate to `/templates` → create template → verify listed → edit subject → save → fill variables → render preview
@@ -268,6 +282,7 @@ const response = await fetch(`${BASE}/api/projects`);
 6. **Login page** (static): Visit `/login` → verify page loads, Google sign-in button visible
 
 **`playwright.config.ts`**:
+
 ```typescript
 export default defineConfig({
 	testDir: "./e2e/bdd",
@@ -295,6 +310,7 @@ export default defineConfig({
 > **Env injection note**: L3 Playwright needs the test Worker URL injected into the webServer shell. We use `D1_WORKER_URL_TEST` / `D1_WORKER_API_KEY_TEST` env vars (set in CI or local shell profile) and remap them to `D1_WORKER_URL` / `D1_WORKER_API_KEY` in the command prefix. The `${VAR:?}` syntax ensures a hard failure if credentials are missing — L3 is a hard gate, not soft.
 
 **Commits** (atomic):
+
 1. `feat(L3): add Playwright config`
 2. `feat(L3): add dashboard and navigation BDD specs`
 3. `feat(L3): add project CRUD BDD spec`
@@ -306,9 +322,11 @@ export default defineConfig({
 ### Step 6: Wire L3 into CI / on-demand script ✅
 
 **Files**:
+
 - `package.json` — Change `test:e2e:bdd` script from `bun run e2e/bdd/runner.ts` (nonexistent) to `npx playwright test`
 
 **Script change**:
+
 ```diff
 - "test:e2e:bdd": "bun run e2e/bdd/runner.ts",
 + "test:e2e:bdd": "npx playwright test",
