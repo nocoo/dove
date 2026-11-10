@@ -32,6 +32,7 @@
 A `SELECT COUNT` then send is not atomic. Under concurrent webhook calls to the same (project, email), both requests pass the check simultaneously. A dedicated lock table with UNIQUE constraint provides atomic enforcement.
 
 **New table: `rate_limit_locks`**
+
 ```sql
 CREATE TABLE IF NOT EXISTS rate_limit_locks (
   project_id TEXT NOT NULL,
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS rate_limit_locks (
 The `PRIMARY KEY (project_id, to_email)` enforces uniqueness. Only one lock per (project, email) can exist.
 
 **Algorithm:**
+
 1. After recipient is resolved (Step 5), normalize email → `recipient.email`
 2. Query: `SELECT blocked_until FROM rate_limit_locks WHERE project_id = ? AND to_email = ?`
 3. If row exists AND `blocked_until > now()` → reject with 429
@@ -56,6 +58,7 @@ The `PRIMARY KEY (project_id, to_email)` enforces uniqueness. Only one lock per 
 Two concurrent requests both see "no lock / expired lock" at step 2–3. Both proceed to send. Both succeed. Both write the lock. Result: 2 emails sent within 5 minutes, but the lock is now in place for the next 5 min. This is acceptable as a 1-in-a-million edge — D1 serializes writes at the database level, so in practice the second INSERT OR REPLACE will still succeed but the user gets one extra email at most. For strict single-send guarantee, we'd need D1 transactions (batch), but the risk/complexity tradeoff isn't worth it for email delivery.
 
 **Alternative (stricter): acquire-before-send**
+
 1. `INSERT OR IGNORE INTO rate_limit_locks` with `blocked_until = datetime('now', '+5 minutes')`
 2. If insert affected 0 rows → check if existing lock is expired:
    - `UPDATE rate_limit_locks SET blocked_until = ... WHERE project_id = ? AND to_email = ? AND blocked_until <= datetime('now')`
@@ -66,6 +69,7 @@ Two concurrent requests both see "no lock / expired lock" at step 2–3. Both pr
 This gives strict atomic enforcement. **Recommended approach.**
 
 **New function (`src/server/lib/email/rate-limit.ts`):**
+
 ```typescript
 export interface RateLimitCheck {
 	allowed: boolean;
@@ -88,6 +92,7 @@ export async function releaseAddressLock(
 
 **Webhook integration (webhook.ts):**
 Insert rate-limit check AFTER Step 5 (Recipient resolution), BEFORE Step 6 (Template):
+
 - Uses `recipient.email` (already normalized, lowercase, trimmed)
 - Returns 429 with:
   - Header: `Retry-After: <seconds>`
@@ -101,6 +106,7 @@ Insert rate-limit check AFTER Step 5 (Recipient resolution), BEFORE Step 6 (Temp
 In the **Recipients card** of project detail page (`src/client/routes/projects/$id.tsx`):
 
 **Type change:**
+
 ```typescript
 interface Project {
 	// ... existing fields ...
@@ -109,6 +115,7 @@ interface Project {
 ```
 
 **UI behavior:**
+
 - Add a toggle/switch at the top of the Recipients card, between header and list
 - Label: "Accept any email address"
 - Description: "When enabled, sends skip the whitelist and accept any valid email address. Rate limits and quotas still apply. Your existing whitelist is preserved and re-activated if you turn this off."
@@ -124,6 +131,7 @@ The toggle should NOT be part of the main form's `dirty` state since it saves im
 ### 3.3 Schema Changes
 
 **New migration: `migrations/2026-05-02-rate-limit-locks.sql`**
+
 ```sql
 CREATE TABLE IF NOT EXISTS rate_limit_locks (
   project_id TEXT NOT NULL,
@@ -141,6 +149,7 @@ CREATE TABLE IF NOT EXISTS rate_limit_locks (
 ### 3.4 Lock Cleanup
 
 Expired locks accumulate over time. Options:
+
 - **Lazy cleanup**: before INSERT, DELETE expired rows for this (project_id, to_email). Already handled by the UPDATE approach.
 - **Periodic cleanup** (optional, deferred): a scheduled worker or cron that DELETEs `WHERE blocked_until < datetime('now', '-1 hour')`. Not critical for MVP since expired rows don't affect correctness.
 

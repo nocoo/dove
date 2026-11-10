@@ -105,6 +105,7 @@ For example, with `from_name = "Backy Alerts"`, `email_prefix = "noreply"`, `RES
 UNIQUE constraint on `(project_id, email)` — no duplicate emails per project.
 
 **Email normalization**: All email addresses are normalized on write and on lookup: `value.trim().toLowerCase()`. This ensures `User@Example.com` and `user@example.com` resolve to the same recipient. Normalization is applied in:
+
 - `POST /api/recipients` (create) and `PUT /api/recipients/[id]` (update)
 - Webhook send flow step 5 (recipient lookup by email)
 
@@ -136,6 +137,7 @@ interface TemplateVariable {
 ```
 
 **Type coercion rules**: All `default` values and all webhook-supplied `variables` values are accepted as strings and coerced at validation time:
+
 - `"string"` — used as-is
 - `"number"` — must pass `Number()` without `NaN`; rendered as the numeric string
 - `"boolean"` — must be `"true"` or `"false"` (case-insensitive); rendered as `"true"` / `"false"`
@@ -191,6 +193,7 @@ UNIQUE index on `(project_id, idempotency_key)` WHERE `idempotency_key IS NOT NU
 | `created_at`    | TEXT    | NOT NULL                            | ISO 8601                |
 
 Webhook logs are **fire-and-forget observability logs** — written asynchronously (`void createWebhookLog(...)`, errors swallowed), never blocking the response. As a consequence:
+
 - Logs **may be lost** under D1 transient failures or process crashes
 - They are suitable for debugging and traffic monitoring, **not** for strong-consistency auditing
 - For authoritative send history, use `send_logs` (written synchronously before responding)
@@ -341,6 +344,7 @@ Content-Type: application/json
 **Payload fingerprint enforcement**: An idempotency key is permanently bound to its request payload. On first use, a SHA-256 hash of the canonical payload (`JSON.stringify({ template, to, variables })` with sorted keys) is stored in `send_logs.payload_hash`. On subsequent requests with the same key, the incoming payload hash is compared against the stored one. If they differ → return 422 `idempotency_payload_mismatch`. This prevents silent semantic conflicts where the same key carries different intent.
 
 Dedup behavior (assuming payload matches):
+
 - If a matching log exists with status `sent` → return the cached result immediately (200, no re-send)
 - If a matching log exists with status `failed` → reuse the existing send_log record, re-run from step 4 (quota check → recipient → template → validate → render → reset record to `sending` → Resend call → update). Payload fingerprint guarantees identical input so re-rendering produces the same result. The original `send_log.id` is preserved as the Resend Idempotency-Key.
 - If a matching log exists with status `sending` → return 409 `send_in_progress`
@@ -433,6 +437,7 @@ This code expires in {{expire_minutes}} minutes.
 ### HTML Escaping
 
 All variable values are HTML-escaped before substitution to prevent XSS:
+
 - `&` → `&amp;`
 - `<` → `&lt;`
 - `>` → `&gt;`
@@ -445,6 +450,7 @@ Quotas are **soft limits (best-effort)**. Each send request performs a near-real
 ### Time Boundary
 
 All quota windows use **UTC**:
+
 - **Daily quota** resets at `UTC 00:00` each day
 - **Monthly quota** resets at `UTC 00:00` on the 1st of each month
 
@@ -616,6 +622,7 @@ database_id = "<from cloudflare dashboard>"
 ### Proxy (`src/proxy.ts`)
 
 Public routes (no auth required):
+
 - `/api/auth/*`
 - `/api/live`
 - `/api/webhook/*`
@@ -623,6 +630,7 @@ Public routes (no auth required):
 ### Database Initialization (`/api/db/init`)
 
 **NOT a public route.** Requires session auth (admin login) and is further gated:
+
 - `NODE_ENV === 'production'` → returns 403 unconditionally, regardless of auth status
 - Only accessible when `NODE_ENV` is `development` or `test`
 - In production, schema initialization must be performed via CLI or deployment script before the app starts
@@ -632,6 +640,7 @@ Public routes (no auth required):
 `sanitizeProject()` strips `webhook_token` from all API responses using field allowlisting (not deletion).
 
 **Exception**: `POST /api/projects/[id]/token` (token regeneration) returns the new token in plaintext exactly once:
+
 ```json
 { "webhook_token": "new_48char_token_here" }
 ```

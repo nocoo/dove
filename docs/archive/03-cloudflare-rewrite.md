@@ -302,6 +302,7 @@ Request → authSession → authBearer → Route handler
 KV session 校验，保护 dashboard API。
 
 **Skip conditions**（直接调用 `next()`）：
+
 - 公开路由：`/api/live`、`/api/auth/*`
 - Webhook 路由：`/api/webhook/*`
 - Localhost（本地开发）
@@ -610,6 +611,7 @@ const total = sent + failed;
 ```
 
 **UI 影响**：Provider 列表页的健康状态徽章逻辑需要适配：
+
 - `configValid === false` → 红色（配置错误）
 - `reachable === false` → 红色（CF Email 不可达）
 - `lastSendHealth === 'unhealthy'` → 红色（发送持续失败）
@@ -797,6 +799,7 @@ wrangler secret put ALLOWED_EMAILS
 ```
 
 Google Console 添加 OAuth callback URL：
+
 ```
 https://dove.hexly.ai/api/auth/google/callback
 ```
@@ -844,6 +847,7 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 | `dove` + `[env.test]` | 远程 smoke test（手动） | `dove-test.hexly.ai` | `dove-test`  |
 
 重写完成后删除：
+
 - `dove.worker.hexly.ai`（D1 proxy Worker）
 - `dove-email.worker.hexly.ai`（邮件 Worker）
 
@@ -882,20 +886,24 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 ### Phase A — Scaffold
 
 **C001** ✅ `wrangler.toml` + `src/server/env.ts`：Worker 配置和类型定义
+
 - 所有 bindings（DB, KV, EMAIL）
 - `[env.test]` 配置
 - custom domain routes
 
 **C002** ✅ `src/server/index.ts` + `src/server/lib/version.ts`：最小 Hono app
+
 - `GET /api/live` 健康检查
 - D1 连接验证
 
 **C003** ✅ Vite + React 19 骨架
+
 - `vite.config.ts`
 - `src/client/main.tsx`
 - `src/client/styles/globals.css`（Tailwind v4）
 
 **C004** ✅ React Router v7 配置
+
 - `src/client/routes/_layout.tsx`（AppShell 骨架）
 - 路由配置文件
 
@@ -906,6 +914,7 @@ curl -s https://dove-test.hexly.ai/api/live | jq .
 ### Phase B — Data Layer
 
 **C006** ✅ `src/server/lib/db/d1.ts`：D1 native binding 薄包装
+
 ```typescript
 export async function query<T>(db: D1Database, sql: string, params?: unknown[]): Promise<T[]>;
 export async function queryOne<T>(
@@ -929,6 +938,7 @@ export async function execute(db: D1Database, sql: string, params?: unknown[]): 
 **C012** ✅ `src/server/lib/db/email-providers.ts`：Provider CRUD
 
 **C013** ✅ `src/server/schema.sql`：完整 schema
+
 - 现有所有表
 - `cf_email_idempotency`（合并自 worker-email）
 
@@ -937,6 +947,7 @@ export async function execute(db: D1Database, sql: string, params?: unknown[]): 
 ### Phase C — Auth
 
 **C014** ✅ `src/server/lib/session.ts`：KV session 工具
+
 ```typescript
 export async function createSession(kv: KVNamespace, email: string): Promise<string>;
 export async function getSession(kv: KVNamespace, sessionId: string): Promise<SessionData | null>;
@@ -946,6 +957,7 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 **C015** ✅ `src/server/middleware/auth-session.ts`：Session 校验中间件
 
 **C016** ✅ `src/server/routes/auth.ts`：Google OAuth 路由
+
 - `GET /api/auth/google` → 跳转 Google
 - `GET /api/auth/google/callback` → 校验 + 写 KV session + set cookie
 - `POST /api/auth/signout` → 删 session
@@ -966,6 +978,7 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 **C021** ✅ `src/server/lib/sanitize.ts`：响应清理
 
 **C022** ✅ `src/server/routes/projects.ts`：项目 CRUD API
+
 - `GET /api/projects`
 - `POST /api/projects`
 - `GET /api/projects/:id`
@@ -984,6 +997,7 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 **C027** ✅ `src/server/routes/webhook-logs.ts`：Webhook 日志分页查询 API
 
 **C028** ✅ `src/server/routes/stats.ts`：Dashboard 统计 API
+
 - `GET /api/stats` — 总计统计（projects, templates, sent today/month）
 - `GET /api/stats/charts` — 30 天发送趋势图数据
 
@@ -994,16 +1008,19 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 **C031** ✅ `src/server/lib/email/quota.ts`：配额检查
 
 **C032** ✅ `src/server/lib/email/provider.ts`：Provider 接口 + 工厂
+
 - `parseProviderConfig()` 兼容旧 cloudflare config
 - `createProvider()` 签名加 `env` 参数
 
 **C033** ✅ `src/server/lib/email/providers/resend.ts`：Resend provider
 
 **C034** ✅ `src/server/lib/email/providers/cloudflare.ts`：Cloudflare provider
+
 - 直接使用 `env.EMAIL` binding
 - 合并 `worker-email/` 的 Layer 2 幂等逻辑
 
 **C035** ✅ `src/server/routes/webhook.ts`：核心 webhook 路由
+
 - `HEAD /api/webhook/:projectId` — health check
 - `GET /api/webhook/:projectId/templates` — 获取模板列表
 - `POST /api/webhook/:projectId/send` — 发送邮件（**完全复制现有 12 步逻辑**）
@@ -1015,6 +1032,7 @@ export async function deleteSession(kv: KVNamespace, sessionId: string): Promise
 ### Phase E — UI Migration
 
 **C037** ✅ `src/client/lib/auth.ts`：客户端 session API
+
 ```typescript
 // 替代 next-auth/react 的 useSession / signOut
 export function useAuth(): { user: User | null; loading: boolean };
@@ -1022,6 +1040,7 @@ export async function signOut(): Promise<void>;
 ```
 
 **C038** ✅ `src/client/components/auth-provider.tsx`：Auth context provider
+
 - 替代 `SessionProvider` from next-auth/react
 - 从 `GET /api/auth/me` 获取用户状态
 - 提供 `useAuth()` hook
@@ -1029,6 +1048,7 @@ export async function signOut(): Promise<void>;
 **C039** ✅ `src/client/components/ui/*`：shadcn/ui 组件（搬运）
 
 **C040** ✅ `src/client/components/layout/*`：AppShell / Sidebar / Breadcrumbs
+
 - **关键**：替换所有 `useSession()` / `signOut()` 调用为 `useAuth()` / `signOut()`
 - 移除 `next/link`、`next/image` 依赖，改用 React Router `<Link>` + `<img>`
 
@@ -1055,9 +1075,11 @@ export async function signOut(): Promise<void>;
 **C051** ✅ `src/client/routes/templates/$id.tsx`：模板编辑
 
 **C052** ✅ `src/client/routes/providers/index.tsx`：Provider 列表
+
 - **关键**：健康徽章逻辑适配（同时使用 `reachable` + `lastSendHealth` 三态显示）
 
 **C053** ✅ `src/client/routes/providers/new.tsx`：新建 Provider
+
 - **关键**：cloudflare 类型隐藏 `worker_url`/`api_key` 字段
 
 **C054** ✅ `src/client/routes/providers/$id.tsx`：Provider 详情/编辑
@@ -1073,6 +1095,7 @@ export async function signOut(): Promise<void>;
 ### Phase F — Quality
 
 **C058** ✅ `src/server/routes/db-init.ts`：Schema 初始化 API
+
 - `POST /api/db/init` — 执行 schema.sql（仅 non-production）
 - 用于 L2/L3 测试前置初始化
 
@@ -1081,6 +1104,7 @@ export async function signOut(): Promise<void>;
 **C060** ⏭️ 跳过（保持 bun:test，不迁移 vitest）
 
 **C061** 🔲 配置 L2 API E2E（用户 CLI 执行）
+
 - `scripts/run-e2e.ts` 重写：
   - 启动 `wrangler dev --port 17034`（本地 miniflare D1，**不用 `--env test`**）
   - 调用 `POST /api/db/init` 初始化 schema（替代 `verify-test-db.ts`）
@@ -1093,6 +1117,7 @@ export async function signOut(): Promise<void>;
 **C062** 🔲 迁移现有 E2E 测试（用户 CLI 执行）
 
 **C063** 🔲 配置 L3 Playwright（用户 CLI 执行）
+
 - `wrangler dev --port 27034`（本地 miniflare D1，**不用 `--env test`**）
 
 **C064** 🔲 迁移现有 Playwright 测试（用户 CLI 执行）
@@ -1112,6 +1137,7 @@ export async function signOut(): Promise<void>;
 > 这与 bat 项目的模型一致：`[env.test]` 用于 isolated deploy 验证，本地测试不触碰远程资源。
 
 **C068** 🔲 设置 secrets（用户 CLI 执行）
+
 ```bash
 # Production
 wrangler secret put AUTH_SECRET
@@ -1129,6 +1155,7 @@ wrangler secret put ALLOWED_EMAILS --env test
 ```
 
 **C069** 🔲 部署 test 环境 + smoke test（用户 CLI 执行）
+
 ```bash
 bun run build
 wrangler d1 migrations apply dove-db-test --remote --env test
@@ -1140,12 +1167,14 @@ wrangler deploy --env test
 - 发送测试邮件
 
 **C070** 🔲 部署 production（用户 CLI 执行）
+
 ```bash
 wrangler d1 migrations apply dove-db --remote
 wrangler deploy
 ```
 
 **C071** 🔲 Smoke test production（用户 CLI 执行）
+
 - `curl https://dove.hexly.ai/api/live`
 - 登录测试（Google OAuth）
 - 发送测试邮件
@@ -1155,6 +1184,7 @@ wrangler deploy
 ### Phase H — Cleanup（部署成功后）
 
 **C072** ✅ 删除旧代码
+
 - `worker/`（D1 proxy Worker）
 - `worker-email/`（邮件 Worker）
 - `src/app/`（Next.js pages）
@@ -1165,15 +1195,18 @@ wrangler deploy
 - `next.config.*`、`next-env.d.ts`
 
 **C073** ✅ 删除旧测试脚本
+
 - `scripts/deploy-test-worker.ts`
 - `scripts/verify-test-db.ts`
 - `.env.test`（不再需要）
 
 **C074** ✅ 更新 `CLAUDE.md`
+
 - 移除 Railway 相关说明
 - 更新 Tech Stack 为 Cloudflare Workers
 
 **C075** 🔲 删除旧 Workers（用户 CLI 执行）
+
 ```bash
 # dove.worker.hexly.ai (D1 proxy)
 cd worker && wrangler delete
