@@ -41,24 +41,29 @@ Test configuration needs `D1_WORKER_URL`, `D1_WORKER_API_KEY`, `EMAIL_DRY_RUN`, 
 
 ## Testing and quality contract
 
-6DQ keeps its name with unified L1, L2/L3, G2 and D1; the owner merged former G1 into L1 on 2026-09-21. Statuses: `enforced`, `planned`, `manual`, `N/A`.
+Quality follows System1 v1.3.0 Native Mode (`nocoo/base-ci v2026.15`) in `.github/workflows/quality-slots.yml` and `.github/workflows/ci.yml`. Statuses: `enforced`, `planned`, `manual`, `N/A`.
 
-| Dimension             | Required proof                                                                                                             | Status   | Current enforcement / gap                                                                                                                                                                                                                                                     |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| L1 pre-commit quality | Statements/functions/lines ≥99%, branches ≥96%; no `.skip`/`.only`; strict types and check-only lint, zero errors/warnings | enforced | `.husky/pre-commit` exports the Git index via `checkout-index`, symlinks `node_modules`, runs gitleaks on staged changes, then typecheck, full Biome, route/page maps and `vitest --coverage` in parallel on that snapshot; any failure blocks the commit (target \<30s warm) |
-| L2 API                | Real local HTTP over 100% of endpoint/method combinations                                                                  | planned  | Push/CI run `scripts/run-e2e.ts`; static route mapping does not prove every behavior/method assertion                                                                                                                                                                         |
-| L3 UI                 | Critical dashboard workflows in Chromium with dry-run delivery                                                             | enforced | CI runs Playwright; page mapping is additional structural evidence                                                                                                                                                                                                            |
-| G2 security           | Dependency and secret scans; missing scanner fails                                                                         | enforced | Commit staged Gitleaks, push OSV, CI shared scanners; local push does not independently scan its commit range for secrets                                                                                                                                                     |
-| D1 isolation          | Per-run local stores, guards before fixtures/reset/cleanup and verified marker                                             | planned  | L2 allocates a per-run local configuration, persistence and port, rejects production-capable inputs, and verifies a random database ownership marker before schema/fixture writes. L3 still needs equivalent per-run isolation                                                |
-| Build                 | Actual Vite assets in `dist/client`                                                                                        | enforced | CI prepare command and CD build                                                                                                                                                                                                                                               |
-| Docs / release        | Public behavior, schema and synchronized version reviewed                                                                  | manual   | README/changelog and maintainer release checks                                                                                                                                                                                                                                |
+| Slot              | Status   | Evidence                                                                       |
+| ----------------- | -------- | ------------------------------------------------------------------------------ |
+| `S1` Types        | enforced | `bun run typecheck` (pre-commit + CI)                                          |
+| `S2` Lint         | enforced | `bun run lint` (Biome, pre-commit + CI)                                        |
+| `S3` Workflow     | enforced | SHA-pinned workflow action check in CI                                         |
+| `G1` Secrets      | enforced | `gitleaks` (`.gitleaks.toml`) in pre-commit + CI                               |
+| `G2` Dependencies | enforced | `osv-scanner` (`osv-scanner.toml`, `bun.lock`) in pre-push + CI                |
+| `B1` Build        | enforced | `bun run build` in CI                                                          |
+| `L1` Unit         | enforced | `vitest --coverage` (≥99% stmts/funcs/lines, ≥96% branches) in pre-commit + CI |
+| `L2` Runtime      | N/A      | No `@cloudflare/vitest-pool-workers` suite                                     |
+| `L3` Integration  | enforced | `bun run test:e2e:api` in pre-push + CI                                        |
+| `L4` E2E          | enforced | `bun run test:e2e:bdd` (Playwright Chromium) in CI                             |
+| `P1` Package      | N/A      | Private repo, not published to npm                                             |
+| `Z1` Gate         | enforced | `quality / Z1: Gate` required status check on `main`                           |
 
 | Hook       | Current behavior                                                                                | Required follow-up                                     |
 | ---------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | pre-commit | Index snapshot: gitleaks + parallel typecheck, Biome, route/page maps and coverage (\<30s warm) | Maintain snapshot enforcement and measured warm timing |
 | pre-push   | Local API E2E and dependency scan in parallel                                                   | Full L2+G2 on stdin push refs, <3min                   |
 
-Install restores Husky. Hooks are check-only; never use `--no-verify` on commits or branch pushes. CI pins `base-ci/quality.yml` at `1ea10ecab22b72512399485391603fe03a161016` (`v2026.12`, strict `slot-status`) and runs S1/S2/S3/G1/G2/B1/L1/L2/L3/Z1.
+Install restores Husky. Hooks are check-only; never use `--no-verify` on commits or branch pushes.
 
 ## Resources and isolation
 

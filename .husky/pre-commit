@@ -3,7 +3,7 @@
 if [ -z "${BASH_VERSION-}" ]; then
 	exec bash "$0" "$@"
 fi
-# L1 + G2-secrets (6DQ): Git index snapshot, not the working tree.
+# L1 + G1-secrets: Git index snapshot, not the working tree.
 # Export the index via checkout-index, run all L1 checks in that tree,
 # and block the commit on any failure. Target wall time <30s (warm).
 
