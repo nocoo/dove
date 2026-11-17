@@ -1,7 +1,7 @@
 # osv-scanner configuration
 # See: https://google.github.io/osv-scanner/configuration/
 
-# Add vulnerability ignores here when needed, e.g.:
-# [[IgnoredVulns]]
-# id = "GHSA-xxxx-yyyy-zzzz"
-# reason = "Transitive dep of X; cannot upgrade without breaking Y"
+[[IgnoredVulns]]
+id = "GHSA-fc5q-39xc-vjpf"
+ignoreUntil = 2026-12-18
+reason = "picomatch <= 4.0.7 ReDoS has no patched release yet; dev/build-only transitive dep of vite, vitest, tinyglobby, and lint-staged (not shipped in runtime)"
