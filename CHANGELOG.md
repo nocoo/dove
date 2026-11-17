@@ -7,6 +7,235 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.5.7
+
+### Added
+- Run L1 pre-commit on Git index snapshot
+- Add Hexly project link and header tooltips
+- Refine logo presentation
+- Refine dove animal identity
+
+### Changed
+- Migrate client to basalt
+- Bump hono to 4.13.18 (#694)
+- Bump @biomejs/biome to 2.6.7 (#693)
+- Bump marked to 18.2.0 (#692)
+- Bump @testing-library/user-event to 14.6.10 (#690)
+- Bump jose to 6.2.17 (#685)
+- Bump vite to 8.3.8 (#684)
+- Bump wrangler to 4.162.0 (#681)
+- Bump @vitejs/plugin-react to 6.3.0 (#677)
+- Migrate to System1 v1.3.0 Native Mode (v2026.15)
+- Update AGENTS.md base-ci pin and slot coverage
+- Migrate quality.yml to base-ci v2026.12 with strict slot-status
+- Pin base-ci to v2026.10
+- Bump @happy-dom/global-registrator 20.14.6 → 21.0.4
+- Bump entities 8.1.0 → 9.0.0
+- Bump @playwright/test 1.64.1 → 1.65.0
+- Bump @biomejs/biome 2.6.4 → 2.6.6
+- Bump vitest 5.0.5 → 5.1.0, @vitest/coverage-v8 5.0.5 → 5.1.0
+- Bump tailwindcss 4.3.3 → 4.3.5, @tailwindcss/postcss 4.3.3 → 4.3.5
+- Bump lucide-react 1.61.0 → 1.70.0
+- Bump hono 4.13.13 → 4.13.17
+- Release 0.5.5
+- Bump jose to 6.2.15 (#674)
+- Bump @biomejs/biome to 2.6.4 (#672)
+- Bump @types/node to 26.6.6 (#671)
+- Bump react-router to 8.5.1 (#670)
+- Bump wrangler to 4.156.2 (#668)
+- Bump postcss to 8.5.32 (#667)
+- Bump marked to 18.1.3 (#666)
+- Release 0.5.4
+- Bump undici 7.29.1 → 7.30.1
+- Bump happy-dom 20.14.5 → 21.0.4
+- Bump @types/bun 1.4.3 → 1.4.4
+- Bump vite 8.3.4 → 8.3.5
+- Bump @cloudflare/workers-types 5.20261019.1 → 5.20261024.1
+- Bump @biomejs/biome 2.5.15 → 2.6.3
+- Bump wrangler 4.151.2 → 4.152.0
+- Bump lucide-react 1.59.0 → 1.61.0
+- Bump jose 6.2.12 → 6.2.13
+- Re-pin base-ci for node 26.12.1
+- Release 0.5.3
+- Bump wrangler 4.149.0 → 4.151.2
+- Bump react-router 8.4.0 → 8.5.0
+- Bump postcss 8.5.30 → 8.5.31
+- Bump lucide-react 1.55.0 → 1.59.0
+- Bump vitest and @vitest/coverage-v8 5.0.4 → 5.0.5
+- Bump react and react-dom 19.3.0 → 19.3.1
+- Bump @testing-library/user-event 14.6.7 → 14.6.8
+- Bump @playwright/test 1.64.0 → 1.64.1
+- Bump @cloudflare/workers-types 5.20261012.1 → 5.20261019.1
+- Upgrade base-ci to v2026.9
+- Bump vitest (#637 #638)
+- Bump types-bun (#636)
+- Bump zod (#635)
+- Bump wrangler (#634)
+- Bump vite (#633)
+- Bump radix-ui (#632)
+- Bump postcss (#631)
+- Bump nanoid (#630)
+- Bump marked (#629)
+- Bump lucide (#628)
+- Bump hono (#627)
+- Bump plugin-react (#626)
+- Bump node (#625)
+- Bump playwright (#624)
+- Bump workers-types (#622)
+- Bump biome (#616)
+- Bump wrangler (#615)
+- Bump vite (#613)
+- Bump lucide (#611)
+- Bump lint (#610)
+- Bump hono (#609)
+- Bump vitest (#608)
+- Bump node (#607)
+- Bump workers (#606)
+- Migrate handbook to agents.md
+- Upgrade wrangler to 4.136.3 (#604)
+- Sync lock snapshot for #602 #603
+- Upgrade marked to 18.0.14
+- Upgrade workers-types to 5.20260922.1
+- Upgrade wrangler to 4.136.1 (#600)
+- Upgrade @cloudflare/workers-types to 5.20260921.1 (#599)
+- Update workers-types
+- Update wrangler
+- Update node
+- Update lucide-react
+- Update biome
+- Normalize claude handbook and quality contract
+- Align release wrangler-version with lockfile
+- Update react-router
+- Update hono
+- Align vitest 5.0.1
+- Upgrade lucide-react to 1.46.0
+- Upgrade wrangler to 4.131.2
+- Upgrade @cloudflare/workers-types to 5.20260914.1
+- Upgrade zod to 4.6.5
+- Upgrade @types/node to 26.5.1
+- Upgrade @types/react-dom to 19.3.0
+- Bump marked to 18.0.13
+- Bump happy-dom global registrator
+- Merge main into STU-5796 dependency update
+- Upgrade zod to 4.6.4
+- Upgrade tailwind-merge to 3.7.0 (STU-5795)
+- Upgrade lucide-react to 1.45.0
+- Bump workers types
+- Upgrade wrangler to 4.131.1
+- Upgrade react and react-dom to 19.3.0 (STU-5598)
+- Bump biome to 2.5.13
+- Upgrade zod to 4.6.2
+- Upgrade @types/react to 19.3.0 (STU-5595)
+- Upgrade vite to 8.3.0
+- Upgrade lucide-react to 1.44.0
+- Upgrade lint-staged to 17.5.1
+- Upgrade workers types to 5.20260910.1
+- Pin base-ci to ad43150
+- Pin base-ci to verified sha
+- Migrate workflows to base-ci
+- Upgrade @types/bun to 1.4.2
+- Upgrade wrangler to 4.130.0
+- Upgrade sharp to 0.35.4
+- Bump lucide-react to 1.43.0
+- Refresh bilingual project readmes
+- Upgrade lucide-react to 1.42.0
+- Upgrade wrangler to 4.129.1
+- Upgrade marked to 18.0.12
+- Upgrade entities to 8.1.0
+- Upgrade @cloudflare/workers-types
+- Update @types/node to 26.5.0
+- Defer dove logo adoption
+- Bump lint-staged to 17.5.0
+- Bump jose to 6.2.12
+- Bump workers types to 5.20260905.1
+- Bump jose to 6.2.11
+- Upgrade lucide-react to 1.41.0
+- Isolate provider fixture domains
+- Bump @types/bun to 1.4.1
+- Upgrade playwright to 1.63.0
+- Upgrade hono to 4.13.7
+- Upgrade workers types
+- Upgrade wrangler to 4.129.0
+- Align schema with cli version
+- Upgrade biome to 2.5.12
+- Bump postcss to 8.5.28
+- Upgrade Vitest to 5.0.0
+- Upgrade lucide-react to 1.40.0
+- Update @types/react-dom to 19.2.7
+- Upgrade happy-dom global registrator
+- Bump user-event to 14.6.7
+- Update @types/node to 26.4.1
+- Wait ci before release tag
+- Require release from main in handbook
+- Fix readme auth and typescript version
+- Add claude agent handbook
+- Add Retrospective.md for accident routing
+- Align Biome schema with CLI
+- Upgrade node types to 26.4.0
+- Upgrade hono to 4.13.5
+- Upgrade biome to 2.5.11
+- Upgrade testing library react to 16.3.3
+- Upgrade lint-staged to 17.4.1
+- Upgrade vite react plugin to 6.1.1
+- Upgrade react-router to 8.3.1
+- Upgrade wrangler to 4.127.1
+- Upgrade happy-dom registrator to 20.12.0
+- Upgrade zod to 4.5.4
+- Upgrade workers types to 5.20260831.1
+- Upgrade lucide-react to 1.38.0
+- Upgrade hono 4.13.3 → 4.13.4
+- Upgrade lucide-react 1.33.0 → 1.34.0 (STU-4396)
+- Bump marked to 18.0.11 (GH #407)
+- Upgrade @types/node 26.2.0 → 26.3.0
+- [deps] @types/react-dom 19.2.4 → 19.2.5
+- Bump @testing-library/user-event to 14.6.6 (GH #400)
+- Bump @cloudflare/workers-types to 5.20260823.1 (GH #399)
+- Bump @biomejs/biome to 2.5.10 (GH #395)
+- Bump @cloudflare/workers-types to 5.20260822.1 (GH #396)
+- Bump jose to 6.2.10 (GH #397)
+- Bump wrangler to 4.125.0 and @types/bun to 1.4.0 (GH #391, #388)
+- Bump vite to 8.2.2 and @vitejs/plugin-react to 6.1.0 (GH #390, #389)
+- Bump @cloudflare/workers-types to 5.20260821.1 (GH #387)
+- Bump @happy-dom/global-registrator to 20.11.6 (GH #383)
+- Bump lucide-react to 1.33.0 (GH #384)
+- Bump @cloudflare/workers-types to 5.20260820.1 (GH #382)
+- Bump @cloudflare/workers-types to 5.20260819.1 (GH #371) (#380)
+- Bump wrangler to 4.124.0 (GH #378)
+- Bump vitest to 4.1.11 (GH #377)
+- Bump marked to 18.0.10 (GH #376)
+- Bump lucide-react to 1.32.0 (GH #375)
+- Bump hono to 4.13.3 (GH #374)
+- Bump @vitest/coverage-v8 to 4.1.11 (GH #373)
+- Bump @testing-library/user-event to 14.6.5 (GH #372)
+- Bump @cloudflare/workers-types to 5.20260819.1 (GH #371)
+- Bump @biomejs/biome to 2.5.9 (GH #365)
+- Bump @cloudflare/workers-types to 5.20260818.1 (GH #366)
+- Bump jose to 6.2.9 (GH #363)
+- Bump @cloudflare/workers-types to 5.20260817.1 (GH #364) (#367)
+
+### Fixed
+- Patch source-map-js (#620)
+- Patch sharp (#619)
+- Sync release wrangler (#615)
+- Interrupt owned L2 requests (#606)
+- Verify owned process cleanup (#606)
+- Isolate dependency tests (#606)
+- Match locked wrangler version
+- Disable worker default and preview urls
+- Add accessible sr-only text and fix Biome lint in toolbar
+- Add release proof permissions
+- Upgrade sharp to 0.35.4
+- Preserve lint-staged caret range
+- Align workers types with wrangler
+- Recovery after failed push waits for ci
+- Wait ci before pushing the version tag
+- Require main and drop laptop wrangler deploy
+
+### Removed
+- Drop unused ci secrets inherit
+- Remove unused shadcn sidebar Sheet and Separator
+- Drop kv session and fix test facts
+
 ## v0.5.1
 
 ### Added
