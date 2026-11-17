@@ -1,17 +1,14 @@
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Input, Label, toast } from "@nocoo/basalt";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@nocoo/basalt/components/select";
+import { Loader2 } from "@nocoo/basalt/icons";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 
 type ProviderType = "resend" | "cloudflare";
 
@@ -67,8 +64,8 @@ export function NewProviderPage() {
 	return (
 		<div className="flex flex-col gap-6 max-w-lg">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold font-display">New Provider</h1>
-				<p className="text-sm text-muted-foreground mt-1">
+				<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">New Provider</h1>
+				<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 					Register an email backend. The config is validated against the type&apos;s schema before
 					it&apos;s saved.
 				</p>
@@ -115,7 +112,7 @@ export function NewProviderPage() {
 						maxLength={253}
 						disabled={saving}
 					/>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-basalt-xs text-basalt-muted-foreground">
 						Verified sender domain. Normalized to lowercase before storage.
 					</p>
 				</div>
@@ -135,12 +132,12 @@ export function NewProviderPage() {
 				)}
 
 				{type === "cloudflare" && (
-					<p className="text-sm text-muted-foreground">
+					<p className="text-basalt-sm text-basalt-muted-foreground">
 						Cloudflare Email Routing uses the Worker email binding — no API key needed.
 					</p>
 				)}
 
-				{error && <p className="text-sm text-destructive">{error}</p>}
+				{error && <p className="text-basalt-sm text-basalt-destructive">{error}</p>}
 
 				<div className="flex items-center gap-3 pt-1">
 					<Button type="submit" disabled={!canSubmit}>

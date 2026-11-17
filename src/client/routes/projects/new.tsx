@@ -1,18 +1,15 @@
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Input, Label, toast } from "@nocoo/basalt";
+import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@nocoo/basalt/components/select";
+import { Loader2 } from "@nocoo/basalt/icons";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 
 interface ProviderOption {
 	id: string;
@@ -89,8 +86,8 @@ export function NewProjectPage() {
 	return (
 		<div className="flex flex-col gap-6 max-w-lg">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold font-display">New Project</h1>
-				<p className="text-sm text-muted-foreground mt-1">
+				<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">New Project</h1>
+				<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 					Create an email relay project. A webhook token will be generated automatically.
 				</p>
 			</div>
@@ -111,9 +108,9 @@ export function NewProjectPage() {
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="description">
-						Description <span className="text-muted-foreground font-normal">(optional)</span>
+						Description <span className="text-basalt-muted-foreground font-normal">(optional)</span>
 					</Label>
-					<Textarea
+					<InputArea
 						id="description"
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
@@ -135,9 +132,11 @@ export function NewProjectPage() {
 							maxLength={64}
 							disabled={saving}
 						/>
-						<span className="text-sm text-muted-foreground shrink-0">@your-domain.com</span>
+						<span className="text-basalt-sm text-basalt-muted-foreground shrink-0">
+							@your-domain.com
+						</span>
 					</div>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-basalt-xs text-basalt-muted-foreground">
 						The local part of the sender email address.
 					</p>
 				</div>
@@ -152,7 +151,7 @@ export function NewProjectPage() {
 						maxLength={128}
 						disabled={saving}
 					/>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-basalt-xs text-basalt-muted-foreground">
 						Shown as the &quot;From&quot; name in the recipient&apos;s inbox.
 					</p>
 				</div>
@@ -201,13 +200,13 @@ export function NewProjectPage() {
 							))}
 						</SelectContent>
 					</Select>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-basalt-xs text-basalt-muted-foreground">
 						Choose a configured provider, or stay on Legacy to use the existing RESEND_API_KEY
 						env-var fallback.
 					</p>
 				</div>
 
-				{error && <p className="text-sm text-destructive">{error}</p>}
+				{error && <p className="text-basalt-sm text-basalt-destructive">{error}</p>}
 
 				<div className="flex items-center gap-3 pt-1">
 					<Button type="submit" disabled={!canSubmit}>

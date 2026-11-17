@@ -1,9 +1,8 @@
-import { FileText, Plus } from "lucide-react";
+import { Button, toast } from "@nocoo/basalt";
+import { FileText, Plus } from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { toast } from "sonner";
 import { TemplatesListSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
 
 interface Template {
 	id: string;
@@ -68,8 +67,10 @@ export function TemplatesPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-xl md:text-2xl font-semibold font-display">Templates</h1>
-					<p className="text-sm text-muted-foreground mt-1">Email templates across all projects.</p>
+					<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">Templates</h1>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
+						Email templates across all projects.
+					</p>
 				</div>
 				<Button size="sm" onClick={() => void navigate("/templates/new")}>
 					<Plus className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
@@ -81,17 +82,20 @@ export function TemplatesPage() {
 			{loading && !templates ? (
 				<TemplatesListSkeleton />
 			) : error && !templates ? (
-				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-					<p className="text-sm text-destructive">{error}</p>
+				<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+					<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 					<Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchData()}>
 						Retry
 					</Button>
 				</div>
 			) : templates && templates.length === 0 ? (
-				<div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
-					<FileText className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
-					<p className="text-sm font-medium text-foreground">No templates yet</p>
-					<p className="text-sm text-muted-foreground mt-1">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
+					<FileText
+						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
+						strokeWidth={1.5}
+					/>
+					<p className="text-basalt-sm font-medium text-basalt-foreground">No templates yet</p>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Create a template to define reusable email content.
 					</p>
 					<Button size="sm" className="mt-4" onClick={() => void navigate("/templates/new")}>
@@ -103,25 +107,27 @@ export function TemplatesPage() {
 				<div className="flex flex-col gap-6">
 					{Array.from(grouped.entries()).map(([projectId, tmps]) => (
 						<div key={projectId}>
-							<h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+							<h2 className="text-basalt-sm font-medium text-basalt-muted-foreground uppercase tracking-wide mb-3">
 								{projectMap.get(projectId) ?? "Unknown Project"}
 							</h2>
-							<div className="divide-y divide-border/50 rounded-xl bg-secondary overflow-hidden">
+							<div className="divide-y divide-basalt-border/50 rounded-xl bg-basalt-secondary overflow-hidden">
 								{tmps.map((t) => (
 									<Link
 										key={t.id}
 										to={`/templates/${t.id}`}
-										className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors duration-150"
+										className="flex items-center gap-3 px-4 py-3 hover:bg-basalt-hover/50 transition-colors duration-150"
 									>
 										<div className="min-w-0 flex-1">
-											<p className="text-sm font-medium text-foreground truncate">{t.name}</p>
-											<p className="text-xs text-muted-foreground mt-0.5 truncate">
+											<p className="text-basalt-sm font-medium text-basalt-foreground truncate">
+												{t.name}
+											</p>
+											<p className="text-basalt-xs text-basalt-muted-foreground mt-0.5 truncate">
 												<span className="font-mono">{t.slug}</span>
-												<span className="mx-1.5 text-border">·</span>
+												<span className="mx-1.5 text-basalt-border">·</span>
 												<span>{t.subject}</span>
 											</p>
 										</div>
-										<time className="hidden sm:block text-xs text-muted-foreground tabular-nums shrink-0">
+										<time className="hidden sm:block text-basalt-xs text-basalt-muted-foreground tabular-nums shrink-0">
 											{new Date(t.updated_at).toLocaleDateString(undefined, {
 												month: "short",
 												day: "numeric",

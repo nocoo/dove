@@ -1,17 +1,15 @@
-import { ChevronLeft, ChevronRight, Loader2, ScrollText, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { LogTableSkeleton } from "@/components/skeletons";
-import { SortHeader } from "@/components/sort-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge, Button, toast } from "@nocoo/basalt";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@nocoo/basalt/components/select";
+import { ChevronLeft, ChevronRight, Loader2, ScrollText, X } from "@nocoo/basalt/icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LogTableSkeleton } from "@/components/skeletons";
+import { SortHeader } from "@/components/sort-header";
 import { generatePageNumbers } from "@/lib/pagination";
 
 interface WebhookLog {
@@ -165,8 +163,8 @@ export function WebhookLogsPage() {
 	return (
 		<div className="flex flex-col gap-6">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold font-display">Webhook Logs</h1>
-				<p className="text-sm text-muted-foreground mt-1">
+				<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">Webhook Logs</h1>
+				<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 					Fire-and-forget request logs for observability.
 				</p>
 			</div>
@@ -180,7 +178,7 @@ export function WebhookLogsPage() {
 						setPage(1);
 					}}
 				>
-					<SelectTrigger className="w-[180px] h-9 text-sm">
+					<SelectTrigger className="w-[180px] h-9 text-basalt-sm">
 						<SelectValue placeholder="All Projects" />
 					</SelectTrigger>
 					<SelectContent>
@@ -198,7 +196,7 @@ export function WebhookLogsPage() {
 						variant="ghost"
 						size="sm"
 						onClick={clearFilters}
-						className="h-9 text-xs text-muted-foreground"
+						className="h-9 text-basalt-xs text-basalt-muted-foreground"
 					>
 						<X className="h-3 w-3 mr-1" strokeWidth={1.5} />
 						Clear filters
@@ -210,22 +208,22 @@ export function WebhookLogsPage() {
 			{loading && !logs ? (
 				<LogTableSkeleton columns={6} />
 			) : error && !logs ? (
-				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-					<p className="text-sm text-destructive">{error}</p>
+				<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+					<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 					<Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchData()}>
 						Retry
 					</Button>
 				</div>
 			) : logs && logs.length === 0 ? (
-				<div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
 					<ScrollText
-						className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3"
+						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
 						strokeWidth={1.5}
 					/>
-					<p className="text-sm font-medium text-foreground">
+					<p className="text-basalt-sm font-medium text-basalt-foreground">
 						{hasFilters ? "No logs match your filters" : "No webhook logs yet"}
 					</p>
-					<p className="text-sm text-muted-foreground mt-1">
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						{hasFilters
 							? "Try adjusting your filters."
 							: "Webhook logs will appear here when API requests are made."}
@@ -239,13 +237,13 @@ export function WebhookLogsPage() {
 			) : (
 				<div className="relative">
 					{loading && logs && (
-						<div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-lg z-10">
-							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+						<div className="absolute inset-0 flex items-center justify-center bg-basalt-background/50 rounded-lg z-10">
+							<Loader2 className="h-5 w-5 animate-spin text-basalt-muted-foreground" />
 						</div>
 					)}
 
 					{/* Table header — desktop */}
-					<div className="hidden md:flex items-center gap-3 px-4 py-2 text-xs text-muted-foreground border-b border-border">
+					<div className="hidden md:flex items-center gap-3 px-4 py-2 text-basalt-xs text-basalt-muted-foreground border-b border-basalt-border">
 						<SortHeader
 							label="Status"
 							sortKey="status_code"
@@ -302,84 +300,92 @@ export function WebhookLogsPage() {
 								<button
 									type="button"
 									onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
-									className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-border hover:bg-muted/30 transition-colors"
+									className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-basalt-border hover:bg-basalt-hover/30 transition-colors"
 								>
 									<div className="w-[60px] shrink-0">
 										<Badge
 											variant={statusCodeVariant(log.status_code)}
-											className="text-xs font-mono"
+											className="text-basalt-xs font-mono"
 										>
 											{log.status_code}
 										</Badge>
 									</div>
 									<div className="w-[60px] shrink-0">
-										<span className="text-xs font-mono text-muted-foreground">{log.method}</span>
+										<span className="text-basalt-xs font-mono text-basalt-muted-foreground">
+											{log.method}
+										</span>
 									</div>
-									<div className="flex-1 min-w-0 truncate text-xs font-mono text-foreground">
+									<div className="flex-1 min-w-0 truncate text-basalt-xs font-mono text-basalt-foreground">
 										{log.path}
 									</div>
-									<div className="w-[120px] shrink-0 text-xs text-muted-foreground truncate">
+									<div className="w-[120px] shrink-0 text-basalt-xs text-basalt-muted-foreground truncate">
 										{projectMap.get(log.project_id) ?? log.project_id.slice(0, 8)}
 									</div>
-									<div className="w-[80px] shrink-0 text-xs text-muted-foreground text-right tabular-nums">
+									<div className="w-[80px] shrink-0 text-basalt-xs text-basalt-muted-foreground text-right tabular-nums">
 										{log.duration_ms !== null ? `${log.duration_ms}ms` : "—"}
 									</div>
-									<div className="w-[140px] shrink-0 text-xs text-muted-foreground">
+									<div className="w-[140px] shrink-0 text-basalt-xs text-basalt-muted-foreground">
 										{formatDate(log.created_at)}
 									</div>
 								</button>
 
 								{/* Expanded detail */}
 								{expandedId === log.id && (
-									<div className="mx-4 mb-1 rounded-b-lg border border-t-0 border-border bg-muted/30 px-4 py-3">
+									<div className="mx-4 mb-1 rounded-b-lg border border-t-0 border-basalt-border bg-basalt-muted/30 px-4 py-3">
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 											<div>
-												<span className="text-xs text-muted-foreground block mb-0.5">ID</span>
-												<span className="text-xs font-mono text-foreground break-all">
+												<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
+													ID
+												</span>
+												<span className="text-basalt-xs font-mono text-basalt-foreground break-all">
 													{log.id}
 												</span>
 											</div>
 											{log.error_code && (
 												<div>
-													<span className="text-xs text-muted-foreground block mb-0.5">
+													<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
 														Error Code
 													</span>
-													<span className="text-xs font-mono text-destructive">
+													<span className="text-basalt-xs font-mono text-basalt-destructive">
 														{log.error_code}
 													</span>
 												</div>
 											)}
 											{log.error_message && (
 												<div className="md:col-span-2">
-													<span className="text-xs text-muted-foreground block mb-0.5">
+													<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
 														Error Message
 													</span>
-													<span className="text-xs text-destructive break-all">
+													<span className="text-basalt-xs text-basalt-destructive break-all">
 														{log.error_message}
 													</span>
 												</div>
 											)}
 											{log.ip && (
 												<div>
-													<span className="text-xs text-muted-foreground block mb-0.5">
+													<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
 														IP Address
 													</span>
-													<span className="text-xs font-mono text-foreground">{log.ip}</span>
+													<span className="text-basalt-xs font-mono text-basalt-foreground">
+														{log.ip}
+													</span>
 												</div>
 											)}
 											{log.user_agent && (
 												<div className="md:col-span-2">
-													<span className="text-xs text-muted-foreground block mb-0.5">
+													<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
 														User Agent
 													</span>
-													<span className="text-xs text-foreground break-all">
+													<span className="text-basalt-xs text-basalt-foreground break-all">
 														{log.user_agent}
 													</span>
 												</div>
 											)}
 											<div>
-												<span className="text-xs text-muted-foreground block mb-0.5">Created</span>
-												<span className="text-xs text-foreground">
+												<span className="text-basalt-xs text-basalt-muted-foreground block mb-0.5">
+													Created
+												</span>
+												<span className="text-basalt-xs text-basalt-foreground">
 													{formatDate(log.created_at)}
 												</span>
 											</div>
@@ -393,7 +399,7 @@ export function WebhookLogsPage() {
 					{/* Pagination */}
 					{totalPages > 1 && (
 						<div className="flex items-center justify-between pt-3">
-							<span className="text-xs text-muted-foreground">
+							<span className="text-basalt-xs text-basalt-muted-foreground">
 								Page {page} of {totalPages}
 							</span>
 							<div className="flex items-center gap-1">
@@ -410,7 +416,7 @@ export function WebhookLogsPage() {
 									if (p === "...") {
 										const key = i < arr.length / 2 ? "ellipsis-start" : "ellipsis-end";
 										return (
-											<span key={key} className="px-1 text-xs text-muted-foreground">
+											<span key={key} className="px-1 text-basalt-xs text-basalt-muted-foreground">
 												...
 											</span>
 										);
@@ -421,7 +427,7 @@ export function WebhookLogsPage() {
 											variant={p === page ? "default" : "outline"}
 											size="sm"
 											onClick={() => setPage(p)}
-											className="h-8 w-8 p-0 text-xs"
+											className="h-8 w-8 p-0 text-basalt-xs"
 										>
 											{p}
 										</Button>

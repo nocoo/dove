@@ -1,17 +1,4 @@
-import { Eye, Loader2, Plus, Send, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
-import { TemplateDetailSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardAction,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Button, Input, Label, LayerCard, toast } from "@nocoo/basalt";
 import {
 	Dialog,
 	DialogContent,
@@ -20,17 +7,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@nocoo/basalt/components/dialog";
+import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@nocoo/basalt/components/select";
+import { Eye, Loader2, Plus, Send, Trash2 } from "@nocoo/basalt/icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
+import { TemplateDetailSkeleton } from "@/components/skeletons";
 
 interface Variable {
 	name: string;
@@ -290,8 +279,8 @@ export function TemplateDetailPage() {
 
 	if (error && !template) {
 		return (
-			<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-				<p className="text-sm text-destructive">{error}</p>
+			<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+				<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 				<Button
 					variant="outline"
 					size="sm"
@@ -308,8 +297,10 @@ export function TemplateDetailPage() {
 		<div className="flex flex-col gap-6">
 			{/* Unsaved changes bar */}
 			{dirty && (
-				<div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-					<p className="text-sm text-muted-foreground flex-1">You have unsaved changes.</p>
+				<div className="flex items-center gap-3 rounded-lg border border-basalt-primary/20 bg-basalt-primary/5 px-4 py-3">
+					<p className="text-basalt-sm text-basalt-muted-foreground flex-1">
+						You have unsaved changes.
+					</p>
 					<Button size="sm" variant="outline" onClick={resetForm}>
 						Reset
 					</Button>
@@ -323,12 +314,12 @@ export function TemplateDetailPage() {
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 				{/* Left: Editor */}
 				<div className="flex flex-col gap-6">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-base">Template Settings</CardTitle>
-							<CardDescription>Name, slug, and subject line.</CardDescription>
-						</CardHeader>
-						<CardContent className="flex flex-col gap-4">
+					<LayerCard>
+						<LayerCard.Header>
+							<h3 className="text-basalt-base">Template Settings</h3>
+							<p>Name, slug, and subject line.</p>
+						</LayerCard.Header>
+						<LayerCard.Body className="flex flex-col gap-4">
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div className="flex flex-col gap-2">
 									<Label htmlFor="name">Name</Label>
@@ -359,57 +350,55 @@ export function TemplateDetailPage() {
 									maxLength={500}
 								/>
 							</div>
-						</CardContent>
-					</Card>
+						</LayerCard.Body>
+					</LayerCard>
 
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-base">Body (Markdown)</CardTitle>
-							<CardDescription>Use {"{{variable_name}}"} for dynamic content.</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Textarea
+					<LayerCard>
+						<LayerCard.Header>
+							<h3 className="text-basalt-base">Body (Markdown)</h3>
+							<p>Use {"{{variable_name}}"} for dynamic content.</p>
+						</LayerCard.Header>
+						<LayerCard.Body>
+							<InputArea
 								value={bodyMarkdown}
 								onChange={(e) => setBodyMarkdown(e.target.value)}
 								rows={16}
-								className="font-mono text-sm"
+								className="font-mono text-basalt-sm"
 							/>
-						</CardContent>
-					</Card>
+						</LayerCard.Body>
+					</LayerCard>
 
 					{/* Variables */}
-					<Card>
-						<CardHeader>
+					<LayerCard>
+						<LayerCard.Header>
 							<div className="flex items-center justify-between">
 								<div>
-									<CardTitle className="text-base">Variables</CardTitle>
-									<CardDescription>
-										Declare template variables with types and defaults.
-									</CardDescription>
+									<h3 className="text-basalt-base">Variables</h3>
+									<p>Declare template variables with types and defaults.</p>
 								</div>
 								<Button variant="outline" size="sm" onClick={addVariable}>
 									<Plus className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
 									Add
 								</Button>
 							</div>
-						</CardHeader>
-						<CardContent className="flex flex-col gap-2">
+						</LayerCard.Header>
+						<LayerCard.Body className="flex flex-col gap-2">
 							{variables.length === 0 ? (
-								<p className="text-xs text-muted-foreground text-center py-3">
+								<p className="text-basalt-xs text-basalt-muted-foreground text-center py-3">
 									No variables declared. Add one to validate template inputs.
 								</p>
 							) : (
 								variables.map((v, i) => (
 									<div
 										key={v.uid}
-										className="flex items-start gap-2 rounded-[var(--radius-widget)] bg-muted/20 p-2.5"
+										className="flex items-start gap-2 rounded-basalt-md bg-basalt-muted/20 p-2.5"
 									>
 										<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
 											<Input
 												placeholder="name"
 												value={v.name}
 												onChange={(e) => updateVariable(i, { name: e.target.value })}
-												className="font-mono text-xs h-8"
+												className="font-mono text-basalt-xs h-8"
 											/>
 											<Select
 												value={v.type}
@@ -417,7 +406,7 @@ export function TemplateDetailPage() {
 													updateVariable(i, { type: val as Variable["type"] })
 												}
 											>
-												<SelectTrigger className="text-xs h-8">
+												<SelectTrigger className="text-basalt-xs h-8">
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
@@ -432,7 +421,7 @@ export function TemplateDetailPage() {
 													updateVariable(i, { required: val === "required" })
 												}
 											>
-												<SelectTrigger className="text-xs h-8">
+												<SelectTrigger className="text-basalt-xs h-8">
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
@@ -447,7 +436,7 @@ export function TemplateDetailPage() {
 													onChange={(e) =>
 														updateVariable(i, { default: e.target.value || undefined })
 													}
-													className="text-xs h-8"
+													className="text-basalt-xs h-8"
 												/>
 											)}
 										</div>
@@ -455,22 +444,22 @@ export function TemplateDetailPage() {
 											variant="ghost"
 											size="sm"
 											onClick={() => removeVariable(i)}
-											className="text-muted-foreground hover:text-destructive h-8 w-8 p-0 shrink-0"
+											className="text-basalt-muted-foreground hover:text-basalt-destructive h-8 w-8 p-0 shrink-0"
 										>
 											<Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
 										</Button>
 									</div>
 								))
 							)}
-						</CardContent>
-					</Card>
+						</LayerCard.Body>
+					</LayerCard>
 
 					{/* Danger zone */}
-					<Card className="ring-1 ring-destructive/30">
-						<CardHeader>
-							<CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
-						</CardHeader>
-						<CardContent>
+					<LayerCard className="ring-1 ring-basalt-destructive/30">
+						<LayerCard.Header>
+							<h3 className="text-basalt-base text-basalt-destructive">Danger Zone</h3>
+						</LayerCard.Header>
+						<LayerCard.Body>
 							<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 								<DialogTrigger asChild>
 									<Button variant="destructive" size="sm">
@@ -505,16 +494,16 @@ export function TemplateDetailPage() {
 									</DialogFooter>
 								</DialogContent>
 							</Dialog>
-						</CardContent>
-					</Card>
+						</LayerCard.Body>
+					</LayerCard>
 				</div>
 
 				{/* Right: Preview */}
-				<Card className="sticky top-0 self-start">
-					<CardHeader>
-						<CardTitle className="text-base">Preview</CardTitle>
-						<CardDescription>Rendered email output.</CardDescription>
-						<CardAction>
+				<LayerCard className="sticky top-0 self-start">
+					<LayerCard.Header>
+						<h3 className="text-basalt-base">Preview</h3>
+						<p>Rendered email output.</p>
+						<div className="ml-auto">
 							<Button
 								size="sm"
 								variant="outline"
@@ -528,16 +517,18 @@ export function TemplateDetailPage() {
 								)}
 								Render
 							</Button>
-						</CardAction>
-					</CardHeader>
-					<CardContent className="flex flex-col gap-4">
+						</div>
+					</LayerCard.Header>
+					<LayerCard.Body className="flex flex-col gap-4">
 						{/* Preview variables input */}
 						{variables.length > 0 && (
 							<div className="flex flex-col gap-2">
-								<p className="text-xs font-medium text-muted-foreground">Sample Variables</p>
+								<p className="text-basalt-xs font-medium text-basalt-muted-foreground">
+									Sample Variables
+								</p>
 								{variables.map((v) => (
 									<div key={v.name} className="flex items-center gap-2">
-										<span className="text-xs font-mono text-muted-foreground w-24 shrink-0 truncate">
+										<span className="text-basalt-xs font-mono text-basalt-muted-foreground w-24 shrink-0 truncate">
 											{v.name}
 										</span>
 										<Input
@@ -545,7 +536,7 @@ export function TemplateDetailPage() {
 											onChange={(e) =>
 												setPreviewVars((prev) => ({ ...prev, [v.name]: e.target.value }))
 											}
-											className="text-xs h-7"
+											className="text-basalt-xs h-7"
 											placeholder={v.default ?? (v.required ? "required" : "optional")}
 										/>
 									</div>
@@ -555,37 +546,41 @@ export function TemplateDetailPage() {
 
 						{previewSubject && (
 							<div>
-								<p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+								<p className="text-basalt-xs uppercase tracking-wider text-basalt-muted-foreground mb-1">
 									Subject
 								</p>
-								<p className="text-sm font-medium text-foreground">{previewSubject}</p>
+								<p className="text-basalt-sm font-medium text-basalt-foreground">
+									{previewSubject}
+								</p>
 							</div>
 						)}
 
 						{previewHtml ? (
-							<div className="rounded-lg border border-border bg-background p-4 overflow-auto max-h-[500px]">
+							<div className="rounded-lg border border-basalt-border bg-basalt-background p-4 overflow-auto max-h-[500px]">
 								<div
-									className="prose prose-sm max-w-none text-foreground"
+									className="prose prose-sm max-w-none text-basalt-foreground"
 									dangerouslySetInnerHTML={{ __html: previewHtml }}
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-center py-8 rounded-[var(--radius-card)] bg-secondary">
-								<p className="text-xs text-muted-foreground">
+							<div className="flex items-center justify-center py-8 rounded-basalt-lg bg-basalt-secondary">
+								<p className="text-basalt-xs text-basalt-muted-foreground">
 									Click &quot;Render&quot; to preview the template.
 								</p>
 							</div>
 						)}
 
-						<div className="border-t border-border pt-4">
-							<p className="text-xs font-medium text-muted-foreground mb-2">Send Test Email</p>
+						<div className="border-t border-basalt-border pt-4">
+							<p className="text-basalt-xs font-medium text-basalt-muted-foreground mb-2">
+								Send Test Email
+							</p>
 							<div className="flex items-center gap-2">
 								<Input
 									type="email"
 									placeholder="recipient@example.com"
 									value={testTo}
 									onChange={(e) => setTestTo(e.target.value)}
-									className="text-sm h-8"
+									className="text-basalt-sm h-8"
 								/>
 								<Button
 									size="sm"
@@ -603,15 +598,15 @@ export function TemplateDetailPage() {
 							</div>
 							{sendResult && (
 								<p
-									className={`text-xs mt-2 ${sendResult.ok ? "text-emerald-600" : "text-destructive"}`}
+									className={`text-basalt-xs mt-2 ${sendResult.ok ? "text-basalt-success" : "text-basalt-destructive"}`}
 								>
 									{sendResult.ok ? "✓ " : "✗ "}
 									{sendResult.message}
 								</p>
 							)}
 						</div>
-					</CardContent>
-				</Card>
+					</LayerCard.Body>
+				</LayerCard>
 			</div>
 		</div>
 	);

@@ -1,18 +1,15 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button, Input, Label, toast } from "@nocoo/basalt";
+import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from "@nocoo/basalt/components/select";
+import { Loader2, Plus, Trash2 } from "@nocoo/basalt/icons";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 
 interface Project {
 	id: string;
@@ -139,8 +136,8 @@ export function NewTemplatePage() {
 	return (
 		<div className="flex flex-col gap-6 max-w-2xl">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold font-display">New Template</h1>
-				<p className="text-sm text-muted-foreground mt-1">
+				<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">New Template</h1>
+				<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 					Create a Markdown email template with optional variables.
 				</p>
 			</div>
@@ -202,16 +199,16 @@ export function NewTemplatePage() {
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="body">Body (Markdown)</Label>
-					<Textarea
+					<InputArea
 						id="body"
 						value={bodyMarkdown}
 						onChange={(e) => setBodyMarkdown(e.target.value)}
 						placeholder={"# Welcome, {{name}}!\n\nThank you for signing up..."}
 						rows={12}
 						disabled={saving}
-						className="font-mono text-sm"
+						className="font-mono text-basalt-sm"
 					/>
-					<p className="text-xs text-muted-foreground">
+					<p className="text-basalt-xs text-basalt-muted-foreground">
 						Use {"{{variable_name}}"} for dynamic content. Markdown will be converted to HTML.
 					</p>
 				</div>
@@ -229,14 +226,14 @@ export function NewTemplatePage() {
 					{variables.map((v, i) => (
 						<div
 							key={v.uid}
-							className="flex items-start gap-2 rounded-[var(--radius-widget)] bg-muted/20 p-3"
+							className="flex items-start gap-2 rounded-basalt-md bg-basalt-muted/20 p-3"
 						>
 							<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
 								<Input
 									placeholder="name"
 									value={v.name}
 									onChange={(e) => updateVariable(i, { name: e.target.value })}
-									className="font-mono text-sm"
+									className="font-mono text-basalt-sm"
 									disabled={saving}
 								/>
 								<Select
@@ -245,7 +242,7 @@ export function NewTemplatePage() {
 										updateVariable(i, { type: val as Variable["type"] })
 									}
 								>
-									<SelectTrigger className="text-sm">
+									<SelectTrigger className="text-basalt-sm">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -260,7 +257,7 @@ export function NewTemplatePage() {
 										updateVariable(i, { required: val === "required" })
 									}
 								>
-									<SelectTrigger className="text-sm">
+									<SelectTrigger className="text-basalt-sm">
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -273,7 +270,7 @@ export function NewTemplatePage() {
 										placeholder="default"
 										value={v.default ?? ""}
 										onChange={(e) => updateVariable(i, { default: e.target.value || undefined })}
-										className="text-sm"
+										className="text-basalt-sm"
 										disabled={saving}
 									/>
 								)}
@@ -283,7 +280,7 @@ export function NewTemplatePage() {
 								variant="ghost"
 								size="sm"
 								onClick={() => removeVariable(i)}
-								className="text-muted-foreground hover:text-destructive shrink-0"
+								className="text-basalt-muted-foreground hover:text-basalt-destructive shrink-0"
 							>
 								<Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
 							</Button>
@@ -291,7 +288,7 @@ export function NewTemplatePage() {
 					))}
 				</div>
 
-				{error && <p className="text-sm text-destructive">{error}</p>}
+				{error && <p className="text-basalt-sm text-basalt-destructive">{error}</p>}
 
 				<div className="flex items-center gap-3 pt-1">
 					<Button type="submit" disabled={!canSubmit}>

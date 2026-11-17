@@ -1,9 +1,4 @@
-import { Loader2, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, Input, Label, LayerCard, toast } from "@nocoo/basalt";
 import {
 	Dialog,
 	DialogContent,
@@ -11,16 +6,17 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@nocoo/basalt/components/dialog";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "@nocoo/basalt/components/select";
+import { Loader2, Trash2 } from "@nocoo/basalt/icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { cn } from "@/lib/utils";
 
 type ProviderType = "resend" | "cloudflare";
@@ -164,15 +160,17 @@ export function ProviderDetailPage() {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center py-12">
-				<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+				<Loader2 className="h-5 w-5 animate-spin text-basalt-muted-foreground" />
 			</div>
 		);
 	}
 
 	if (loadError || !record) {
 		return (
-			<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-				<p className="text-sm text-destructive">{loadError ?? "Provider not found"}</p>
+			<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+				<p className="text-basalt-sm text-basalt-destructive">
+					{loadError ?? "Provider not found"}
+				</p>
 				<Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchRecord()}>
 					Retry
 				</Button>
@@ -184,18 +182,18 @@ export function ProviderDetailPage() {
 		<>
 			<div className="flex flex-col gap-6 max-w-2xl">
 				<div>
-					<h1 className="text-xl md:text-2xl font-semibold font-display">{record.name}</h1>
-					<p className="text-sm text-muted-foreground mt-1">
+					<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">{record.name}</h1>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Update credentials or rotate the provider type.
 					</p>
 				</div>
 
-				<Card>
-					<CardHeader>
-						<CardTitle>Settings</CardTitle>
-						<CardDescription>The API key is masked; retype it to change it.</CardDescription>
-					</CardHeader>
-					<CardContent>
+				<LayerCard>
+					<LayerCard.Header>
+						<h3>Settings</h3>
+						<p>The API key is masked; retype it to change it.</p>
+					</LayerCard.Header>
+					<LayerCard.Body>
 						<form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-5">
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="name">Name</Label>
@@ -224,7 +222,7 @@ export function ProviderDetailPage() {
 									</SelectContent>
 								</Select>
 								{type !== record.type && (
-									<p className="text-xs text-amber-600 dark:text-amber-500">
+									<p className="text-basalt-xs text-basalt-warning dark:text-basalt-warning">
 										Type change: retype the API key before saving.
 									</p>
 								)}
@@ -257,7 +255,7 @@ export function ProviderDetailPage() {
 											apiKeyChanged ? "" : `Current: ${record.config.api_key ?? "(unset)"}`
 										}
 									/>
-									<p className="text-xs text-muted-foreground">
+									<p className="text-basalt-xs text-basalt-muted-foreground">
 										{apiKeyChanged
 											? "New key staged — will replace the stored secret on save."
 											: "Leave blank to keep the current secret. Type a new key to replace it."}
@@ -266,45 +264,48 @@ export function ProviderDetailPage() {
 							)}
 
 							{type === "cloudflare" && (
-								<p className="text-sm text-muted-foreground">
+								<p className="text-basalt-sm text-basalt-muted-foreground">
 									Cloudflare Email Routing uses the Worker email binding — no API key needed.
 								</p>
 							)}
 
-							{error && <p className="text-sm text-destructive">{error}</p>}
+							{error && <p className="text-basalt-sm text-basalt-destructive">{error}</p>}
 
 							<div className="flex items-center gap-3 pt-1">
 								<Button type="submit" disabled={!canSubmit}>
 									{saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
 									Save changes
 								</Button>
-								<span className={cn("text-xs", dirty ? "text-amber-600" : "text-muted-foreground")}>
+								<span
+									className={cn(
+										"text-basalt-xs",
+										dirty ? "text-basalt-warning" : "text-basalt-muted-foreground",
+									)}
+								>
 									{dirty ? "Unsaved changes" : "Up to date"}
 								</span>
 							</div>
 						</form>
-					</CardContent>
-				</Card>
+					</LayerCard.Body>
+				</LayerCard>
 
-				<Card className="border-destructive/40">
-					<CardHeader>
-						<CardTitle>Danger Zone</CardTitle>
-						<CardDescription>
-							Deleting a provider is blocked while any project still references it.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
+				<LayerCard className="border-basalt-destructive/40">
+					<LayerCard.Header>
+						<h3>Danger Zone</h3>
+						<p>Deleting a provider is blocked while any project still references it.</p>
+					</LayerCard.Header>
+					<LayerCard.Body>
 						<Button
 							variant="outline"
 							onClick={() => setConfirmOpen(true)}
 							disabled={deleting}
-							className="text-destructive hover:text-destructive"
+							className="text-basalt-destructive hover:text-basalt-destructive"
 						>
 							<Trash2 className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
 							Delete Provider
 						</Button>
-					</CardContent>
-				</Card>
+					</LayerCard.Body>
+				</LayerCard>
 			</div>
 
 			<Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>

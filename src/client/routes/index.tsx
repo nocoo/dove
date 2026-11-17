@@ -1,6 +1,6 @@
-import { AlertTriangle, CalendarDays, FolderKanban, Mail } from "lucide-react";
+import { toast } from "@nocoo/basalt";
+import { AlertTriangle, CalendarDays, FolderKanban, Mail } from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { SendsChart } from "@/components/charts/sends-chart";
 import { DashboardSkeleton } from "@/components/skeletons";
 
@@ -32,18 +32,18 @@ function StatsCard({
 }) {
 	return (
 		<div
-			className="rounded-[var(--radius-card)] bg-secondary p-4 md:p-5 animate-fade-up"
+			className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5"
 			style={{ animationDelay: `${Math.min(index * 40, 600)}ms` }}
 		>
 			<div className="flex items-start justify-between">
 				<div className="space-y-1">
-					<p className="text-xs md:text-sm text-muted-foreground">{label}</p>
-					<p className="text-2xl md:text-3xl font-semibold font-display text-foreground tracking-tight tabular-nums">
+					<p className="text-basalt-xs md:text-basalt-sm text-basalt-muted-foreground">{label}</p>
+					<p className="text-basalt-3xl md:text-basalt-3xl font-semibold text-basalt-foreground tracking-tight tabular-nums">
 						{value}
 					</p>
 				</div>
-				<div className={`rounded-md ${accent ?? "bg-card"} p-2`}>
-					<Icon className={`h-5 w-5 ${accent ? "text-current" : "text-muted-foreground"}`} />
+				<div className={`rounded-md ${accent ?? "bg-basalt-card"} p-2`}>
+					<Icon className={`h-5 w-5 ${accent ? "text-current" : "text-basalt-muted-foreground"}`} />
 				</div>
 			</div>
 		</div>
@@ -83,8 +83,8 @@ export function Dashboard() {
 	return (
 		<div className="space-y-4 md:space-y-6">
 			<div>
-				<h1 className="text-xl md:text-2xl font-semibold font-display">Dashboard</h1>
-				<p className="text-sm text-muted-foreground mt-1">
+				<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">Dashboard</h1>
+				<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 					Email relay overview and send activity.
 				</p>
 			</div>
@@ -117,7 +117,7 @@ export function Dashboard() {
 							label="Failed Today"
 							value={String(stats?.total_failed_today ?? 0)}
 							icon={AlertTriangle}
-							accent="bg-destructive/10 text-destructive"
+							accent="bg-basalt-destructive/10 text-basalt-destructive"
 							index={3}
 						/>
 					</div>

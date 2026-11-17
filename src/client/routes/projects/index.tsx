@@ -1,9 +1,8 @@
-import { ArrowRight, FolderKanban, Loader2, Mail, Plus } from "lucide-react";
+import { Button, toast } from "@nocoo/basalt";
+import { ArrowRight, FolderKanban, Loader2, Mail, Plus } from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { toast } from "sonner";
 import { ProjectsListSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
 
 interface ProjectSummary {
 	id: string;
@@ -47,8 +46,8 @@ export function ProjectsPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-xl md:text-2xl font-semibold font-display">Projects</h1>
-					<p className="text-sm text-muted-foreground mt-1">
+					<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">Projects</h1>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Manage email relay projects, quotas, and webhook tokens.
 					</p>
 				</div>
@@ -62,20 +61,20 @@ export function ProjectsPage() {
 			{loading && !projects ? (
 				<ProjectsListSkeleton />
 			) : error && !projects ? (
-				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-					<p className="text-sm text-destructive">{error}</p>
+				<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+					<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 					<Button variant="outline" size="sm" className="mt-3" onClick={() => void fetchProjects()}>
 						Retry
 					</Button>
 				</div>
 			) : projects && projects.length === 0 ? (
-				<div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
 					<FolderKanban
-						className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3"
+						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
 						strokeWidth={1.5}
 					/>
-					<p className="text-sm font-medium text-foreground">No projects yet</p>
-					<p className="text-sm text-muted-foreground mt-1">
+					<p className="text-basalt-sm font-medium text-basalt-foreground">No projects yet</p>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Create your first project to start sending emails.
 					</p>
 					<Button size="sm" className="mt-4" onClick={() => void navigate("/projects/new")}>
@@ -87,8 +86,8 @@ export function ProjectsPage() {
 				<div className="relative">
 					{/* Loading overlay for refetches */}
 					{loading && projects && (
-						<div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-lg z-10">
-							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+						<div className="absolute inset-0 flex items-center justify-center bg-basalt-background/50 rounded-lg z-10">
+							<Loader2 className="h-5 w-5 animate-spin text-basalt-muted-foreground" />
 						</div>
 					)}
 
@@ -97,29 +96,31 @@ export function ProjectsPage() {
 							<Link
 								key={project.id}
 								to={`/projects/${project.id}`}
-								className="group rounded-[var(--radius-card)] bg-secondary p-4 md:p-5 transition-colors hover:bg-accent/60"
+								className="group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 transition-colors hover:bg-basalt-hover/60"
 							>
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2.5 min-w-0">
-										<div className="shrink-0 rounded-md bg-card p-1.5">
-											<Mail className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+										<div className="shrink-0 rounded-md bg-basalt-card p-1.5">
+											<Mail className="h-4 w-4 text-basalt-muted-foreground" strokeWidth={1.5} />
 										</div>
 										<div className="min-w-0">
-											<p className="text-sm font-medium text-foreground truncate">{project.name}</p>
-											<p className="text-xs text-muted-foreground truncate">
+											<p className="text-basalt-sm font-medium text-basalt-foreground truncate">
+												{project.name}
+											</p>
+											<p className="text-basalt-xs text-basalt-muted-foreground truncate">
 												{project.from_name} · {project.email_prefix} · {project.quota_daily}/day ·{" "}
 												{project.quota_monthly}/mo
 											</p>
 										</div>
 									</div>
 									<ArrowRight
-										className="shrink-0 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2"
+										className="shrink-0 h-3.5 w-3.5 text-basalt-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2"
 										strokeWidth={1.5}
 									/>
 								</div>
 
 								{project.description && (
-									<p className="text-xs text-muted-foreground mt-2 line-clamp-1 pl-[34px]">
+									<p className="text-basalt-xs text-basalt-muted-foreground mt-2 line-clamp-1 pl-[34px]">
 										{project.description}
 									</p>
 								)}

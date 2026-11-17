@@ -1,3 +1,21 @@
+import { Button, Input, Label, LayerCard, Switch, toast } from "@nocoo/basalt";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@nocoo/basalt/components/dialog";
+import { InputArea } from "@nocoo/basalt/components/input-area";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@nocoo/basalt/components/select";
 import {
 	Copy,
 	Eye,
@@ -9,33 +27,10 @@ import {
 	RefreshCw,
 	Trash2,
 	Users,
-} from "lucide-react";
+} from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { toast } from "sonner";
 import { ProjectDetailSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Project {
 	id: string;
@@ -332,8 +327,8 @@ export function ProjectDetailPage() {
 
 	if (error && !project) {
 		return (
-			<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-				<p className="text-sm text-destructive">{error}</p>
+			<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+				<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 				<Button
 					variant="outline"
 					size="sm"
@@ -350,8 +345,10 @@ export function ProjectDetailPage() {
 		<div className="flex flex-col gap-6 max-w-2xl">
 			{/* Unsaved changes bar */}
 			{dirty && (
-				<div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-					<p className="text-sm text-muted-foreground flex-1">You have unsaved changes.</p>
+				<div className="flex items-center gap-3 rounded-lg border border-basalt-primary/20 bg-basalt-primary/5 px-4 py-3">
+					<p className="text-basalt-sm text-basalt-muted-foreground flex-1">
+						You have unsaved changes.
+					</p>
 					<Button size="sm" variant="outline" onClick={resetForm}>
 						Reset
 					</Button>
@@ -363,12 +360,12 @@ export function ProjectDetailPage() {
 			)}
 
 			{/* Settings card */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">Settings</CardTitle>
-					<CardDescription>Project configuration and sender details.</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-4">
+			<LayerCard>
+				<LayerCard.Header>
+					<h3 className="text-basalt-base">Settings</h3>
+					<p>Project configuration and sender details.</p>
+				</LayerCard.Header>
+				<LayerCard.Body className="flex flex-col gap-4">
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="name">Name</Label>
 						<Input
@@ -381,9 +378,10 @@ export function ProjectDetailPage() {
 
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="description">
-							Description <span className="text-muted-foreground font-normal">(optional)</span>
+							Description{" "}
+							<span className="text-basalt-muted-foreground font-normal">(optional)</span>
 						</Label>
-						<Textarea
+						<InputArea
 							id="description"
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
@@ -454,27 +452,25 @@ export function ProjectDetailPage() {
 								))}
 							</SelectContent>
 						</Select>
-						<p className="text-xs text-muted-foreground">
+						<p className="text-basalt-xs text-basalt-muted-foreground">
 							Picks the outbound backend. Legacy uses the RESEND_API_KEY / RESEND_FROM_DOMAIN env
 							vars for backward compat.
 						</p>
 					</div>
-				</CardContent>
-			</Card>
+				</LayerCard.Body>
+			</LayerCard>
 
 			{/* Webhook token card */}
-			<Card>
-				<CardHeader>
-					<CardTitle className="text-base">Webhook Token</CardTitle>
-					<CardDescription>
-						Use this token as a Bearer token to authenticate webhook requests.
-					</CardDescription>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-3">
+			<LayerCard>
+				<LayerCard.Header>
+					<h3 className="text-basalt-base">Webhook Token</h3>
+					<p>Use this token as a Bearer token to authenticate webhook requests.</p>
+				</LayerCard.Header>
+				<LayerCard.Body className="flex flex-col gap-3">
 					<div className="flex flex-col gap-1">
-						<Label className="text-xs text-muted-foreground">Webhook URL</Label>
+						<Label className="text-basalt-xs text-basalt-muted-foreground">Webhook URL</Label>
 						<div className="flex items-center gap-2">
-							<div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
+							<div className="flex-1 rounded-md border border-basalt-border bg-basalt-muted/30 px-3 py-2 font-mono text-basalt-xs break-all">
 								{`${window.location.origin}/api/webhook/${projectId ?? ""}/send`}
 							</div>
 							<Button
@@ -493,9 +489,9 @@ export function ProjectDetailPage() {
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<Label className="text-xs text-muted-foreground">Project ID</Label>
+						<Label className="text-basalt-xs text-basalt-muted-foreground">Project ID</Label>
 						<div className="flex items-center gap-2">
-							<div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
+							<div className="flex-1 rounded-md border border-basalt-border bg-basalt-muted/30 px-3 py-2 font-mono text-basalt-xs break-all">
 								{projectId}
 							</div>
 							<Button
@@ -515,10 +511,10 @@ export function ProjectDetailPage() {
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<Label className="text-xs text-muted-foreground">Token</Label>
+						<Label className="text-basalt-xs text-basalt-muted-foreground">Token</Label>
 						{token ? (
 							<div className="flex items-center gap-2">
-								<div className="flex-1 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-xs break-all">
+								<div className="flex-1 rounded-md border border-basalt-border bg-basalt-muted/30 px-3 py-2 font-mono text-basalt-xs break-all">
 									{tokenVisible ? token : "••••••••••••••••••••••••••••••••••••••••••••••••"}
 								</div>
 								<Button variant="outline" size="sm" onClick={() => setTokenVisible(!tokenVisible)}>
@@ -542,7 +538,7 @@ export function ProjectDetailPage() {
 								</Button>
 							</div>
 						) : (
-							<p className="text-xs text-muted-foreground">
+							<p className="text-basalt-xs text-basalt-muted-foreground">
 								Token is hidden for security. Regenerate to get a new one.
 							</p>
 						)}
@@ -562,16 +558,16 @@ export function ProjectDetailPage() {
 						)}
 						Regenerate Token
 					</Button>
-				</CardContent>
-			</Card>
+				</LayerCard.Body>
+			</LayerCard>
 
 			{/* Recipients card */}
-			<Card>
-				<CardHeader>
+			<LayerCard>
+				<LayerCard.Header>
 					<div className="flex items-center justify-between">
 						<div>
-							<CardTitle className="text-base">Recipients</CardTitle>
-							<CardDescription>Control who can receive emails from this project.</CardDescription>
+							<h3 className="text-basalt-base">Recipients</h3>
+							<p>Control who can receive emails from this project.</p>
 						</div>
 						{!allowUnknown && (
 							<Button
@@ -584,15 +580,15 @@ export function ProjectDetailPage() {
 							</Button>
 						)}
 					</div>
-				</CardHeader>
-				<CardContent className="flex flex-col gap-3">
+				</LayerCard.Header>
+				<LayerCard.Body className="flex flex-col gap-3">
 					{/* Recipient mode toggle */}
-					<div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3">
+					<div className="flex items-center justify-between rounded-lg border border-basalt-border bg-basalt-muted/20 px-4 py-3">
 						<div className="flex items-center gap-3">
-							<Globe className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+							<Globe className="h-4 w-4 text-basalt-muted-foreground" strokeWidth={1.5} />
 							<div>
-								<p className="text-sm font-medium">Accept any email address</p>
-								<p className="text-xs text-muted-foreground">
+								<p className="text-basalt-sm font-medium">Accept any email address</p>
+								<p className="text-basalt-xs text-basalt-muted-foreground">
 									{allowUnknown
 										? "Sends skip the whitelist. Rate limits and quotas still apply."
 										: "Only whitelisted recipients can receive emails."}
@@ -607,7 +603,7 @@ export function ProjectDetailPage() {
 					</div>
 
 					{allowUnknown && (
-						<p className="text-xs text-muted-foreground italic">
+						<p className="text-basalt-xs text-basalt-muted-foreground italic">
 							Your existing whitelist is preserved and will re-activate if you turn this off.
 						</p>
 					)}
@@ -617,7 +613,7 @@ export function ProjectDetailPage() {
 							{showAddRecipient && (
 								<form
 									onSubmit={(e) => void handleAddRecipient(e)}
-									className="flex flex-col gap-3 rounded-[var(--radius-widget)] bg-muted/20 p-3"
+									className="flex flex-col gap-3 rounded-basalt-md bg-basalt-muted/20 p-3"
 								>
 									<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 										<Input
@@ -658,29 +654,33 @@ export function ProjectDetailPage() {
 							)}
 
 							{recipients.length === 0 ? (
-								<div className="rounded-[var(--radius-card)] bg-secondary p-6 text-center">
+								<div className="rounded-basalt-lg bg-basalt-secondary p-6 text-center">
 									<Users
-										className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2"
+										className="h-8 w-8 text-basalt-muted-foreground/40 mx-auto mb-2"
 										strokeWidth={1.5}
 									/>
-									<p className="text-xs text-muted-foreground">
+									<p className="text-basalt-xs text-basalt-muted-foreground">
 										No recipients yet. Add one to start sending emails.
 									</p>
 								</div>
 							) : (
-								<div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
+								<div className="rounded-basalt-lg bg-basalt-secondary p-1 overflow-x-auto">
 									{recipients.map((r) => (
 										<div key={r.id} className="flex items-center gap-3 px-3 py-2.5">
 											<div className="min-w-0 flex-1">
-												<p className="text-sm font-medium text-foreground truncate">{r.name}</p>
-												<p className="text-xs text-muted-foreground truncate">{r.email}</p>
+												<p className="text-basalt-sm font-medium text-basalt-foreground truncate">
+													{r.name}
+												</p>
+												<p className="text-basalt-xs text-basalt-muted-foreground truncate">
+													{r.email}
+												</p>
 											</div>
 											<Button
 												variant="ghost"
 												size="sm"
 												onClick={() => setRecipientToDelete(r)}
 												disabled={deletingRecipientId === r.id}
-												className="text-muted-foreground hover:text-destructive"
+												className="text-basalt-muted-foreground hover:text-basalt-destructive"
 											>
 												{deletingRecipientId === r.id ? (
 													<Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -694,18 +694,16 @@ export function ProjectDetailPage() {
 							)}
 						</>
 					)}
-				</CardContent>
-			</Card>
+				</LayerCard.Body>
+			</LayerCard>
 
 			{/* Templates card */}
-			<Card>
-				<CardHeader>
+			<LayerCard>
+				<LayerCard.Header>
 					<div className="flex items-center justify-between">
 						<div>
-							<CardTitle className="text-base">Templates</CardTitle>
-							<CardDescription>
-								Email templates for this project ({templates.length}).
-							</CardDescription>
+							<h3 className="text-basalt-base">Templates</h3>
+							<p>Email templates for this project ({templates.length}).</p>
 						</div>
 						<Button
 							variant="outline"
@@ -716,29 +714,31 @@ export function ProjectDetailPage() {
 							Add
 						</Button>
 					</div>
-				</CardHeader>
-				<CardContent>
+				</LayerCard.Header>
+				<LayerCard.Body>
 					{templates.length === 0 ? (
-						<div className="rounded-[var(--radius-card)] bg-secondary p-6 text-center">
+						<div className="rounded-basalt-lg bg-basalt-secondary p-6 text-center">
 							<FileText
-								className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2"
+								className="h-8 w-8 text-basalt-muted-foreground/40 mx-auto mb-2"
 								strokeWidth={1.5}
 							/>
-							<p className="text-xs text-muted-foreground">No templates yet.</p>
+							<p className="text-basalt-xs text-basalt-muted-foreground">No templates yet.</p>
 						</div>
 					) : (
-						<div className="rounded-[var(--radius-card)] bg-secondary p-1 overflow-x-auto">
+						<div className="rounded-basalt-lg bg-basalt-secondary p-1 overflow-x-auto">
 							{templates.map((t) => (
 								<Link
 									key={t.id}
 									to={`/templates/${t.id}`}
-									className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30 transition-colors"
+									className="flex items-center gap-3 px-3 py-2.5 hover:bg-basalt-hover/30 transition-colors"
 								>
 									<div className="min-w-0 flex-1">
-										<p className="text-sm font-medium text-foreground truncate">{t.name}</p>
-										<p className="text-xs text-muted-foreground truncate">
+										<p className="text-basalt-sm font-medium text-basalt-foreground truncate">
+											{t.name}
+										</p>
+										<p className="text-basalt-xs text-basalt-muted-foreground truncate">
 											<span className="font-mono">{t.slug}</span>
-											<span className="mx-1.5 text-border">·</span>
+											<span className="mx-1.5 text-basalt-border">·</span>
 											<span>{t.subject}</span>
 										</p>
 									</div>
@@ -746,18 +746,16 @@ export function ProjectDetailPage() {
 							))}
 						</div>
 					)}
-				</CardContent>
-			</Card>
+				</LayerCard.Body>
+			</LayerCard>
 
 			{/* Danger zone */}
-			<Card className="ring-1 ring-destructive/30">
-				<CardHeader>
-					<CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
-					<CardDescription>
-						Permanently delete this project and all associated data.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
+			<LayerCard className="ring-1 ring-basalt-destructive/30">
+				<LayerCard.Header>
+					<h3 className="text-basalt-base text-basalt-destructive">Danger Zone</h3>
+					<p>Permanently delete this project and all associated data.</p>
+				</LayerCard.Header>
+				<LayerCard.Body>
 					<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 						<DialogTrigger asChild>
 							<Button variant="destructive" size="sm">
@@ -792,8 +790,8 @@ export function ProjectDetailPage() {
 							</DialogFooter>
 						</DialogContent>
 					</Dialog>
-				</CardContent>
-			</Card>
+				</LayerCard.Body>
+			</LayerCard>
 
 			{/* Recipient delete confirmation */}
 			<Dialog

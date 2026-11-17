@@ -1,193 +1,94 @@
-import { Menu, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { ThemeToggle } from "@nocoo/basalt";
+import { AppHeader, AppHeaderMenuButton, ProjectLinks } from "@nocoo/basalt/components/app-header";
+import {
+	AppMain,
+	AppSkipLink,
+	AppShell as BasaltAppShell,
+} from "@nocoo/basalt/components/app-shell";
+import { ContentIsland, SidebarDrawer, SidebarProvider } from "@nocoo/basalt/components/sidebar";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
-import { GithubIcon } from "@/components/icons/github";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
-import { HeaderTooltip, HexlyLink } from "../../../components/layout/header-links";
-import { Breadcrumbs } from "./breadcrumbs";
-import { Sidebar } from "./sidebar";
-import { SidebarProvider, useSidebar } from "./sidebar-context";
+import { AppSidebar } from "./sidebar";
 
 interface AppShellProps {
 	children: React.ReactNode;
 	breadcrumbs?: { label: string; href?: string }[] | undefined;
 }
 
-function AppShellInner({ children, breadcrumbs = [] }: AppShellProps) {
-	const isMobile = useIsMobile();
-	const { mobileOpen, setMobileOpen } = useSidebar();
-	const { pathname } = useLocation();
-	const drawerRef = useRef<HTMLDivElement | null>(null);
-
-	// Close mobile drawer when the route changes (pathname is intentional).
-	// biome-ignore lint/correctness/useExhaustiveDependencies: pathname triggers close-on-navigate
-	useEffect(() => {
-		setMobileOpen(false);
-	}, [pathname, setMobileOpen]);
-
-	useEffect(() => {
-		if (mobileOpen) {
-			document.body.style.overflow = "hidden";
-		} else {
-			document.body.style.overflow = "";
-		}
-		return () => {
-			document.body.style.overflow = "";
-		};
-	}, [mobileOpen]);
-
-	useEffect(() => {
-		if (!isMobile || !mobileOpen) return;
-
-		const drawer = drawerRef.current;
-		const previousActiveElement =
-			document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-		if (!drawer) return;
-
-		const getFocusableElements = () =>
-			Array.from(
-				drawer.querySelectorAll<HTMLElement>(
-					'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-				),
-			);
-
-		const focusableElements = getFocusableElements();
-		(focusableElements[0] ?? drawer).focus();
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (event.key === "Escape") {
-				event.preventDefault();
-				setMobileOpen(false);
-				return;
-			}
-
-			if (event.key !== "Tab") return;
-
-			const elements = getFocusableElements();
-			if (elements.length === 0) {
-				event.preventDefault();
-				drawer.focus();
-				return;
-			}
-
-			const first = elements[0];
-			const last = elements[elements.length - 1];
-			const activeElement = document.activeElement;
-
-			if (event.shiftKey && activeElement === first) {
-				event.preventDefault();
-				last?.focus();
-			} else if (!event.shiftKey && activeElement === last) {
-				event.preventDefault();
-				first?.focus();
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-
-		return () => {
-			document.removeEventListener("keydown", handleKeyDown);
-			previousActiveElement?.focus();
-		};
-	}, [isMobile, mobileOpen, setMobileOpen]);
-
-	return (
-		<div className="flex min-h-screen w-full bg-background">
-			{!isMobile && <Sidebar />}
-
-			{isMobile && (
-				<>
-					<div
-						className={cn(
-							"fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity duration-300",
-							mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none",
-						)}
-						onClick={() => setMobileOpen(false)}
-						aria-hidden="true"
-					/>
-					<div
-						ref={drawerRef}
-						role="dialog"
-						aria-modal={mobileOpen ? "true" : undefined}
-						aria-label="Navigation menu"
-						aria-hidden={!mobileOpen}
-						tabIndex={-1}
-						className={cn(
-							"fixed inset-y-0 left-0 z-50 w-[260px] outline-none transition-transform duration-300 ease-in-out",
-							mobileOpen ? "translate-x-0" : "-translate-x-full",
-						)}
-					>
-						<div className="absolute top-3 right-3 z-10">
-							<HeaderTooltip label="Close navigation">
-								<button
-									type="button"
-									onClick={() => setMobileOpen(false)}
-									aria-label="Close navigation"
-									className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-								>
-									<X className="h-4 w-4" aria-hidden="true" strokeWidth={1.5} />
-								</button>
-							</HeaderTooltip>
-						</div>
-						<Sidebar />
-					</div>
-				</>
-			)}
-
-			<main className="flex flex-1 flex-col min-h-screen min-w-0">
-				<header className="flex h-14 shrink-0 items-center justify-between px-4 md:px-6">
-					<div className="flex items-center gap-3">
-						{isMobile && (
-							<HeaderTooltip label="Open navigation">
-								<button
-									type="button"
-									onClick={() => setMobileOpen(true)}
-									aria-label="Open navigation"
-									className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-								>
-									<Menu className="h-5 w-5" aria-hidden="true" strokeWidth={1.5} />
-								</button>
-							</HeaderTooltip>
-						)}
-						<Breadcrumbs items={[{ label: "Home", href: "/" }, ...breadcrumbs]} />
-					</div>
-					<div className="flex items-center gap-1">
-						<HeaderTooltip label="GitHub repository">
-							<a
-								href="https://github.com/nocoo/dove"
-								target="_blank"
-								rel="noopener noreferrer"
-								aria-label="GitHub repository"
-								className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-							>
-								<GithubIcon className="h-[18px] w-[18px]" strokeWidth={1.5} />
-							</a>
-						</HeaderTooltip>
-						<HexlyLink />
-						<ThemeToggle />
-					</div>
-				</header>
-
-				<div className="flex-1 px-3 pb-3 md:px-4 md:pb-4">
-					<div className="h-full rounded-[var(--radius-card)] bg-card p-3 md:p-5 overflow-y-auto">
-						{children}
-					</div>
-				</div>
-			</main>
-		</div>
-	);
+function routeTitle(pathname: string) {
+	if (pathname === "/projects/new") return "New Project";
+	if (pathname.startsWith("/projects/")) return "Project";
+	if (pathname === "/projects") return "Projects";
+	if (pathname === "/providers/new") return "New Provider";
+	if (pathname.startsWith("/providers/")) return "Provider";
+	if (pathname === "/providers") return "Providers";
+	if (pathname === "/templates/new") return "New Template";
+	if (pathname.startsWith("/templates/")) return "Template";
+	if (pathname === "/templates") return "Templates";
+	if (pathname === "/send-logs") return "Send Logs";
+	if (pathname === "/webhook-logs") return "Webhook Logs";
+	return "Dashboard";
 }
 
 export function AppShell({ children, breadcrumbs = [] }: AppShellProps) {
+	const [collapsed, setCollapsed] = useState(false);
+	const [mobileOpen, setMobileOpen] = useState(false);
+	const isMobile = useIsMobile();
+	const { pathname } = useLocation();
+	const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+
+	useEffect(() => {
+		void pathname;
+		setMobileOpen(false);
+	}, [pathname]);
+
+	const currentBreadcrumbs =
+		breadcrumbs.length > 0
+			? [{ href: "/", label: "Home" }, ...breadcrumbs]
+			: pathname === "/"
+				? [{ label: "Dashboard" }]
+				: [{ href: "/", label: "Home" }, { label: routeTitle(pathname) }];
+
 	return (
-		<TooltipProvider delayDuration={0}>
-			<SidebarProvider>
-				<AppShellInner breadcrumbs={breadcrumbs}>{children}</AppShellInner>
-			</SidebarProvider>
-		</TooltipProvider>
+		<SidebarProvider collapsed={collapsed} onCollapsedChange={setCollapsed}>
+			<BasaltAppShell layout="workspace">
+				<AppSkipLink>Skip to main content</AppSkipLink>
+				{!isMobile && <AppSidebar />}
+				<AppMain>
+					<AppHeader
+						leading={
+							isMobile ? (
+								<AppHeaderMenuButton
+									ref={mobileTriggerRef}
+									onClick={() => setMobileOpen(true)}
+									aria-controls="mobile-navigation"
+								/>
+							) : undefined
+						}
+						breadcrumbs={currentBreadcrumbs}
+						actions={
+							<>
+								<ProjectLinks github="nocoo/dove" hexly="dove" name="Dove" />
+								<ThemeToggle aria-label="Change theme" />
+							</>
+						}
+					/>
+					<div className="flex min-h-0 min-w-0 flex-1 px-basalt-space-lg pb-basalt-space-lg md:px-basalt-layout-sm md:pb-basalt-layout-sm">
+						<ContentIsland>{children}</ContentIsland>
+					</div>
+				</AppMain>
+				{isMobile && (
+					<SidebarDrawer
+						open={mobileOpen}
+						onOpenChange={setMobileOpen}
+						id="mobile-navigation"
+						returnFocusRef={mobileTriggerRef}
+					>
+						<AppSidebar resizable={false} onDismiss={() => setMobileOpen(false)} />
+					</SidebarDrawer>
+				)}
+			</BasaltAppShell>
+		</SidebarProvider>
 	);
 }

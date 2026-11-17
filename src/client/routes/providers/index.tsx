@@ -1,3 +1,4 @@
+import { Button, toast } from "@nocoo/basalt";
 import {
 	AlertCircle,
 	ArrowRight,
@@ -6,12 +7,10 @@ import {
 	Plus,
 	Server,
 	XCircle,
-} from "lucide-react";
+} from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { toast } from "sonner";
 import { ProjectsListSkeleton } from "@/components/skeletons";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface ProviderSummary {
@@ -36,7 +35,7 @@ interface HealthStatus {
 function HealthBadge({ loading, health }: { loading: boolean; health: HealthStatus | null }) {
 	if (loading) {
 		return (
-			<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+			<span className="inline-flex items-center gap-1 text-basalt-xs text-basalt-muted-foreground">
 				<Loader2 className="h-3 w-3 animate-spin" />
 				Checking…
 			</span>
@@ -44,7 +43,7 @@ function HealthBadge({ loading, health }: { loading: boolean; health: HealthStat
 	}
 	if (!health) {
 		return (
-			<span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+			<span className="inline-flex items-center gap-1 text-basalt-xs text-basalt-muted-foreground">
 				<AlertCircle className="h-3 w-3" strokeWidth={1.5} />
 				Unknown
 			</span>
@@ -53,7 +52,7 @@ function HealthBadge({ loading, health }: { loading: boolean; health: HealthStat
 	if (!health.configValid) {
 		return (
 			<span
-				className="inline-flex items-center gap-1 text-xs text-destructive"
+				className="inline-flex items-center gap-1 text-basalt-xs text-basalt-destructive"
 				title={health.configError ?? "Invalid config"}
 			>
 				<XCircle className="h-3 w-3" strokeWidth={1.5} />
@@ -64,7 +63,7 @@ function HealthBadge({ loading, health }: { loading: boolean; health: HealthStat
 	if (health.reachable === false) {
 		return (
 			<span
-				className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500"
+				className="inline-flex items-center gap-1 text-basalt-xs text-basalt-warning dark:text-basalt-warning"
 				title={health.reachableError ?? "Unreachable"}
 			>
 				<AlertCircle className="h-3 w-3" strokeWidth={1.5} />
@@ -73,7 +72,7 @@ function HealthBadge({ loading, health }: { loading: boolean; health: HealthStat
 		);
 	}
 	return (
-		<span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-500">
+		<span className="inline-flex items-center gap-1 text-basalt-xs text-basalt-success dark:text-basalt-success">
 			<CheckCircle2 className="h-3 w-3" strokeWidth={1.5} />
 			Healthy
 		</span>
@@ -132,8 +131,8 @@ export function ProvidersPage() {
 		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-xl md:text-2xl font-semibold font-display">Providers</h1>
-					<p className="text-sm text-muted-foreground mt-1">
+					<h1 className="text-basalt-xl md:text-basalt-3xl font-semibold">Providers</h1>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Outbound email backends. Each project picks one; health here is a cheap probe, not a
 						guarantee of delivery.
 					</p>
@@ -147,8 +146,8 @@ export function ProvidersPage() {
 			{loading && !providers ? (
 				<ProjectsListSkeleton />
 			) : error && !providers ? (
-				<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-center">
-					<p className="text-sm text-destructive">{error}</p>
+				<div className="rounded-lg border border-basalt-destructive/30 bg-basalt-destructive/5 p-6 text-center">
+					<p className="text-basalt-sm text-basalt-destructive">{error}</p>
 					<Button
 						variant="outline"
 						size="sm"
@@ -159,10 +158,15 @@ export function ProvidersPage() {
 					</Button>
 				</div>
 			) : providers && providers.length === 0 ? (
-				<div className="rounded-[var(--radius-card)] bg-secondary p-8 text-center">
-					<Server className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
-					<p className="text-sm font-medium text-foreground">No providers configured</p>
-					<p className="text-sm text-muted-foreground mt-1">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
+					<Server
+						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
+						strokeWidth={1.5}
+					/>
+					<p className="text-basalt-sm font-medium text-basalt-foreground">
+						No providers configured
+					</p>
+					<p className="text-basalt-sm text-basalt-muted-foreground mt-1">
 						Add a Resend or Cloudflare provider to start sending emails.
 					</p>
 					<Button size="sm" className="mt-4" onClick={() => void navigate("/providers/new")}>
@@ -173,8 +177,8 @@ export function ProvidersPage() {
 			) : (
 				<div className="relative">
 					{loading && providers && (
-						<div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-lg z-10">
-							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+						<div className="absolute inset-0 flex items-center justify-center bg-basalt-background/50 rounded-lg z-10">
+							<Loader2 className="h-5 w-5 animate-spin text-basalt-muted-foreground" />
 						</div>
 					)}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -183,23 +187,25 @@ export function ProvidersPage() {
 								key={p.id}
 								to={`/providers/${p.id}`}
 								className={cn(
-									"group rounded-[var(--radius-card)] bg-secondary p-4 md:p-5 transition-colors hover:bg-accent/60",
+									"group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 transition-colors hover:bg-basalt-hover/60",
 								)}
 							>
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2.5 min-w-0">
-										<div className="shrink-0 rounded-md bg-card p-1.5">
-											<Server className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
+										<div className="shrink-0 rounded-md bg-basalt-card p-1.5">
+											<Server className="h-4 w-4 text-basalt-muted-foreground" strokeWidth={1.5} />
 										</div>
 										<div className="min-w-0">
-											<p className="text-sm font-medium text-foreground truncate">{p.name}</p>
-											<p className="text-xs text-muted-foreground truncate">
+											<p className="text-basalt-sm font-medium text-basalt-foreground truncate">
+												{p.name}
+											</p>
+											<p className="text-basalt-xs text-basalt-muted-foreground truncate">
 												{p.type} · {p.domain}
 											</p>
 										</div>
 									</div>
 									<ArrowRight
-										className="shrink-0 h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2"
+										className="shrink-0 h-3.5 w-3.5 text-basalt-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2"
 										strokeWidth={1.5}
 									/>
 								</div>

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "@nocoo/basalt/icons";
 import { cn } from "@/lib/utils";
 
 interface SortHeaderProps {
@@ -29,8 +29,8 @@ export function SortHeader({
 				aria-pressed={isActive}
 				aria-label={`Sort by ${label}${isActive ? `, ${currentDir === "asc" ? "ascending" : "descending"}` : ""}`}
 				className={cn(
-					"inline-flex items-center gap-1 hover:text-foreground transition-colors",
-					isActive && "text-foreground",
+					"inline-flex items-center gap-1 hover:text-basalt-foreground transition-colors",
+					isActive && "text-basalt-foreground",
 				)}
 			>
 				{label}
