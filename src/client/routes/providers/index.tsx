@@ -158,7 +158,7 @@ export function ProvidersPage() {
 					</Button>
 				</div>
 			) : providers && providers.length === 0 ? (
-				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center ring-1 ring-basalt-border/80 shadow-basalt-card">
 					<Server
 						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
 						strokeWidth={1.5}
@@ -187,7 +187,7 @@ export function ProvidersPage() {
 								key={p.id}
 								to={`/providers/${p.id}`}
 								className={cn(
-									"group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 transition-colors hover:bg-basalt-hover/60",
+									"group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 ring-1 ring-basalt-border/80 shadow-basalt-card transition-colors hover:bg-basalt-hover/60",
 								)}
 							>
 								<div className="flex items-center justify-between">

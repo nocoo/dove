@@ -89,7 +89,7 @@ export function TemplatesPage() {
 					</Button>
 				</div>
 			) : templates && templates.length === 0 ? (
-				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center ring-1 ring-basalt-border/80 shadow-basalt-card">
 					<FileText
 						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
 						strokeWidth={1.5}
@@ -110,7 +110,7 @@ export function TemplatesPage() {
 							<h2 className="text-basalt-sm font-medium text-basalt-muted-foreground uppercase tracking-wide mb-3">
 								{projectMap.get(projectId) ?? "Unknown Project"}
 							</h2>
-							<div className="divide-y divide-basalt-border/50 rounded-xl bg-basalt-secondary overflow-hidden">
+							<div className="divide-y divide-basalt-border/50 rounded-basalt-lg bg-basalt-secondary ring-1 ring-basalt-border/80 shadow-basalt-card overflow-hidden">
 								{tmps.map((t) => (
 									<Link
 										key={t.id}

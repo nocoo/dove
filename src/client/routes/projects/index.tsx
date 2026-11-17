@@ -68,7 +68,7 @@ export function ProjectsPage() {
 					</Button>
 				</div>
 			) : projects && projects.length === 0 ? (
-				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center">
+				<div className="rounded-basalt-lg bg-basalt-secondary p-8 text-center ring-1 ring-basalt-border/80 shadow-basalt-card">
 					<FolderKanban
 						className="h-10 w-10 text-basalt-muted-foreground/40 mx-auto mb-3"
 						strokeWidth={1.5}
@@ -96,7 +96,7 @@ export function ProjectsPage() {
 							<Link
 								key={project.id}
 								to={`/projects/${project.id}`}
-								className="group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 transition-colors hover:bg-basalt-hover/60"
+								className="group rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 ring-1 ring-basalt-border/80 shadow-basalt-card transition-colors hover:bg-basalt-hover/60"
 							>
 								<div className="flex items-center justify-between">
 									<div className="flex items-center gap-2.5 min-w-0">

@@ -5,10 +5,12 @@ import {
 	SidebarFooter,
 	SidebarGroup,
 	SidebarHeader,
+	SidebarIconItem,
 	SidebarItem,
 	SidebarNav,
 	SidebarToggle,
 	SidebarUser,
+	useSidebar,
 } from "@nocoo/basalt/components/sidebar";
 import {
 	FileText,
@@ -64,6 +66,7 @@ export function AppSidebar({
 }) {
 	const { pathname } = useLocation();
 	const { user } = useAuth();
+	const { collapsed } = useSidebar();
 	const [profile, setProfile] = useState<{ name: string | null; avatar: string | null }>({
 		name: null,
 		avatar: null,
@@ -115,19 +118,33 @@ export function AppSidebar({
 				/>
 			</SidebarHeader>
 			<SidebarNav aria-label="Workspace navigation">
-				{navGroups.map((group) => (
-					<SidebarGroup key={group.label} label={group.label}>
-						{group.items.map((item) => {
-							const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-							return (
-								<SidebarItem key={item.href} href={item.href} active={active}>
-									<item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-									<span className="flex-1 truncate text-left">{item.label}</span>
-								</SidebarItem>
-							);
-						})}
-					</SidebarGroup>
-				))}
+				{collapsed
+					? navGroups.flatMap((group) =>
+							group.items.map((item) => {
+								const active =
+									item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+								return (
+									<SidebarIconItem key={item.href} href={item.href} active={active}>
+										<item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+										<span className="sr-only">{item.label}</span>
+									</SidebarIconItem>
+								);
+							}),
+						)
+					: navGroups.map((group) => (
+							<SidebarGroup key={group.label} label={group.label}>
+								{group.items.map((item) => {
+									const active =
+										item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+									return (
+										<SidebarItem key={item.href} href={item.href} active={active}>
+											<item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+											<span className="flex-1 truncate text-left">{item.label}</span>
+										</SidebarItem>
+									);
+								})}
+							</SidebarGroup>
+						))}
 			</SidebarNav>
 			<SidebarFooter>
 				<SidebarUser

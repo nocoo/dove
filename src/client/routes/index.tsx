@@ -32,7 +32,7 @@ function StatsCard({
 }) {
 	return (
 		<div
-			className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5"
+			className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 ring-1 ring-basalt-border/80 shadow-basalt-card"
 			style={{ animationDelay: `${Math.min(index * 40, 600)}ms` }}
 		>
 			<div className="flex items-start justify-between">
