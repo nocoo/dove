@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.5.8
+
+### Changed
+- Waive picomatch advisory pending upstream fix
+- Bump @nocoo/basalt to 3.5.1
+
+### Fixed
+- Add tile shadows and clean collapsed sidebar
+
 ## v0.5.7
 
 ### Added
