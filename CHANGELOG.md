@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.5.9
+
+### Changed
+- Bump tailwind-merge to 3.7.1 (#710)
+- Bump @types/bun to 1.4.5 (#709)
+- Bump wrangler to 4.166.0 (#703)
+- Bump @testing-library/user-event to 14.6.13 (#700)
+- Bump @cloudflare/workers-types to 5.20261120.1 (#664)
+- Bump jose to 6.2.18 (#708)
+- Bump vitest to 5.1.1 (#707)
+- Bump react-router to 8.5.2 (#706)
+- Bump @vitest/coverage-v8 to 5.1.1 (#705)
+- Bump recharts to 3.11.0 (#704)
+- Bump marked to 18.2.1 (#702)
+- Bump hono to 4.13.19 (#701)
+- Bump lint-staged to 17.6.1 (#699)
+- Bump @biomejs/biome to 2.6.8 (#698)
+- Bump postcss to 8.5.33 (#696)
+- Bump @playwright/test to 1.65.1 (#695)
+- Bump base-ci to v2026.16
+- Normalize AGENTS.md to system1 v2 standard
+
 ## v0.5.8
 
 ### Changed
