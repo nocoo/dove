@@ -33,11 +33,14 @@ interface Project {
 
 const PAGE_SIZE = 20;
 
-function statusCodeVariant(code: number): "success" | "secondary" | "destructive" | "outline" {
-	if (code >= 200 && code < 300) return "success";
-	if (code >= 400 && code < 500) return "secondary";
-	if (code >= 500) return "destructive";
-	return "outline";
+function statusCodeBadgeProps(code: number): {
+	tone: "success" | "neutral" | "danger";
+	variant: "soft" | "outline";
+} {
+	if (code >= 200 && code < 300) return { tone: "success", variant: "soft" };
+	if (code >= 400 && code < 500) return { tone: "neutral", variant: "soft" };
+	if (code >= 500) return { tone: "danger", variant: "soft" };
+	return { tone: "neutral", variant: "outline" };
 }
 
 function formatDate(iso: string): string {
@@ -104,7 +107,7 @@ export function WebhookLogsPage() {
 			if (projectsRes.ok) setProjects((await projectsRes.json()) as Project[]);
 		} catch {
 			setError("Failed to load webhook logs");
-			toast.error("Failed to load webhook logs");
+			toast.danger("Failed to load webhook logs");
 		} finally {
 			setLoading(false);
 		}
@@ -304,7 +307,7 @@ export function WebhookLogsPage() {
 								>
 									<div className="w-[60px] shrink-0">
 										<Badge
-											variant={statusCodeVariant(log.status_code)}
+											{...statusCodeBadgeProps(log.status_code)}
 											className="text-basalt-xs font-mono"
 										>
 											{log.status_code}

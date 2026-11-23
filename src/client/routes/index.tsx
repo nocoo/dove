@@ -70,7 +70,7 @@ export function Dashboard() {
 				setChartData((await chartsRes.json()) as ChartPoint[]);
 			}
 		} catch {
-			toast.error("Failed to load dashboard data");
+			toast.danger("Failed to load dashboard data");
 		} finally {
 			setLoading(false);
 		}

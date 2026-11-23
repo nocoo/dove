@@ -1,5 +1,4 @@
 import { Button, Input, Label, toast } from "@nocoo/basalt";
-import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
@@ -7,6 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@nocoo/basalt/components/select";
+import { Textarea } from "@nocoo/basalt/components/textarea";
 import { Loader2, Plus, Trash2 } from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -124,7 +124,7 @@ export function NewTemplatePage() {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to create template";
 			setError(message);
-			toast.error(message);
+			toast.danger(message);
 		} finally {
 			setSaving(false);
 		}
@@ -199,7 +199,7 @@ export function NewTemplatePage() {
 
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="body">Body (Markdown)</Label>
-					<InputArea
+					<Textarea
 						id="body"
 						value={bodyMarkdown}
 						onChange={(e) => setBodyMarkdown(e.target.value)}

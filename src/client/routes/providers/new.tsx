@@ -52,7 +52,7 @@ export function NewProviderPage() {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to create provider";
 			setError(message);
-			toast.error(message);
+			toast.danger(message);
 		} finally {
 			setSaving(false);
 		}

@@ -55,16 +55,19 @@ interface Project {
 
 const PAGE_SIZE = 20;
 
-function statusVariant(status: string): "success" | "secondary" | "destructive" | "outline" {
+function statusBadgeProps(status: string): {
+	tone: "success" | "neutral" | "danger";
+	variant: "soft" | "outline";
+} {
 	switch (status) {
 		case "sent":
-			return "success";
+			return { tone: "success", variant: "soft" };
 		case "sending":
-			return "secondary";
+			return { tone: "neutral", variant: "soft" };
 		case "failed":
-			return "destructive";
+			return { tone: "danger", variant: "soft" };
 		default:
-			return "outline";
+			return { tone: "neutral", variant: "outline" };
 	}
 }
 
@@ -133,7 +136,7 @@ export function SendLogsPage() {
 			if (projectsRes.ok) setProjects((await projectsRes.json()) as Project[]);
 		} catch {
 			setError("Failed to load send logs");
-			toast.error("Failed to load send logs");
+			toast.danger("Failed to load send logs");
 		} finally {
 			setLoading(false);
 		}
@@ -341,7 +344,7 @@ export function SendLogsPage() {
 										className="w-full flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 text-left border-b border-basalt-border hover:bg-basalt-hover/30 transition-colors"
 									>
 										<span className="w-[80px] shrink-0">
-											<Badge variant={statusVariant(log.status)} className="text-basalt-xs">
+											<Badge {...statusBadgeProps(log.status)} className="text-basalt-xs">
 												{log.status}
 											</Badge>
 										</span>

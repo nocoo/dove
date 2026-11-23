@@ -31,7 +31,7 @@ export function ProjectsPage() {
 			setProjects((await res.json()) as ProjectSummary[]);
 		} catch {
 			setError("Failed to load projects");
-			toast.error("Failed to load projects");
+			toast.danger("Failed to load projects");
 		} finally {
 			setLoading(false);
 		}

@@ -126,7 +126,7 @@ export function ProviderDetailPage() {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to save";
 			setError(message);
-			toast.error(message);
+			toast.danger(message);
 		} finally {
 			setSaving(false);
 		}
@@ -143,14 +143,14 @@ export function ProviderDetailPage() {
 				const data = (await res.json()) as {
 					error: { message: string };
 				};
-				toast.error(data.error.message);
+				toast.danger(data.error.message);
 				return;
 			}
 			if (!res.ok) throw new Error("Delete failed");
 			toast.success("Provider deleted");
 			void navigate("/providers");
 		} catch {
-			toast.error("Failed to delete provider");
+			toast.danger("Failed to delete provider");
 		} finally {
 			setDeleting(false);
 			setConfirmOpen(false);

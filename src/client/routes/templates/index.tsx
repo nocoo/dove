@@ -41,7 +41,7 @@ export function TemplatesPage() {
 			if (projectsRes.ok) setProjects((await projectsRes.json()) as Project[]);
 		} catch {
 			setError("Failed to load templates");
-			toast.error("Failed to load templates");
+			toast.danger("Failed to load templates");
 		} finally {
 			setLoading(false);
 		}

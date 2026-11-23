@@ -1,5 +1,4 @@
 import { Button, Input, Label, toast } from "@nocoo/basalt";
-import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
@@ -7,6 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@nocoo/basalt/components/select";
+import { Textarea } from "@nocoo/basalt/components/textarea";
 import { Loader2 } from "@nocoo/basalt/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
@@ -75,7 +75,7 @@ export function NewProjectPage() {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : "Failed to create project";
 			setError(message);
-			toast.error(message);
+			toast.danger(message);
 		} finally {
 			setSaving(false);
 		}
@@ -110,7 +110,7 @@ export function NewProjectPage() {
 					<Label htmlFor="description">
 						Description <span className="text-basalt-muted-foreground font-normal">(optional)</span>
 					</Label>
-					<InputArea
+					<Textarea
 						id="description"
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}

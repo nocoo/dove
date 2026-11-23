@@ -96,7 +96,7 @@ export function ProvidersPage() {
 			setProviders((await res.json()) as ProviderSummary[]);
 		} catch {
 			setError("Failed to load providers");
-			toast.error("Failed to load providers");
+			toast.danger("Failed to load providers");
 		} finally {
 			setLoading(false);
 		}

@@ -8,7 +8,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@nocoo/basalt/components/dialog";
-import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
@@ -16,6 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@nocoo/basalt/components/select";
+import { Textarea } from "@nocoo/basalt/components/textarea";
 import {
 	Copy,
 	Eye,
@@ -141,7 +141,7 @@ export function ProjectDetailPage() {
 			if (templatesRes.ok) setTemplates((await templatesRes.json()) as Template[]);
 		} catch {
 			setError("Failed to load project");
-			toast.error("Failed to load project");
+			toast.danger("Failed to load project");
 		} finally {
 			setLoading(false);
 		}
@@ -200,7 +200,7 @@ export function ProjectDetailPage() {
 			setProject(updated);
 			toast.success("Project saved");
 		} catch {
-			toast.error("Failed to save project");
+			toast.danger("Failed to save project");
 		} finally {
 			setSaving(false);
 		}
@@ -234,7 +234,7 @@ export function ProjectDetailPage() {
 			toast.success(checked ? "Any email address accepted" : "Whitelist mode enabled");
 		} catch {
 			setAllowUnknown(previous);
-			toast.error("Failed to update recipient mode");
+			toast.danger("Failed to update recipient mode");
 		} finally {
 			setTogglingMode(false);
 		}
@@ -251,7 +251,7 @@ export function ProjectDetailPage() {
 			setTokenVisible(true);
 			toast.success("Token regenerated. Copy it now — it won't be shown again.");
 		} catch {
-			toast.error("Failed to regenerate token");
+			toast.danger("Failed to regenerate token");
 		} finally {
 			setRegenerating(false);
 		}
@@ -284,7 +284,7 @@ export function ProjectDetailPage() {
 			setShowAddRecipient(false);
 			toast.success("Recipient added");
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to add recipient");
+			toast.danger(err instanceof Error ? err.message : "Failed to add recipient");
 		} finally {
 			setAddingRecipient(false);
 		}
@@ -298,7 +298,7 @@ export function ProjectDetailPage() {
 			setRecipients((prev) => prev.filter((r) => r.id !== recipientId));
 			toast.success("Recipient removed");
 		} catch {
-			toast.error("Failed to delete recipient");
+			toast.danger("Failed to delete recipient");
 		} finally {
 			setDeletingRecipientId(null);
 			setRecipientToDelete(null);
@@ -314,7 +314,7 @@ export function ProjectDetailPage() {
 			toast.success("Project deleted");
 			void navigate("/projects");
 		} catch {
-			toast.error("Failed to delete project");
+			toast.danger("Failed to delete project");
 		} finally {
 			setDeleting(false);
 			setDeleteDialogOpen(false);
@@ -381,7 +381,7 @@ export function ProjectDetailPage() {
 							Description{" "}
 							<span className="text-basalt-muted-foreground font-normal">(optional)</span>
 						</Label>
-						<InputArea
+						<Textarea
 							id="description"
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
@@ -480,7 +480,7 @@ export function ProjectDetailPage() {
 									void navigator.clipboard
 										.writeText(`${window.location.origin}/api/webhook/${projectId ?? ""}/send`)
 										.then(() => toast.success("Webhook URL copied"))
-										.catch(() => toast.error("Failed to copy URL"));
+										.catch(() => toast.danger("Failed to copy URL"));
 								}}
 							>
 								<Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -502,7 +502,7 @@ export function ProjectDetailPage() {
 									void navigator.clipboard
 										.writeText(projectId)
 										.then(() => toast.success("Project ID copied"))
-										.catch(() => toast.error("Failed to copy ID"));
+										.catch(() => toast.danger("Failed to copy ID"));
 								}}
 							>
 								<Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -531,7 +531,7 @@ export function ProjectDetailPage() {
 										void navigator.clipboard
 											.writeText(token)
 											.then(() => toast.success("Token copied to clipboard"))
-											.catch(() => toast.error("Failed to copy token"));
+											.catch(() => toast.danger("Failed to copy token"));
 									}}
 								>
 									<Copy className="h-3.5 w-3.5" strokeWidth={1.5} />

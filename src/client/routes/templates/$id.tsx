@@ -8,7 +8,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@nocoo/basalt/components/dialog";
-import { InputArea } from "@nocoo/basalt/components/input-area";
 import {
 	Select,
 	SelectContent,
@@ -16,6 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@nocoo/basalt/components/select";
+import { Textarea } from "@nocoo/basalt/components/textarea";
 import { Eye, Loader2, Plus, Send, Trash2 } from "@nocoo/basalt/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -104,7 +104,7 @@ export function TemplateDetailPage() {
 			setVariables(parsed.map(withUid));
 		} catch {
 			setError("Failed to load template");
-			toast.error("Failed to load template");
+			toast.danger("Failed to load template");
 		} finally {
 			setLoading(false);
 		}
@@ -155,7 +155,7 @@ export function TemplateDetailPage() {
 			setTemplate(updated);
 			toast.success("Template saved");
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to save template");
+			toast.danger(err instanceof Error ? err.message : "Failed to save template");
 		} finally {
 			setSaving(false);
 		}
@@ -202,7 +202,7 @@ export function TemplateDetailPage() {
 			setPreviewSubject(result.subject);
 			setPreviewHtml(result.html);
 		} catch (err) {
-			toast.error(err instanceof Error ? err.message : "Failed to preview template");
+			toast.danger(err instanceof Error ? err.message : "Failed to preview template");
 		} finally {
 			setPreviewing(false);
 		}
@@ -229,7 +229,7 @@ export function TemplateDetailPage() {
 			toast.success("Template deleted");
 			void navigate("/templates");
 		} catch {
-			toast.error("Failed to delete template");
+			toast.danger("Failed to delete template");
 		} finally {
 			setDeleting(false);
 			setDeleteDialogOpen(false);
@@ -359,7 +359,7 @@ export function TemplateDetailPage() {
 							<p>Use {"{{variable_name}}"} for dynamic content.</p>
 						</LayerCard.Header>
 						<LayerCard.Body>
-							<InputArea
+							<Textarea
 								value={bodyMarkdown}
 								onChange={(e) => setBodyMarkdown(e.target.value)}
 								rows={16}

@@ -1,7 +1,7 @@
-import { SkeletonLine } from "@nocoo/basalt/components/skeleton-line";
+import { Skeleton } from "@nocoo/basalt/components/skeleton";
 
 /**
- * SkeletonLine loading states for all pages.
+ * Skeleton loading states for all pages.
  * Each mirrors the real page layout using bg-basalt-secondary card shells.
  */
 
@@ -13,8 +13,8 @@ function CardSkeleton({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="rounded-basalt-lg bg-basalt-secondary p-0">
 			<div className="px-5 py-4 space-y-1.5">
-				<SkeletonLine className="h-4 w-28" />
-				<SkeletonLine className="h-3 w-48" />
+				<Skeleton className="h-4 w-28" />
+				<Skeleton className="h-3 w-48" />
 			</div>
 			<div className="px-5 pb-4">{children}</div>
 		</div>
@@ -32,16 +32,16 @@ export function DashboardSkeleton() {
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
 				{(["s0", "s1", "s2", "s3"] as const).map((id) => (
 					<div key={id} className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5 space-y-3">
-						<SkeletonLine className="h-3 w-20" />
-						<SkeletonLine className="h-7 w-28" />
+						<Skeleton className="h-3 w-20" />
+						<Skeleton className="h-7 w-28" />
 					</div>
 				))}
 			</div>
 
 			{/* Chart */}
 			<div className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5">
-				<SkeletonLine className="h-3 w-24 mb-4" />
-				<SkeletonLine className="h-[200px] w-full" />
+				<Skeleton className="h-3 w-24 mb-4" />
+				<Skeleton className="h-[200px] w-full" />
 			</div>
 		</>
 	);
@@ -57,10 +57,10 @@ export function ProjectsListSkeleton() {
 			{(["p0", "p1", "p2", "p3", "p4", "p5"] as const).map((id) => (
 				<div key={id} className="rounded-basalt-lg bg-basalt-secondary p-4 md:p-5">
 					<div className="flex items-center gap-2.5">
-						<SkeletonLine className="h-7 w-7 rounded-md shrink-0" />
+						<Skeleton className="h-7 w-7 rounded-md shrink-0" />
 						<div className="space-y-1.5 flex-1 min-w-0">
-							<SkeletonLine className="h-3.5 w-20" />
-							<SkeletonLine className="h-3 w-full max-w-[200px]" />
+							<Skeleton className="h-3.5 w-20" />
+							<Skeleton className="h-3 w-full max-w-[200px]" />
 						</div>
 					</div>
 				</div>
@@ -80,31 +80,31 @@ export function ProjectDetailSkeleton() {
 			<CardSkeleton>
 				<div className="flex flex-col gap-4">
 					<div className="space-y-2">
-						<SkeletonLine className="h-3 w-10" />
-						<SkeletonLine className="h-9 w-full rounded-md" />
+						<Skeleton className="h-3 w-10" />
+						<Skeleton className="h-9 w-full rounded-md" />
 					</div>
 					<div className="space-y-2">
-						<SkeletonLine className="h-3 w-16" />
-						<SkeletonLine className="h-16 w-full rounded-md" />
+						<Skeleton className="h-3 w-16" />
+						<Skeleton className="h-16 w-full rounded-md" />
 					</div>
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<SkeletonLine className="h-3 w-20" />
-							<SkeletonLine className="h-9 w-full rounded-md" />
+							<Skeleton className="h-3 w-20" />
+							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 						<div className="space-y-2">
-							<SkeletonLine className="h-3 w-20" />
-							<SkeletonLine className="h-9 w-full rounded-md" />
+							<Skeleton className="h-3 w-20" />
+							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 					</div>
 					<div className="grid grid-cols-2 gap-4">
 						<div className="space-y-2">
-							<SkeletonLine className="h-3 w-20" />
-							<SkeletonLine className="h-9 w-full rounded-md" />
+							<Skeleton className="h-3 w-20" />
+							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 						<div className="space-y-2">
-							<SkeletonLine className="h-3 w-24" />
-							<SkeletonLine className="h-9 w-full rounded-md" />
+							<Skeleton className="h-3 w-24" />
+							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 					</div>
 				</div>
@@ -113,8 +113,8 @@ export function ProjectDetailSkeleton() {
 			{/* Token card */}
 			<CardSkeleton>
 				<div className="flex flex-col gap-3">
-					<SkeletonLine className="h-9 w-full rounded-md" />
-					<SkeletonLine className="h-8 w-36 rounded-md" />
+					<Skeleton className="h-9 w-full rounded-md" />
+					<Skeleton className="h-8 w-36 rounded-md" />
 				</div>
 			</CardSkeleton>
 
@@ -124,10 +124,10 @@ export function ProjectDetailSkeleton() {
 					{(["rc0", "rc1"] as const).map((id) => (
 						<div key={id} className="flex items-center justify-between px-3 py-2.5">
 							<div className="space-y-1">
-								<SkeletonLine className="h-4 w-24" />
-								<SkeletonLine className="h-3 w-36" />
+								<Skeleton className="h-4 w-24" />
+								<Skeleton className="h-3 w-36" />
 							</div>
-							<SkeletonLine className="h-8 w-8 rounded-md" />
+							<Skeleton className="h-8 w-8 rounded-md" />
 						</div>
 					))}
 				</div>
@@ -139,10 +139,10 @@ export function ProjectDetailSkeleton() {
 					{(["tp0", "tp1"] as const).map((id) => (
 						<div key={id} className="flex items-center justify-between px-3 py-2.5">
 							<div className="space-y-1">
-								<SkeletonLine className="h-4 w-28" />
-								<SkeletonLine className="h-3 w-20" />
+								<Skeleton className="h-4 w-28" />
+								<Skeleton className="h-3 w-20" />
 							</div>
-							<SkeletonLine className="h-3 w-32" />
+							<Skeleton className="h-3 w-32" />
 						</div>
 					))}
 				</div>
@@ -165,31 +165,31 @@ export function TemplateDetailSkeleton() {
 					<div className="flex flex-col gap-4">
 						<div className="grid grid-cols-2 gap-4">
 							<div className="space-y-2">
-								<SkeletonLine className="h-3 w-10" />
-								<SkeletonLine className="h-9 w-full rounded-md" />
+								<Skeleton className="h-3 w-10" />
+								<Skeleton className="h-9 w-full rounded-md" />
 							</div>
 							<div className="space-y-2">
-								<SkeletonLine className="h-3 w-10" />
-								<SkeletonLine className="h-9 w-full rounded-md" />
+								<Skeleton className="h-3 w-10" />
+								<Skeleton className="h-9 w-full rounded-md" />
 							</div>
 						</div>
 						<div className="space-y-2">
-							<SkeletonLine className="h-3 w-14" />
-							<SkeletonLine className="h-9 w-full rounded-md" />
+							<Skeleton className="h-3 w-14" />
+							<Skeleton className="h-9 w-full rounded-md" />
 						</div>
 					</div>
 				</CardSkeleton>
 
 				{/* Body */}
 				<CardSkeleton>
-					<SkeletonLine className="h-[320px] w-full rounded-md" />
+					<Skeleton className="h-[320px] w-full rounded-md" />
 				</CardSkeleton>
 
 				{/* Variables */}
 				<CardSkeleton>
 					<div className="space-y-2">
 						{(["v0", "v1"] as const).map((id) => (
-							<SkeletonLine key={id} className="h-10 w-full rounded-lg" />
+							<Skeleton key={id} className="h-10 w-full rounded-lg" />
 						))}
 					</div>
 				</CardSkeleton>
@@ -198,7 +198,7 @@ export function TemplateDetailSkeleton() {
 			{/* Right: preview */}
 			<div>
 				<CardSkeleton>
-					<SkeletonLine className="h-[400px] w-full rounded-md" />
+					<Skeleton className="h-[400px] w-full rounded-md" />
 				</CardSkeleton>
 			</div>
 		</div>
@@ -214,34 +214,34 @@ export function NewTemplateFormSkeleton() {
 		<div className="flex flex-col gap-6 max-w-2xl">
 			{/* Project selector */}
 			<div className="space-y-2">
-				<SkeletonLine className="h-3 w-14" />
-				<SkeletonLine className="h-9 w-full rounded-md" />
+				<Skeleton className="h-3 w-14" />
+				<Skeleton className="h-9 w-full rounded-md" />
 			</div>
 			{/* Name + Slug */}
 			<div className="grid grid-cols-2 gap-4">
 				<div className="space-y-2">
-					<SkeletonLine className="h-3 w-10" />
-					<SkeletonLine className="h-9 w-full rounded-md" />
+					<Skeleton className="h-3 w-10" />
+					<Skeleton className="h-9 w-full rounded-md" />
 				</div>
 				<div className="space-y-2">
-					<SkeletonLine className="h-3 w-10" />
-					<SkeletonLine className="h-9 w-full rounded-md" />
+					<Skeleton className="h-3 w-10" />
+					<Skeleton className="h-9 w-full rounded-md" />
 				</div>
 			</div>
 			{/* Subject */}
 			<div className="space-y-2">
-				<SkeletonLine className="h-3 w-14" />
-				<SkeletonLine className="h-9 w-full rounded-md" />
+				<Skeleton className="h-3 w-14" />
+				<Skeleton className="h-9 w-full rounded-md" />
 			</div>
 			{/* Body */}
 			<div className="space-y-2">
-				<SkeletonLine className="h-3 w-24" />
-				<SkeletonLine className="h-[200px] w-full rounded-md" />
+				<Skeleton className="h-3 w-24" />
+				<Skeleton className="h-[200px] w-full rounded-md" />
 			</div>
 			{/* Buttons */}
 			<div className="flex items-center gap-3 pt-1">
-				<SkeletonLine className="h-9 w-32 rounded-md" />
-				<SkeletonLine className="h-9 w-20 rounded-md" />
+				<Skeleton className="h-9 w-32 rounded-md" />
+				<Skeleton className="h-9 w-20 rounded-md" />
 			</div>
 		</div>
 	);
@@ -256,11 +256,11 @@ export function LoginSkeleton() {
 		<div className="flex min-h-screen items-center justify-center bg-basalt-background">
 			<div className="w-full max-w-sm space-y-6 px-6">
 				<div className="flex flex-col items-center gap-3">
-					<SkeletonLine className="h-20 w-20 rounded-2xl" />
-					<SkeletonLine className="h-6 w-24" />
-					<SkeletonLine className="h-4 w-48" />
+					<Skeleton className="h-20 w-20 rounded-2xl" />
+					<Skeleton className="h-6 w-24" />
+					<Skeleton className="h-4 w-48" />
 				</div>
-				<SkeletonLine className="h-10 w-full rounded-md" />
+				<Skeleton className="h-10 w-full rounded-md" />
 			</div>
 		</div>
 	);
@@ -275,15 +275,15 @@ export function TemplatesListSkeleton() {
 		<div className="flex flex-col gap-6">
 			{(["g0", "g1"] as const).map((gid) => (
 				<div key={gid}>
-					<SkeletonLine className="h-3 w-28 mb-3" />
+					<Skeleton className="h-3 w-28 mb-3" />
 					<div className="rounded-xl bg-basalt-secondary overflow-hidden divide-y divide-basalt-border/50">
 						{(["r0", "r1", "r2"] as const).map((rid) => (
 							<div key={rid} className="flex items-center gap-3 px-4 py-3">
 								<div className="flex-1 min-w-0 space-y-1.5">
-									<SkeletonLine className="h-4 w-28" />
-									<SkeletonLine className="h-3 w-48" />
+									<Skeleton className="h-4 w-28" />
+									<Skeleton className="h-3 w-48" />
 								</div>
-								<SkeletonLine className="hidden sm:block h-3 w-14 shrink-0" />
+								<Skeleton className="hidden sm:block h-3 w-14 shrink-0" />
 							</div>
 						))}
 					</div>
@@ -306,15 +306,15 @@ export function LogTableSkeleton({ columns = 5 }: { columns?: number }) {
 		<>
 			{/* Filter bar */}
 			<div className="flex gap-2">
-				<SkeletonLine className="h-9 w-[180px] rounded-md" />
-				<SkeletonLine className="h-9 w-[140px] rounded-md" />
+				<Skeleton className="h-9 w-[180px] rounded-md" />
+				<Skeleton className="h-9 w-[140px] rounded-md" />
 			</div>
 
 			{/* Table header */}
 			<div>
 				<div className="hidden md:flex items-center gap-3 px-4 py-2 border-b border-basalt-border">
 					{colIds.map((id, i) => (
-						<SkeletonLine key={id} className={`h-3 ${widths[i % widths.length]}`} />
+						<Skeleton key={id} className={`h-3 ${widths[i % widths.length]}`} />
 					))}
 				</div>
 
@@ -325,7 +325,7 @@ export function LogTableSkeleton({ columns = 5 }: { columns?: number }) {
 						className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3 px-4 py-3 border-b border-basalt-border"
 					>
 						{colIds.map((colId, ci) => (
-							<SkeletonLine key={colId} className={`h-4 ${widths[ci % widths.length]}`} />
+							<Skeleton key={colId} className={`h-4 ${widths[ci % widths.length]}`} />
 						))}
 					</div>
 				))}
