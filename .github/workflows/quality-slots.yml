@@ -92,7 +92,7 @@ jobs:
           package-manager: bun
           runtime-version: ${{ env.BUN_VERSION }}
           install-policy: trusted
-      - run: bun run scripts/setup-ci-env.ts && bun run build && bun run test:coverage
+      - run: bun run scripts/setup-ci-env.ts && bun run test:coverage
 
   l2-runtime:
     name: "L2: Runtime"
