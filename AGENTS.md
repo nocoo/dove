@@ -37,7 +37,7 @@ bun run gate:security              # G1 + G2 (gitleaks + osv-scanner)
 
 Follows `system1-quality`; CI slots and pinned `base-ci` revision live in `.github/workflows/quality-slots.yml` via `.github/workflows/ci.yml` (`quality / Z1: Gate` required on `main`). Statuses: `enforced`, `planned`, `manual`, `N/A`.
 
-- **Exceptions / gaps**: `L2 Runtime` is `N/A` (no `@cloudflare/vitest-pool-workers` suite); `P1 Package` is `N/A` (private repo, not published to npm); `L4` per-run persistence isolation is `planned`.
+- **Exceptions / gaps**: `L2 Runtime` is `N/A` (no `@cloudflare/vitest-pool-workers` suite); `P1 Package` runs `wrangler deploy --env="" --dry-run` reusing `B1` (`enforced`); `L3` and `L4` reuse `B1` (`dist/client/`); `L4` per-run persistence isolation is `planned`.
 - **Local hooks**: `bun install` restores check-only `.husky/` hooks; never bypass with `--no-verify`.
 - **pre-commit** (`enforced`): checks staged index snapshot via `gitleaks` (`G1`) + parallel `typecheck` (`S1`), `lint` (`S2`), `gate:routes`, `gate:pages`, and `test:coverage` (`L1`, `<30s` warm target).
 - **pre-push** (`enforced` for `L3` + `G2`): runs `test:e2e:api` and `gate:deps` (`osv-scanner`) in parallel; stdin push-ref isolation (`<3min` target) is `planned`.
