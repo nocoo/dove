@@ -30,12 +30,12 @@ bun run gate:security              # G1 + G2 (gitleaks + osv-scanner)
 - **Dry-run & creds**: Tests require `EMAIL_DRY_RUN=true`, `RESEND_DRY_RUN=true`, `DEV_MODE=true`, documented placeholders, and unset `CLOUDFLARE_*`/`CF_*` env; never send real mail or use real provider keys.
 - **Coverage boundary**: Keep `src/server/` and `src/lib/` >=99% stmts/funcs/lines and >=96% branches (`vitest.config.mts`). UI (`src/client/`) is covered by `L4`; never hide business logic in excluded UI code.
 - **Version & env**: Sync `package.json` and `src/server/lib/version.ts` (`APP_VERSION`) on release. When changing ports/URLs/auth, inspect ignored `.env.local`/`.env.test` paths without printing secrets.
-- **CD ownership**: `.github/workflows/release.yml` owns production deploys—never `wrangler deploy` from a laptop; keep prod secrets in Cloudflare/GitHub. Verify `GET https://dove.hexly.ai/api/live` post-deploy.
-- **Release flow**: Authorized `bun run release` on `main` (patch default; needs `gh`, write access, `production` env) syncs version/changelog, pushes `main`, waits for CI, then tags (tag CD has no CI wait).
+- **CD ownership**: `.github/workflows/pipeline.yml` (`deploy` job, `D1`–`D5` via `deploy-worker.yml` on `main` push after `quality / Z1: Gate` passes, or `workflow_dispatch` with `deploy=true`) owns production deploys, reusing `b1-build` (`dist/client`) without rebuilding and verifying `https://dove.hexly.ai/api/live`—never `wrangler deploy` from a laptop; keep prod secrets in Cloudflare/GitHub.
+- **Release flow**: Authorized `bun run release` on `main` (patch default; needs `gh`, write access, `production` env) syncs version/changelog and pushes `main` (`pipeline.yml` runs quality + Worker deploy in one pipeline).
 
 ## Quality & Local Gates
 
-Follows `system1-quality`; CI slots and pinned `base-ci` revision live in `.github/workflows/quality-slots.yml` via `.github/workflows/ci.yml` (`quality / Z1: Gate` required on `main`). Statuses: `enforced`, `planned`, `manual`, `N/A`.
+Follows `system1-quality`; CI slots and pinned `base-ci` revision live in `.github/workflows/quality-slots.yml` via `.github/workflows/pipeline.yml` (`quality / Z1: Gate` required on `main`). Statuses: `enforced`, `planned`, `manual`, `N/A`.
 
 - **Exceptions / gaps**: `L2 Runtime` is `N/A` (no `@cloudflare/vitest-pool-workers` suite); `P1 Package` runs `wrangler deploy --env="" --dry-run` reusing `B1` (`enforced`); `L3` and `L4` reuse `B1` (`dist/client/`); `L4` per-run persistence isolation is `planned`.
 - **Local hooks**: `bun install` restores check-only `.husky/` hooks; never bypass with `--no-verify`.
@@ -44,12 +44,12 @@ Follows `system1-quality`; CI slots and pinned `base-ci` revision live in `.gith
 
 ## Resources & Isolation
 
-| Lane      | Endpoint / State                                      | Boundary                                                                           |
-| --------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Daily dev | `127.0.0.1:7034`, default `dove-db`                   | Remote production binding (`remote = true`); never an automated test target        |
-| `L3` API  | Ephemeral loopback port, temp config + `--persist-to` | Fresh local SQLite, fake creds, both dry-run flags; verifies `_test_marker`        |
-| `L4` BDD  | `127.0.0.1:27034`, `--env test` + `.env.test`         | Reuses local server outside CI; per-run persistence isolation `planned`            |
-| Prod      | `https://dove.hexly.ai`                               | Read-only `/api/live` checks unless release/deploy via `release.yml` is authorized |
+| Lane      | Endpoint / State                                      | Boundary                                                                            |
+| --------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Daily dev | `127.0.0.1:7034`, default `dove-db`                   | Remote production binding (`remote = true`); never an automated test target         |
+| `L3` API  | Ephemeral loopback port, temp config + `--persist-to` | Fresh local SQLite, fake creds, both dry-run flags; verifies `_test_marker`         |
+| `L4` BDD  | `127.0.0.1:27034`, `--env test` + `.env.test`         | Reuses local server outside CI; per-run persistence isolation `planned`             |
+| Prod      | `https://dove.hexly.ai`                               | Read-only `/api/live` checks unless release/deploy via `pipeline.yml` is authorized |
 
 Test harnesses must reject remote bindings/URLs and prod credential fallback, allocate isolated local state, and verify `_test_marker(key,value)` (`env=test` + random `run_id` in `L3`) read-only before schema init or cleanup.
 
