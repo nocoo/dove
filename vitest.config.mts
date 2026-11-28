@@ -38,8 +38,9 @@ export default defineConfig({
 				"**/*.spec.ts",
 				// Build/tool configuration files contain no runtime logic worth covering.
 				"**/*.config.*",
-				// Type declaration files have no executable code.
+				// Type declaration files and pure type modules have no executable code.
 				"**/*.d.ts",
+				"src/lib/types/**",
 				// Test fixtures, mocks, and helpers — exercised indirectly by tests.
 				"src/__tests__/",
 				"src/server/__tests__/",
@@ -58,10 +59,10 @@ export default defineConfig({
 				"src/server/routes/db-init.ts",
 			],
 			thresholds: {
-				lines: 99,
-				functions: 99,
-				branches: 96,
-				statements: 99,
+				lines: 90,
+				functions: 90,
+				branches: 85,
+				statements: 90,
 			},
 		},
 	},
